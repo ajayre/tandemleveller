@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2025-02-13")
+    (date "2025-02-14")
     (rev "V1.0")
     (company "(C) andy@britishideas.com 2025")
     (comment 1 "For personal use only, no commercial use")
@@ -1038,7 +1038,7 @@
     (property "Reference" "C17" (at 67.945 75.565 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "100nF" (at 67.945 78.105 90)
+    (property "Value" "100n" (at 67.945 78.105 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "" (at 71.755 80.9498 0)
@@ -1139,7 +1139,7 @@
     (property "Reference" "C19" (at 204.47 75.565 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "100nF" (at 204.47 78.105 90)
+    (property "Value" "100n" (at 204.47 78.105 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "" (at 200.66 80.9498 0)
@@ -1162,7 +1162,7 @@
   (symbol (lib_id "Device:FerriteBead_Small") (at 222.885 67.945 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 8b8229b7-ce77-4494-9f9a-d98a01dfd720)
-    (property "Reference" "FB?" (at 226.06 66.6369 0)
+    (property "Reference" "FB2" (at 226.06 66.6369 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "MI0805K400R-10" (at 226.06 69.1769 0)
@@ -1182,7 +1182,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "FB?") (unit 1)
+          (reference "FB2") (unit 1)
         )
       )
     )
@@ -1220,7 +1220,7 @@
     (property "Reference" "C20" (at 168.91 55.245 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "100nF" (at 168.91 57.785 90)
+    (property "Value" "100n" (at 168.91 57.785 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "" (at 165.1 60.6298 0)
@@ -1427,7 +1427,7 @@
     (property "Reference" "C18" (at 106.045 61.595 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "100nF" (at 106.045 64.135 90)
+    (property "Value" "100n" (at 106.045 64.135 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "" (at 109.855 66.9798 0)

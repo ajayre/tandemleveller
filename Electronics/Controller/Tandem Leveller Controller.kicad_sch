@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2025-02-13")
+    (date "2025-02-14")
     (rev "V1.0")
     (company "(C) andy@britishideas.com 2025")
     (comment 1 "For personal use only, no commercial use")
@@ -679,6 +679,14 @@
     (stroke (width 0) (type default))
     (uuid f1fb9c8a-dffc-4fb3-9c59-5e09ced7f69e)
   )
+  (wire (pts (xy 201.93 48.26) (xy 201.93 50.165))
+    (stroke (width 0) (type default))
+    (uuid f3b78ca2-013b-49a0-b681-9d7834fd116f)
+  )
+  (wire (pts (xy 201.93 29.845) (xy 201.93 31.115))
+    (stroke (width 0) (type default))
+    (uuid f6cdea2c-4c3b-412b-be75-5a5754baa009)
+  )
   (wire (pts (xy 261.62 48.26) (xy 261.62 52.07))
     (stroke (width 0) (type default))
     (uuid fbfe818a-93f9-4693-83ac-b8a75cd6e932)
@@ -686,6 +694,10 @@
   (wire (pts (xy 105.41 95.885) (xy 107.95 95.885))
     (stroke (width 0) (type default))
     (uuid fc7e9f19-661b-40d4-a106-4feaa9ae10b9)
+  )
+  (wire (pts (xy 201.93 38.735) (xy 201.93 40.64))
+    (stroke (width 0) (type default))
+    (uuid fed396ce-2afd-457e-9a61-8a9d22398505)
   )
 
   (label "STATUS2" (at 78.105 56.515 180) (fields_autoplaced)
@@ -764,6 +776,31 @@
     )
   )
 
+  (symbol (lib_id "power:+5V") (at 201.93 29.845 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid 2205b2cf-32cc-400d-96e9-de8f1b3befe5)
+    (property "Reference" "#PWR055" (at 201.93 33.655 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+5V" (at 201.93 25.4 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 201.93 29.845 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 201.93 29.845 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 81c95e48-6801-4491-bc34-08b38b614eb0))
+    (instances
+      (project "Tandem Leveller Controller"
+        (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448"
+          (reference "#PWR055") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "power:+5V") (at 242.57 29.845 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 26abc412-2408-4906-9297-d0920f0b0998)
@@ -813,6 +850,35 @@
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448"
           (reference "D6") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "Device:LED") (at 201.93 34.925 90) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 5e31d499-6d31-49c7-b9d0-64ca5cdefd6c)
+    (property "Reference" "D7" (at 205.105 35.2424 90)
+      (effects (font (size 1.27 1.27)) (justify right))
+    )
+    (property "Value" "HSMS-C190" (at 205.105 37.7824 90)
+      (effects (font (size 1.27 1.27)) (justify right))
+    )
+    (property "Footprint" "Diode_SMD:D_0603_1608Metric" (at 201.93 34.925 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 201.93 34.925 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "manf#" "HSMS-C190" (at 201.93 34.925 90)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 622bb6d4-5a63-4592-8471-835db23f6fe2))
+    (pin "2" (uuid 2af44477-8a15-45ff-a43f-d16efba2185b))
+    (instances
+      (project "Tandem Leveller Controller"
+        (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448"
+          (reference "D7") (unit 1)
         )
       )
     )
@@ -952,6 +1018,31 @@
     )
   )
 
+  (symbol (lib_id "power:GND") (at 201.93 50.165 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid 82f5dcab-b548-420a-9d48-5f9276fd2a4f)
+    (property "Reference" "#PWR062" (at 201.93 56.515 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 201.93 53.975 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 201.93 50.165 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 201.93 50.165 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 6b84c5ee-2571-422c-a1a0-b65552235ec7))
+    (instances
+      (project "Tandem Leveller Controller"
+        (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448"
+          (reference "#PWR062") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "Device:LED") (at 242.57 34.925 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 93103dd9-8f1c-40df-a0c4-8f631b4d8b49)
@@ -1056,6 +1147,32 @@
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448"
           (reference "#PWR049") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "Device:R") (at 201.93 44.45 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid fddc44e1-68df-4fe9-ae09-91a525adc542)
+    (property "Reference" "R25" (at 204.47 43.18 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "287" (at 204.47 45.72 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 200.152 44.45 90)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 201.93 44.45 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid cc2e0861-6738-4c34-b49a-65b2ad95241b))
+    (pin "2" (uuid f40c0643-45fa-4b88-864a-d10889846a04))
+    (instances
+      (project "Tandem Leveller Controller"
+        (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448"
+          (reference "R25") (unit 1)
         )
       )
     )
@@ -1311,6 +1428,23 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448" (page "6"))
+      )
+    )
+  )
+
+  (sheet (at 25.4 132.715) (size 47.625 33.02) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 9e68b822-6469-4f83-b3f9-7a42b55305fd)
+    (property "Sheetname" "Valve Control" (at 25.4 132.0034 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "Valve Control.kicad_sch" (at 25.4 166.3196 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "Tandem Leveller Controller"
+        (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448" (page "8"))
       )
     )
   )

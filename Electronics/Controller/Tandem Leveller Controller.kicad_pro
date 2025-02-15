@@ -350,6 +350,10 @@
     [
       "1cd899d7-b38b-4987-817a-614911419488",
       "USB Hub"
+    ],
+    [
+      "9e68b822-6469-4f83-b3f9-7a42b55305fd",
+      "Valve Control"
     ]
   ],
   "text_variables": {}
