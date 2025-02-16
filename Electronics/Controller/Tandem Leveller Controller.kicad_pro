@@ -333,7 +333,7 @@
     ],
     [
       "acdcb949-8386-481e-9890-88fc97609208",
-      "IMU"
+      "IMU and Sensors"
     ],
     [
       "dcf28da0-a625-49c3-8f0d-066b6ff7258a",
@@ -354,6 +354,10 @@
     [
       "9e68b822-6469-4f83-b3f9-7a42b55305fd",
       "Valve Control"
+    ],
+    [
+      "abf695b4-b6ff-485a-9a7d-88be190e17fc",
+      "Switches"
     ]
   ],
   "text_variables": {}
