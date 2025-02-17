@@ -984,13 +984,13 @@
   (symbol (lib_id "Device:C") (at 107.315 23.495 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 00ca72e1-5bfb-4462-a161-493df9afb48a)
-    (property "Reference" "C12" (at 107.315 17.145 90)
+    (property "Reference" "C14" (at 107.315 17.145 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 107.315 19.685 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 111.125 22.5298 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 111.125 22.5298 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 107.315 23.495 0)
@@ -1001,7 +1001,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C12") (unit 1)
+          (reference "C14") (unit 1)
         )
       )
     )
@@ -1010,7 +1010,7 @@
   (symbol (lib_id "power:GND") (at 75.565 109.22 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 02a9f2cf-0680-4cf8-bb66-934da84d8ed8)
-    (property "Reference" "#PWR023" (at 75.565 115.57 0)
+    (property "Reference" "#PWR040" (at 75.565 115.57 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 75.565 113.03 0)
@@ -1026,7 +1026,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR023") (unit 1)
+          (reference "#PWR040") (unit 1)
         )
       )
     )
@@ -1035,7 +1035,7 @@
   (symbol (lib_id "power:GND") (at 200.025 84.455 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0f76405a-e559-4a5b-9d06-e20790b82bd1)
-    (property "Reference" "#PWR033" (at 200.025 90.805 0)
+    (property "Reference" "#PWR050" (at 200.025 90.805 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 200.025 89.535 0)
@@ -1051,7 +1051,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR033") (unit 1)
+          (reference "#PWR050") (unit 1)
         )
       )
     )
@@ -1060,13 +1060,13 @@
   (symbol (lib_id "Device:C") (at 137.795 121.285 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 190e0a33-8b29-4639-b3cc-5302c90ffde8)
-    (property "Reference" "C13" (at 137.795 114.935 90)
+    (property "Reference" "C15" (at 137.795 114.935 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 137.795 117.475 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 141.605 120.3198 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 141.605 120.3198 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 137.795 121.285 0)
@@ -1077,7 +1077,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C13") (unit 1)
+          (reference "C15") (unit 1)
         )
       )
     )
@@ -1086,13 +1086,13 @@
   (symbol (lib_id "Device:C") (at 175.895 107.315 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 1d38f3c0-68db-4e89-af29-2263958a18d6)
-    (property "Reference" "C15" (at 175.895 100.965 90)
+    (property "Reference" "C17" (at 175.895 100.965 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 175.895 103.505 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 179.705 106.3498 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 179.705 106.3498 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 175.895 107.315 0)
@@ -1103,7 +1103,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C15") (unit 1)
+          (reference "C17") (unit 1)
         )
       )
     )
@@ -1112,13 +1112,13 @@
   (symbol (lib_id "Device:R") (at 233.045 40.005 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 250f0dae-89b0-48b7-a5ae-4e50d4a8a7ad)
-    (property "Reference" "R14" (at 234.95 42.545 90)
+    (property "Reference" "R20" (at 234.95 42.545 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 231.14 42.545 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 233.045 41.783 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 233.045 41.783 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 233.045 40.005 0)
@@ -1129,7 +1129,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R14") (unit 1)
+          (reference "R20") (unit 1)
         )
       )
     )
@@ -1138,7 +1138,7 @@
   (symbol (lib_id "power:GND") (at 56.515 40.005 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 27671427-379a-4c1d-8d11-dd4bb16befb9)
-    (property "Reference" "#PWR020" (at 56.515 46.355 0)
+    (property "Reference" "#PWR037" (at 56.515 46.355 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 56.515 43.815 0)
@@ -1154,7 +1154,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR020") (unit 1)
+          (reference "#PWR037") (unit 1)
         )
       )
     )
@@ -1163,7 +1163,7 @@
   (symbol (lib_id "power:GND") (at 160.655 40.005 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 2aca95fd-a2e1-4c8a-a18e-0a7ae2e9909e)
-    (property "Reference" "#PWR028" (at 160.655 46.355 0)
+    (property "Reference" "#PWR045" (at 160.655 46.355 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 160.655 43.815 0)
@@ -1179,7 +1179,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR028") (unit 1)
+          (reference "#PWR045") (unit 1)
         )
       )
     )
@@ -1188,7 +1188,7 @@
   (symbol (lib_id "power:GND") (at 213.995 25.4 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4f870dcb-5ff6-4e19-aa24-7b391463fb4a)
-    (property "Reference" "#PWR034" (at 213.995 31.75 0)
+    (property "Reference" "#PWR051" (at 213.995 31.75 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 213.995 29.21 0)
@@ -1204,7 +1204,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR034") (unit 1)
+          (reference "#PWR051") (unit 1)
         )
       )
     )
@@ -1213,7 +1213,7 @@
   (symbol (lib_id "Interface_USB:FT232RL") (at 59.055 139.065 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 5c2627e3-87af-477e-bffe-cf4fe19b082a)
-    (property "Reference" "U8" (at 63.7891 112.395 0)
+    (property "Reference" "U10" (at 63.7891 112.395 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "FT232RL" (at 63.7891 114.935 0)
@@ -1254,7 +1254,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "U8") (unit 1)
+          (reference "U10") (unit 1)
         )
       )
     )
@@ -1263,13 +1263,13 @@
   (symbol (lib_id "Device:C") (at 169.545 37.465 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 63b4322f-2e6d-4157-a9ed-00d634b08672)
-    (property "Reference" "C14" (at 169.545 31.115 90)
+    (property "Reference" "C16" (at 169.545 31.115 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 169.545 33.655 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 173.355 36.4998 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 173.355 36.4998 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 169.545 37.465 0)
@@ -1280,7 +1280,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C14") (unit 1)
+          (reference "C16") (unit 1)
         )
       )
     )
@@ -1289,7 +1289,7 @@
   (symbol (lib_id "power:GND") (at 61.595 168.275 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 666ddbc7-dfc3-4a29-afc8-e0349fe37a95)
-    (property "Reference" "#PWR022" (at 61.595 174.625 0)
+    (property "Reference" "#PWR039" (at 61.595 174.625 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 61.595 173.355 0)
@@ -1305,7 +1305,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR022") (unit 1)
+          (reference "#PWR039") (unit 1)
         )
       )
     )
@@ -1314,7 +1314,7 @@
   (symbol (lib_id "power:+5V") (at 166.37 105.41 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 6829da77-3368-40d2-b32a-8a6505185eb3)
-    (property "Reference" "#PWR029" (at 166.37 109.22 0)
+    (property "Reference" "#PWR046" (at 166.37 109.22 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 166.37 100.33 0)
@@ -1330,7 +1330,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR029") (unit 1)
+          (reference "#PWR046") (unit 1)
         )
       )
     )
@@ -1339,13 +1339,13 @@
   (symbol (lib_id "Device:R") (at 201.295 123.825 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 7006d771-9095-43e7-b491-73fbd7d1392f)
-    (property "Reference" "R12" (at 203.2 126.365 90)
+    (property "Reference" "R18" (at 203.2 126.365 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 199.39 126.365 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 201.295 125.603 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 201.295 125.603 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 201.295 123.825 0)
@@ -1356,7 +1356,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R12") (unit 1)
+          (reference "R18") (unit 1)
         )
       )
     )
@@ -1365,13 +1365,13 @@
   (symbol (lib_id "Device:C") (at 69.215 37.465 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 78cf6809-0deb-46f7-9e77-ea3112fd363a)
-    (property "Reference" "C10" (at 69.215 31.115 90)
+    (property "Reference" "C12" (at 69.215 31.115 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 69.215 33.655 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 73.025 36.4998 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 73.025 36.4998 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 69.215 37.465 0)
@@ -1382,7 +1382,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C10") (unit 1)
+          (reference "C12") (unit 1)
         )
       )
     )
@@ -1391,13 +1391,13 @@
   (symbol (lib_id "Device:R") (at 193.675 121.285 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 7b63cc22-ebb1-47e9-8b76-82f19bce487e)
-    (property "Reference" "R11" (at 194.945 119.38 90)
+    (property "Reference" "R17" (at 194.945 119.38 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 191.77 119.38 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 193.675 123.063 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 193.675 123.063 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 193.675 121.285 0)
@@ -1408,7 +1408,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R11") (unit 1)
+          (reference "R17") (unit 1)
         )
       )
     )
@@ -1417,7 +1417,7 @@
   (symbol (lib_id "Interface_USB:FT232RL") (at 165.735 139.065 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 8cc08364-b2aa-4604-b08e-f4f844eb1236)
-    (property "Reference" "U10" (at 170.4691 112.395 0)
+    (property "Reference" "U12" (at 170.4691 112.395 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "FT232RL" (at 170.4691 114.935 0)
@@ -1458,7 +1458,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "U10") (unit 1)
+          (reference "U12") (unit 1)
         )
       )
     )
@@ -1467,7 +1467,7 @@
   (symbol (lib_id "power:GND") (at 18.415 123.825 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 8cd156c7-dd7d-4e6e-9a4a-842e1c6d2ad2)
-    (property "Reference" "#PWR019" (at 18.415 130.175 0)
+    (property "Reference" "#PWR036" (at 18.415 130.175 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 18.415 127.635 0)
@@ -1483,7 +1483,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR019") (unit 1)
+          (reference "#PWR036") (unit 1)
         )
       )
     )
@@ -1492,7 +1492,7 @@
   (symbol (lib_id "power:GND") (at 168.275 168.275 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 8d958f06-9b97-41bd-9844-15d123859945)
-    (property "Reference" "#PWR030" (at 168.275 174.625 0)
+    (property "Reference" "#PWR047" (at 168.275 174.625 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 168.275 173.355 0)
@@ -1508,7 +1508,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR047") (unit 1)
         )
       )
     )
@@ -1517,13 +1517,13 @@
   (symbol (lib_id "Device:R") (at 86.995 121.285 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 992ab24f-fe2d-454f-bbfc-66dfa70a0b49)
-    (property "Reference" "R7" (at 88.265 119.38 90)
+    (property "Reference" "R13" (at 88.265 119.38 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 85.09 119.38 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 86.995 123.063 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 86.995 123.063 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 86.995 121.285 0)
@@ -1534,7 +1534,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R7") (unit 1)
+          (reference "R13") (unit 1)
         )
       )
     )
@@ -1543,7 +1543,7 @@
   (symbol (lib_id "power:GND") (at 99.695 84.455 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid ab218c0d-840b-410d-aa3f-64591ee3f252)
-    (property "Reference" "#PWR025" (at 99.695 90.805 0)
+    (property "Reference" "#PWR042" (at 99.695 90.805 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 99.695 89.535 0)
@@ -1559,7 +1559,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR025") (unit 1)
+          (reference "#PWR042") (unit 1)
         )
       )
     )
@@ -1568,13 +1568,13 @@
   (symbol (lib_id "Device:R") (at 132.715 40.005 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid ae20d307-45be-4d3d-b8ae-4e3033cf42f6)
-    (property "Reference" "R10" (at 134.62 42.545 90)
+    (property "Reference" "R16" (at 134.62 42.545 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 130.81 42.545 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 132.715 41.783 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 132.715 41.783 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 132.715 40.005 0)
@@ -1585,7 +1585,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R10") (unit 1)
+          (reference "R16") (unit 1)
         )
       )
     )
@@ -1594,7 +1594,7 @@
   (symbol (lib_id "power:GND") (at 182.245 109.22 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid afdeab07-5951-4713-8757-d71690778724)
-    (property "Reference" "#PWR031" (at 182.245 115.57 0)
+    (property "Reference" "#PWR048" (at 182.245 115.57 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 182.245 113.03 0)
@@ -1610,7 +1610,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR031") (unit 1)
+          (reference "#PWR048") (unit 1)
         )
       )
     )
@@ -1619,13 +1619,13 @@
   (symbol (lib_id "Device:R") (at 125.095 37.465 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid bedcf372-1c11-4bbc-b230-68d16ff16ac0)
-    (property "Reference" "R9" (at 126.365 35.56 90)
+    (property "Reference" "R15" (at 126.365 35.56 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 123.19 35.56 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 125.095 39.243 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 125.095 39.243 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 125.095 37.465 0)
@@ -1636,7 +1636,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R9") (unit 1)
+          (reference "R15") (unit 1)
         )
       )
     )
@@ -1645,7 +1645,7 @@
   (symbol (lib_id "power:+5V") (at 97.79 21.59 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c08312c4-21dc-431e-a017-66306078bbe2)
-    (property "Reference" "#PWR024" (at 97.79 25.4 0)
+    (property "Reference" "#PWR041" (at 97.79 25.4 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 97.79 16.51 0)
@@ -1661,7 +1661,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR024") (unit 1)
+          (reference "#PWR041") (unit 1)
         )
       )
     )
@@ -1670,7 +1670,7 @@
   (symbol (lib_id "power:+5V") (at 198.12 21.59 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c7dc3fec-e7be-4b28-81f8-53cbaa3f4ca3)
-    (property "Reference" "#PWR032" (at 198.12 25.4 0)
+    (property "Reference" "#PWR049" (at 198.12 25.4 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 198.12 16.51 0)
@@ -1686,7 +1686,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR032") (unit 1)
+          (reference "#PWR049") (unit 1)
         )
       )
     )
@@ -1695,13 +1695,13 @@
   (symbol (lib_id "Device:C") (at 69.215 107.315 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c8d400cf-166d-4b25-877e-7bf63a04d7f6)
-    (property "Reference" "C11" (at 69.215 100.965 90)
+    (property "Reference" "C13" (at 69.215 100.965 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 69.215 103.505 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 73.025 106.3498 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 73.025 106.3498 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 69.215 107.315 0)
@@ -1712,7 +1712,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C11") (unit 1)
+          (reference "C13") (unit 1)
         )
       )
     )
@@ -1721,13 +1721,13 @@
   (symbol (lib_id "Device:R") (at 94.615 123.825 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid cba5884e-3100-4590-9fbd-79cfb72ce295)
-    (property "Reference" "R8" (at 96.52 126.365 90)
+    (property "Reference" "R14" (at 96.52 126.365 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 92.71 126.365 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 94.615 125.603 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 94.615 125.603 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 94.615 123.825 0)
@@ -1738,7 +1738,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R8") (unit 1)
+          (reference "R14") (unit 1)
         )
       )
     )
@@ -1747,7 +1747,7 @@
   (symbol (lib_id "Interface_USB:FT232RL") (at 197.485 55.245 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid cee76e43-e8a5-4c50-8c97-d8f16e70ce94)
-    (property "Reference" "U11" (at 202.2191 28.575 0)
+    (property "Reference" "U13" (at 202.2191 28.575 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "FT232RL" (at 202.2191 31.115 0)
@@ -1788,7 +1788,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "U11") (unit 1)
+          (reference "U13") (unit 1)
         )
       )
     )
@@ -1797,13 +1797,13 @@
   (symbol (lib_id "Device:R") (at 225.425 37.465 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid cf2d027e-af7a-49ff-9448-50a1695ac6a8)
-    (property "Reference" "R13" (at 226.695 35.56 90)
+    (property "Reference" "R19" (at 226.695 35.56 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 223.52 35.56 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 225.425 39.243 90)
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric" (at 225.425 39.243 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 225.425 37.465 0)
@@ -1814,7 +1814,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "R13") (unit 1)
+          (reference "R19") (unit 1)
         )
       )
     )
@@ -1823,7 +1823,7 @@
   (symbol (lib_id "power:GND") (at 113.665 25.4 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d08b16ad-7cce-4e22-aedb-c7f028506995)
-    (property "Reference" "#PWR026" (at 113.665 31.75 0)
+    (property "Reference" "#PWR043" (at 113.665 31.75 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 113.665 29.21 0)
@@ -1839,7 +1839,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR026") (unit 1)
+          (reference "#PWR043") (unit 1)
         )
       )
     )
@@ -1848,7 +1848,7 @@
   (symbol (lib_id "Interface_USB:FT232RL") (at 97.155 55.245 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid d76def9c-a283-4c0c-93e5-862cb16f2eae)
-    (property "Reference" "U9" (at 101.8891 28.575 0)
+    (property "Reference" "U11" (at 101.8891 28.575 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "FT232RL" (at 101.8891 31.115 0)
@@ -1889,7 +1889,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "U9") (unit 1)
+          (reference "U11") (unit 1)
         )
       )
     )
@@ -1898,7 +1898,7 @@
   (symbol (lib_id "power:GND") (at 123.19 123.825 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d9807935-c74f-4930-ad9c-c429904ed482)
-    (property "Reference" "#PWR027" (at 123.19 130.175 0)
+    (property "Reference" "#PWR044" (at 123.19 130.175 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 123.19 127.635 0)
@@ -1914,7 +1914,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR027") (unit 1)
+          (reference "#PWR044") (unit 1)
         )
       )
     )
@@ -1923,7 +1923,7 @@
   (symbol (lib_id "power:+5V") (at 59.69 105.41 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid da6cdb98-e6fa-4c2f-a115-b6af72f576af)
-    (property "Reference" "#PWR021" (at 59.69 109.22 0)
+    (property "Reference" "#PWR038" (at 59.69 109.22 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 59.69 100.33 0)
@@ -1939,7 +1939,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "#PWR021") (unit 1)
+          (reference "#PWR038") (unit 1)
         )
       )
     )
@@ -1948,13 +1948,13 @@
   (symbol (lib_id "Device:C") (at 207.645 23.495 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e0dff478-3c6b-4cc4-90bd-00a4e1dbb12a)
-    (property "Reference" "C16" (at 207.645 17.145 90)
+    (property "Reference" "C18" (at 207.645 17.145 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 207.645 19.685 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 211.455 22.5298 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 211.455 22.5298 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 207.645 23.495 0)
@@ -1965,7 +1965,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C16") (unit 1)
+          (reference "C18") (unit 1)
         )
       )
     )
@@ -1974,13 +1974,13 @@
   (symbol (lib_id "Device:C") (at 31.115 121.285 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid fe90d0b6-9d26-4ce0-9447-8b99516b6247)
-    (property "Reference" "C9" (at 31.115 114.935 90)
+    (property "Reference" "C11" (at 31.115 114.935 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100n" (at 31.115 117.475 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 34.925 120.3198 0)
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (at 34.925 120.3198 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 31.115 121.285 0)
@@ -1991,7 +1991,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/9766c679-f1a5-4712-83d0-7b490b793632"
-          (reference "C9") (unit 1)
+          (reference "C11") (unit 1)
         )
       )
     )
