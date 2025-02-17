@@ -793,7 +793,7 @@
   (symbol (lib_id "power:GND") (at 125.73 122.555 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 1c0d0f8f-1792-48a1-b8b6-4ef7554ac2e5)
-    (property "Reference" "#PWR08" (at 125.73 128.905 0)
+    (property "Reference" "#PWR010" (at 125.73 128.905 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 125.73 126.365 0)
@@ -809,7 +809,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "#PWR08") (unit 1)
+          (reference "#PWR010") (unit 1)
         )
       )
     )
@@ -818,13 +818,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x02") (at 153.67 48.895 270) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 303315b3-9221-4801-ab85-aba9052c1773)
-    (property "Reference" "J8" (at 149.225 48.895 90)
+    (property "Reference" "J6" (at 149.225 48.895 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "Conn_01x02" (at 147.955 47.625 90)
       (effects (font (size 1.27 1.27)) (justify right) hide)
     )
-    (property "Footprint" "" (at 153.67 48.895 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" (at 153.67 48.895 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 153.67 48.895 0)
@@ -835,7 +835,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J8") (unit 1)
+          (reference "J6") (unit 1)
         )
       )
     )
@@ -844,13 +844,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x08") (at 118.11 110.49 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 39081440-a016-4802-9185-ac942adf88dd)
-    (property "Reference" "J6" (at 118.11 94.615 0)
+    (property "Reference" "J2" (at 118.11 94.615 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "GPS SIM" (at 118.11 97.155 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "" (at 118.11 110.49 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical" (at 118.11 110.49 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 118.11 110.49 0)
@@ -867,7 +867,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J6") (unit 1)
+          (reference "J2") (unit 1)
         )
       )
     )
@@ -876,7 +876,7 @@
   (symbol (lib_id "BritishIdeas2:simpleRTK2B") (at 171.45 48.895 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 441c8a96-b3b7-4c53-a691-a3080b7033fc)
-    (property "Reference" "U4" (at 189.23 50.165 0)
+    (property "Reference" "U2" (at 189.23 50.165 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "simpleRTK2B" (at 170.815 50.165 0)
@@ -923,7 +923,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "U4") (unit 1)
+          (reference "U2") (unit 1)
         )
       )
     )
@@ -957,7 +957,7 @@
   (symbol (lib_id "power:GND") (at 184.15 100.33 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 6847c4a3-d0ab-4765-8812-4b8a6c98a64e)
-    (property "Reference" "#PWR03" (at 184.15 106.68 0)
+    (property "Reference" "#PWR015" (at 184.15 106.68 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 184.15 104.14 0)
@@ -973,7 +973,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR015") (unit 1)
         )
       )
     )
@@ -982,7 +982,7 @@
   (symbol (lib_id "BritishIdeas2:simpleRTK2B") (at 171.45 95.25 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 84cb30da-e398-4809-bcc7-921a88bf9f5b)
-    (property "Reference" "U1" (at 189.23 96.52 0)
+    (property "Reference" "U3" (at 189.23 96.52 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "simpleRTK2B" (at 170.815 96.52 0)
@@ -1029,7 +1029,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "U1") (unit 1)
+          (reference "U3") (unit 1)
         )
       )
     )
@@ -1038,13 +1038,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x02") (at 151.13 77.47 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 93e8da9f-4c11-4bff-9c22-122dfded51c3)
-    (property "Reference" "J2" (at 155.575 77.47 90)
+    (property "Reference" "J4" (at 155.575 77.47 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "Conn_01x02" (at 156.845 78.74 90)
       (effects (font (size 1.27 1.27)) (justify right) hide)
     )
-    (property "Footprint" "" (at 151.13 77.47 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" (at 151.13 77.47 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 151.13 77.47 0)
@@ -1055,7 +1055,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J2") (unit 1)
+          (reference "J4") (unit 1)
         )
       )
     )
@@ -1064,13 +1064,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x02") (at 151.13 127.635 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 95be6437-0bce-43fc-854f-a08dd5152214)
-    (property "Reference" "J4" (at 155.575 127.635 90)
+    (property "Reference" "J5" (at 155.575 127.635 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "Conn_01x02" (at 156.845 128.905 90)
       (effects (font (size 1.27 1.27)) (justify right) hide)
     )
-    (property "Footprint" "" (at 151.13 127.635 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" (at 151.13 127.635 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 151.13 127.635 0)
@@ -1081,7 +1081,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J4") (unit 1)
+          (reference "J5") (unit 1)
         )
       )
     )
@@ -1090,13 +1090,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x02") (at 151.13 31.115 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid b18cd2c5-06dc-4812-953c-a271bb9b00cc)
-    (property "Reference" "J7" (at 155.575 31.115 90)
+    (property "Reference" "J3" (at 155.575 31.115 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "Conn_01x02" (at 156.845 32.385 90)
       (effects (font (size 1.27 1.27)) (justify right) hide)
     )
-    (property "Footprint" "" (at 151.13 31.115 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" (at 151.13 31.115 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 151.13 31.115 0)
@@ -1107,7 +1107,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J7") (unit 1)
+          (reference "J3") (unit 1)
         )
       )
     )
@@ -1116,13 +1116,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x02") (at 153.67 95.25 270) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c603172a-d269-438e-ab04-2031cea08e4a)
-    (property "Reference" "J3" (at 149.225 95.25 90)
+    (property "Reference" "J7" (at 149.225 95.25 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "Conn_01x02" (at 147.955 93.98 90)
       (effects (font (size 1.27 1.27)) (justify right) hide)
     )
-    (property "Footprint" "" (at 153.67 95.25 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" (at 153.67 95.25 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 153.67 95.25 0)
@@ -1133,7 +1133,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J3") (unit 1)
+          (reference "J7") (unit 1)
         )
       )
     )
@@ -1142,7 +1142,7 @@
   (symbol (lib_id "BritishIdeas2:simpleRTK2B") (at 171.45 145.415 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d3021014-0e99-44da-91f7-36651cd76c39)
-    (property "Reference" "U2" (at 189.23 146.685 0)
+    (property "Reference" "U4" (at 189.23 146.685 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "simpleRTK2B" (at 170.815 146.685 0)
@@ -1189,7 +1189,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "U2") (unit 1)
+          (reference "U4") (unit 1)
         )
       )
     )
@@ -1198,7 +1198,7 @@
   (symbol (lib_id "power:+5V") (at 182.88 125.73 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e2913025-d0f5-4f4d-978f-e4ef1650bea5)
-    (property "Reference" "#PWR02" (at 182.88 129.54 0)
+    (property "Reference" "#PWR013" (at 182.88 129.54 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 182.88 121.92 0)
@@ -1214,7 +1214,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "#PWR02") (unit 1)
+          (reference "#PWR013") (unit 1)
         )
       )
     )
@@ -1223,7 +1223,7 @@
   (symbol (lib_id "power:+5V") (at 182.88 75.565 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e2f15465-e39a-4863-ba98-8ca7548321b9)
-    (property "Reference" "#PWR01" (at 182.88 79.375 0)
+    (property "Reference" "#PWR012" (at 182.88 79.375 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 182.88 71.755 0)
@@ -1239,7 +1239,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "#PWR01") (unit 1)
+          (reference "#PWR012") (unit 1)
         )
       )
     )
@@ -1248,7 +1248,7 @@
   (symbol (lib_id "power:GND") (at 184.15 53.975 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e41c2732-1630-48f9-960f-b05535b29ffb)
-    (property "Reference" "#PWR012" (at 184.15 60.325 0)
+    (property "Reference" "#PWR014" (at 184.15 60.325 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 184.15 57.785 0)
@@ -1264,7 +1264,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "#PWR012") (unit 1)
+          (reference "#PWR014") (unit 1)
         )
       )
     )
@@ -1273,7 +1273,7 @@
   (symbol (lib_id "power:GND") (at 184.15 150.495 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid ee44490e-cf5f-40e6-a3a8-642f520c6789)
-    (property "Reference" "#PWR04" (at 184.15 156.845 0)
+    (property "Reference" "#PWR016" (at 184.15 156.845 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 184.15 154.305 0)
@@ -1289,7 +1289,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR016") (unit 1)
         )
       )
     )
@@ -1323,13 +1323,13 @@
   (symbol (lib_id "Connector_Generic:Conn_01x02") (at 153.67 145.415 270) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid f820aeb4-a468-4cd9-9f11-c403811be73b)
-    (property "Reference" "J5" (at 149.225 145.415 90)
+    (property "Reference" "J8" (at 149.225 145.415 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "Conn_01x02" (at 147.955 144.145 90)
       (effects (font (size 1.27 1.27)) (justify right) hide)
     )
-    (property "Footprint" "" (at 153.67 145.415 0)
+    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" (at 153.67 145.415 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 153.67 145.415 0)
@@ -1340,7 +1340,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/48880a4c-aed5-4e9d-965e-feee3f5b433a"
-          (reference "J5") (unit 1)
+          (reference "J8") (unit 1)
         )
       )
     )
