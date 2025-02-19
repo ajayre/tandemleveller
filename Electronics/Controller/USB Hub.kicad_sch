@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2025-02-16")
+    (date "2025-02-18")
     (rev "V1.0")
     (company "(C) andy@britishideas.com 2025")
     (comment 1 "For personal use only, no commercial use")
@@ -2211,7 +2211,7 @@
   (symbol (lib_id "power:GND") (at 36.195 114.935 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 034fab2e-f81b-4fed-bf3a-448c13e8feef)
-    (property "Reference" "#PWR060" (at 36.195 121.285 0)
+    (property "Reference" "#PWR057" (at 36.195 121.285 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 36.195 119.38 0)
@@ -2227,7 +2227,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR060") (unit 1)
+          (reference "#PWR057") (unit 1)
         )
       )
     )
@@ -2236,7 +2236,7 @@
   (symbol (lib_id "power:GND") (at 68.58 31.75 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 08c19982-a3ee-4eb2-816f-31c434196afd)
-    (property "Reference" "#PWR063" (at 68.58 38.1 0)
+    (property "Reference" "#PWR060" (at 68.58 38.1 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 68.58 35.56 0)
@@ -2252,7 +2252,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR063") (unit 1)
+          (reference "#PWR060") (unit 1)
         )
       )
     )
@@ -2261,7 +2261,7 @@
   (symbol (lib_id "power:GND") (at 38.1 149.86 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 10aa2e17-3fd8-412a-b763-0957f49869f4)
-    (property "Reference" "#PWR061" (at 38.1 156.21 0)
+    (property "Reference" "#PWR058" (at 38.1 156.21 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 38.1 154.305 0)
@@ -2277,7 +2277,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR061") (unit 1)
+          (reference "#PWR058") (unit 1)
         )
       )
     )
@@ -2286,7 +2286,7 @@
   (symbol (lib_id "Device:R") (at 36.195 88.265 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 1af7dfef-873b-452a-a9a6-45095e81b91d)
-    (property "Reference" "R23" (at 36.195 83.82 90)
+    (property "Reference" "R20" (at 36.195 83.82 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1M" (at 36.195 85.725 90)
@@ -2303,7 +2303,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R23") (unit 1)
+          (reference "R20") (unit 1)
         )
       )
     )
@@ -2312,7 +2312,7 @@
   (symbol (lib_id "Device:R") (at 88.265 126.365 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 24ff7488-2907-44ef-9d88-489b048caccf)
-    (property "Reference" "R30" (at 82.55 125.095 0)
+    (property "Reference" "R27" (at 82.55 125.095 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "12k" (at 83.185 127.635 0)
@@ -2332,7 +2332,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R30") (unit 1)
+          (reference "R27") (unit 1)
         )
       )
     )
@@ -2448,7 +2448,7 @@
   (symbol (lib_id "Device:R") (at 74.93 160.655 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 35657f32-e03c-44e7-a1e5-d5728a421ae1)
-    (property "Reference" "R26" (at 77.47 159.385 0)
+    (property "Reference" "R23" (at 77.47 159.385 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 77.47 161.925 0)
@@ -2465,7 +2465,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R26") (unit 1)
+          (reference "R23") (unit 1)
         )
       )
     )
@@ -2474,7 +2474,7 @@
   (symbol (lib_id "power:GND") (at 105.41 30.48 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 3cc6eaf4-0b08-4832-a2cb-acfedd679db3)
-    (property "Reference" "#PWR072" (at 105.41 36.83 0)
+    (property "Reference" "#PWR069" (at 105.41 36.83 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 105.41 34.29 0)
@@ -2490,7 +2490,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR072") (unit 1)
+          (reference "#PWR069") (unit 1)
         )
       )
     )
@@ -2499,7 +2499,7 @@
   (symbol (lib_id "Device:R") (at 199.39 54.61 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3e8ff823-7151-42b0-8982-0997a4810a08)
-    (property "Reference" "R34" (at 201.93 53.34 0)
+    (property "Reference" "R31" (at 201.93 53.34 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 201.93 55.88 0)
@@ -2516,7 +2516,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R34") (unit 1)
+          (reference "R31") (unit 1)
         )
       )
     )
@@ -2551,7 +2551,7 @@
   (symbol (lib_id "power:+3V3") (at 104.14 168.91 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 3f9b6677-70aa-4fb5-bf18-2c3913a835a1)
-    (property "Reference" "#PWR071" (at 104.14 172.72 0)
+    (property "Reference" "#PWR068" (at 104.14 172.72 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 104.14 165.1 0)
@@ -2567,7 +2567,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR071") (unit 1)
+          (reference "#PWR068") (unit 1)
         )
       )
     )
@@ -2576,7 +2576,7 @@
   (symbol (lib_id "power:GND") (at 83.82 97.155 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4d0a5efa-65cc-4ecb-a81e-d8198c35cd67)
-    (property "Reference" "#PWR069" (at 83.82 103.505 0)
+    (property "Reference" "#PWR066" (at 83.82 103.505 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 83.82 100.965 0)
@@ -2592,7 +2592,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR069") (unit 1)
+          (reference "#PWR066") (unit 1)
         )
       )
     )
@@ -2656,7 +2656,7 @@
   (symbol (lib_id "Device:R") (at 71.755 95.885 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 5246a7a9-6426-4bff-b4b2-a9b54fc13526)
-    (property "Reference" "R25" (at 74.295 94.615 0)
+    (property "Reference" "R22" (at 74.295 94.615 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 74.295 97.155 0)
@@ -2673,7 +2673,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R25") (unit 1)
+          (reference "R22") (unit 1)
         )
       )
     )
@@ -2708,7 +2708,7 @@
   (symbol (lib_id "power:+3V3") (at 199.39 67.31 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 55657d62-a260-4d91-8be9-ed6cc00ae76e)
-    (property "Reference" "#PWR078" (at 199.39 71.12 0)
+    (property "Reference" "#PWR075" (at 199.39 71.12 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 199.39 63.5 0)
@@ -2724,7 +2724,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR078") (unit 1)
+          (reference "#PWR075") (unit 1)
         )
       )
     )
@@ -2733,7 +2733,7 @@
   (symbol (lib_id "Connector:USB_B_Mini") (at 43.815 46.99 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 586fc853-007e-4e03-92d3-6a9a249b5663)
-    (property "Reference" "J16" (at 43.815 34.29 0)
+    (property "Reference" "J17" (at 43.815 34.29 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "MASTER TABLET" (at 43.815 36.83 0)
@@ -2757,7 +2757,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "J16") (unit 1)
+          (reference "J17") (unit 1)
         )
       )
     )
@@ -2818,7 +2818,7 @@
   (symbol (lib_id "power:GND") (at 159.385 34.29 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 663c8685-9c39-4c7e-acc2-2bf5e3deac09)
-    (property "Reference" "#PWR076" (at 159.385 40.64 0)
+    (property "Reference" "#PWR073" (at 159.385 40.64 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 159.385 38.1 0)
@@ -2834,7 +2834,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR076") (unit 1)
+          (reference "#PWR073") (unit 1)
         )
       )
     )
@@ -2869,7 +2869,7 @@
   (symbol (lib_id "power:GND") (at 77.47 127 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 6c948230-9571-4e77-9a4f-03c22ec0b787)
-    (property "Reference" "#PWR068" (at 77.47 133.35 0)
+    (property "Reference" "#PWR065" (at 77.47 133.35 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 77.47 130.81 0)
@@ -2885,7 +2885,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR068") (unit 1)
+          (reference "#PWR065") (unit 1)
         )
       )
     )
@@ -2920,7 +2920,7 @@
   (symbol (lib_id "Connector:USB_A") (at 241.935 137.795 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 71b4de50-bf74-4b33-a58d-5b9c906e1ae1)
-    (property "Reference" "J18" (at 248.92 136.525 0)
+    (property "Reference" "J19" (at 248.92 136.525 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "292303-7" (at 248.92 139.065 0)
@@ -2940,7 +2940,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "J18") (unit 1)
+          (reference "J19") (unit 1)
         )
       )
     )
@@ -2949,7 +2949,7 @@
   (symbol (lib_id "Device:R") (at 199.39 87.63 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 7812e1f4-6873-4652-af4e-7abe0313c2f5)
-    (property "Reference" "R36" (at 201.93 86.36 0)
+    (property "Reference" "R33" (at 201.93 86.36 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 201.93 88.9 0)
@@ -2966,7 +2966,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R36") (unit 1)
+          (reference "R33") (unit 1)
         )
       )
     )
@@ -2975,7 +2975,7 @@
   (symbol (lib_id "power:+3V3") (at 199.39 50.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 7c83eeb5-2224-42b5-acd0-9b31df54a79b)
-    (property "Reference" "#PWR077" (at 199.39 54.61 0)
+    (property "Reference" "#PWR074" (at 199.39 54.61 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 199.39 46.99 0)
@@ -2991,7 +2991,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR077") (unit 1)
+          (reference "#PWR074") (unit 1)
         )
       )
     )
@@ -3000,7 +3000,7 @@
   (symbol (lib_id "power:+3V3") (at 199.39 116.84 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 7d02fb1e-4106-4291-b1b1-6a40c8211b0d)
-    (property "Reference" "#PWR081" (at 199.39 120.65 0)
+    (property "Reference" "#PWR078" (at 199.39 120.65 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 199.39 113.03 0)
@@ -3016,7 +3016,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR081") (unit 1)
+          (reference "#PWR078") (unit 1)
         )
       )
     )
@@ -3025,7 +3025,7 @@
   (symbol (lib_id "power:+3V3") (at 71.755 92.075 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 819f7733-d711-4eef-ad92-2f8875ee2681)
-    (property "Reference" "#PWR064" (at 71.755 95.885 0)
+    (property "Reference" "#PWR061" (at 71.755 95.885 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 71.755 88.265 0)
@@ -3041,7 +3041,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR064") (unit 1)
+          (reference "#PWR061") (unit 1)
         )
       )
     )
@@ -3050,7 +3050,7 @@
   (symbol (lib_id "power:+5V") (at 219.71 73.025 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 822bea81-c9b3-467a-82ef-856c2e4a94cd)
-    (property "Reference" "#PWR082" (at 219.71 76.835 0)
+    (property "Reference" "#PWR079" (at 219.71 76.835 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 219.71 69.215 0)
@@ -3066,7 +3066,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR082") (unit 1)
+          (reference "#PWR079") (unit 1)
         )
       )
     )
@@ -3075,7 +3075,7 @@
   (symbol (lib_id "power:+3V3") (at 199.39 83.82 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 83d881b2-35d5-4a3c-8815-78fc2553323f)
-    (property "Reference" "#PWR079" (at 199.39 87.63 0)
+    (property "Reference" "#PWR076" (at 199.39 87.63 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 199.39 80.01 0)
@@ -3091,7 +3091,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR079") (unit 1)
+          (reference "#PWR076") (unit 1)
         )
       )
     )
@@ -3100,7 +3100,7 @@
   (symbol (lib_id "power:+3V3") (at 117.475 39.37 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 86ea577d-fdd4-444d-8e3f-02a9dd672814)
-    (property "Reference" "#PWR073" (at 117.475 43.18 0)
+    (property "Reference" "#PWR070" (at 117.475 43.18 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 117.475 35.56 0)
@@ -3116,7 +3116,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR073") (unit 1)
+          (reference "#PWR070") (unit 1)
         )
       )
     )
@@ -3209,7 +3209,7 @@
   (symbol (lib_id "power:GND") (at 128.905 167.005 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 8a4520c1-5816-4e1f-9466-101d81f8e908)
-    (property "Reference" "#PWR074" (at 128.905 173.355 0)
+    (property "Reference" "#PWR071" (at 128.905 173.355 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 128.905 171.45 0)
@@ -3225,7 +3225,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR074") (unit 1)
+          (reference "#PWR071") (unit 1)
         )
       )
     )
@@ -3260,7 +3260,7 @@
   (symbol (lib_id "power:+3V3") (at 159.385 21.59 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 955041f5-b6c0-4588-8a11-767934d925fa)
-    (property "Reference" "#PWR075" (at 159.385 25.4 0)
+    (property "Reference" "#PWR072" (at 159.385 25.4 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 159.385 17.78 0)
@@ -3276,7 +3276,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR075") (unit 1)
+          (reference "#PWR072") (unit 1)
         )
       )
     )
@@ -3285,7 +3285,7 @@
   (symbol (lib_id "Device:R") (at 199.39 71.12 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 9e84adeb-e367-4e0e-8cf7-af66b5526fb1)
-    (property "Reference" "R35" (at 201.93 69.85 0)
+    (property "Reference" "R32" (at 201.93 69.85 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 201.93 72.39 0)
@@ -3302,7 +3302,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R35") (unit 1)
+          (reference "R32") (unit 1)
         )
       )
     )
@@ -3311,7 +3311,7 @@
   (symbol (lib_id "power:GND") (at 241.935 158.115 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid a136f327-61b2-4d80-bc0c-4c0b944061c7)
-    (property "Reference" "#PWR085" (at 241.935 164.465 0)
+    (property "Reference" "#PWR082" (at 241.935 164.465 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 241.935 161.925 0)
@@ -3327,7 +3327,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR085") (unit 1)
+          (reference "#PWR082") (unit 1)
         )
       )
     )
@@ -3336,7 +3336,7 @@
   (symbol (lib_id "Device:R") (at 199.39 104.14 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid a2e23328-d8ce-41de-a697-ddf386bf9a5e)
-    (property "Reference" "R37" (at 201.93 102.87 0)
+    (property "Reference" "R34" (at 201.93 102.87 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 201.93 105.41 0)
@@ -3353,7 +3353,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R37") (unit 1)
+          (reference "R34") (unit 1)
         )
       )
     )
@@ -3362,7 +3362,7 @@
   (symbol (lib_id "Device:R") (at 105.41 26.67 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid a7759cd7-8e81-4d02-a729-e41359ffd3e6)
-    (property "Reference" "R33" (at 107.315 25.4 0)
+    (property "Reference" "R30" (at 107.315 25.4 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "100k" (at 107.315 27.94 0)
@@ -3379,7 +3379,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R33") (unit 1)
+          (reference "R30") (unit 1)
         )
       )
     )
@@ -3388,7 +3388,7 @@
   (symbol (lib_id "Device:R") (at 104.14 172.72 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid ae77361a-edf4-4cfd-b753-ca9edbfb1077)
-    (property "Reference" "R32" (at 106.68 171.45 0)
+    (property "Reference" "R29" (at 106.68 171.45 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 106.68 173.99 0)
@@ -3405,7 +3405,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R32") (unit 1)
+          (reference "R29") (unit 1)
         )
       )
     )
@@ -3414,7 +3414,7 @@
   (symbol (lib_id "Device:R") (at 66.675 160.655 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid b0d99544-33bf-42ed-b4fc-07a7814e6140)
-    (property "Reference" "R24" (at 69.215 159.385 0)
+    (property "Reference" "R21" (at 69.215 159.385 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 69.215 161.925 0)
@@ -3431,7 +3431,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R24") (unit 1)
+          (reference "R21") (unit 1)
         )
       )
     )
@@ -3440,7 +3440,7 @@
   (symbol (lib_id "Device:R") (at 81.28 175.895 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid b1267711-1036-4b49-96bd-bee71fb4a478)
-    (property "Reference" "R29" (at 81.28 170.18 90)
+    (property "Reference" "R26" (at 81.28 170.18 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "330" (at 81.28 172.72 90)
@@ -3457,7 +3457,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R29") (unit 1)
+          (reference "R26") (unit 1)
         )
       )
     )
@@ -3523,7 +3523,7 @@
   (symbol (lib_id "power:+3V3") (at 199.39 100.33 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid b539a9ab-57eb-4da9-8752-a12d3340eeb4)
-    (property "Reference" "#PWR080" (at 199.39 104.14 0)
+    (property "Reference" "#PWR077" (at 199.39 104.14 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 199.39 96.52 0)
@@ -3539,7 +3539,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR080") (unit 1)
+          (reference "#PWR077") (unit 1)
         )
       )
     )
@@ -3574,7 +3574,7 @@
   (symbol (lib_id "power:GND") (at 74.93 185.42 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid bb4936f4-446c-495f-b3cc-fbce9bb389a6)
-    (property "Reference" "#PWR066" (at 74.93 191.77 0)
+    (property "Reference" "#PWR063" (at 74.93 191.77 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 74.93 189.865 0)
@@ -3590,7 +3590,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR066") (unit 1)
+          (reference "#PWR063") (unit 1)
         )
       )
     )
@@ -3599,7 +3599,7 @@
   (symbol (lib_id "power:GND") (at 241.935 120.65 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c2c10256-0086-4a71-b4db-8f5c8fc103d0)
-    (property "Reference" "#PWR084" (at 241.935 127 0)
+    (property "Reference" "#PWR081" (at 241.935 127 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 241.935 124.46 0)
@@ -3615,7 +3615,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR084") (unit 1)
+          (reference "#PWR081") (unit 1)
         )
       )
     )
@@ -3676,7 +3676,7 @@
   (symbol (lib_id "power:+3V3") (at 74.93 154.305 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c6660c3b-0133-4607-896e-ab47bef18bec)
-    (property "Reference" "#PWR065" (at 74.93 158.115 0)
+    (property "Reference" "#PWR062" (at 74.93 158.115 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 74.93 150.495 0)
@@ -3692,7 +3692,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR065") (unit 1)
+          (reference "#PWR062") (unit 1)
         )
       )
     )
@@ -3816,7 +3816,7 @@
   (symbol (lib_id "Connector:USB_A") (at 241.935 100.33 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e31db98d-7154-49be-86c1-4f6fb43d8d8d)
-    (property "Reference" "J17" (at 248.285 99.06 0)
+    (property "Reference" "J18" (at 248.285 99.06 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "292303-7" (at 248.285 101.6 0)
@@ -3836,7 +3836,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "J17") (unit 1)
+          (reference "J18") (unit 1)
         )
       )
     )
@@ -3874,7 +3874,7 @@
   (symbol (lib_id "power:GND") (at 41.275 61.595 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e9d1a7ee-a091-41a7-b210-b2d467cf6a3d)
-    (property "Reference" "#PWR062" (at 41.275 67.945 0)
+    (property "Reference" "#PWR059" (at 41.275 67.945 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 41.275 65.405 0)
@@ -3890,7 +3890,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR062") (unit 1)
+          (reference "#PWR059") (unit 1)
         )
       )
     )
@@ -3925,7 +3925,7 @@
   (symbol (lib_id "power:GND") (at 88.265 130.175 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid eb89093b-198e-4de8-b285-99d4a86694ba)
-    (property "Reference" "#PWR070" (at 88.265 136.525 0)
+    (property "Reference" "#PWR067" (at 88.265 136.525 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 88.265 133.985 0)
@@ -3941,7 +3941,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR070") (unit 1)
+          (reference "#PWR067") (unit 1)
         )
       )
     )
@@ -3950,7 +3950,7 @@
   (symbol (lib_id "power:+3V3") (at 77.47 109.22 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid ec58141e-c60b-431a-ba11-61e4aed4ef67)
-    (property "Reference" "#PWR067" (at 77.47 113.03 0)
+    (property "Reference" "#PWR064" (at 77.47 113.03 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 77.47 105.41 0)
@@ -3966,7 +3966,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR067") (unit 1)
+          (reference "#PWR064") (unit 1)
         )
       )
     )
@@ -3975,7 +3975,7 @@
   (symbol (lib_id "Device:R") (at 74.93 181.61 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid eee71476-4337-4552-b3c7-308ad67811e1)
-    (property "Reference" "R27" (at 77.47 180.34 0)
+    (property "Reference" "R24" (at 77.47 180.34 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "100k" (at 77.47 182.88 0)
@@ -3992,7 +3992,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R27") (unit 1)
+          (reference "R24") (unit 1)
         )
       )
     )
@@ -4001,7 +4001,7 @@
   (symbol (lib_id "power:GND") (at 233.68 81.915 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid f271cc0f-b343-48ba-8287-d801fd16e534)
-    (property "Reference" "#PWR083" (at 233.68 88.265 0)
+    (property "Reference" "#PWR080" (at 233.68 88.265 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 233.68 85.725 0)
@@ -4017,7 +4017,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "#PWR083") (unit 1)
+          (reference "#PWR080") (unit 1)
         )
       )
     )
@@ -4052,7 +4052,7 @@
   (symbol (lib_id "Device:R") (at 77.47 113.03 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid f84ce87d-915f-4e5d-a578-6a84255843ea)
-    (property "Reference" "R28" (at 70.485 111.76 0)
+    (property "Reference" "R25" (at 70.485 111.76 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "100k" (at 69.85 114.3 0)
@@ -4069,7 +4069,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R28") (unit 1)
+          (reference "R25") (unit 1)
         )
       )
     )
@@ -4078,7 +4078,7 @@
   (symbol (lib_id "Device:R") (at 99.06 19.05 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid fa730f26-616f-467f-8cc7-521e8cf297ee)
-    (property "Reference" "R31" (at 99.06 14.605 90)
+    (property "Reference" "R28" (at 99.06 14.605 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "100k" (at 99.06 16.51 90)
@@ -4095,7 +4095,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R31") (unit 1)
+          (reference "R28") (unit 1)
         )
       )
     )
@@ -4104,7 +4104,7 @@
   (symbol (lib_id "Device:R") (at 199.39 120.65 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid fdb068f2-6808-4bb4-8a3c-2fe914dfbafe)
-    (property "Reference" "R38" (at 201.93 119.38 0)
+    (property "Reference" "R35" (at 201.93 119.38 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 201.93 121.92 0)
@@ -4121,7 +4121,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/1cd899d7-b38b-4987-817a-614911419488"
-          (reference "R38") (unit 1)
+          (reference "R35") (unit 1)
         )
       )
     )
