@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2025-02-16")
+    (date "2025-02-18")
     (rev "V1.0")
     (company "(C) andy@britishideas.com 2025")
     (comment 1 "For personal use only, no commercial use")
@@ -544,6 +544,46 @@
         )
       )
     )
+    (symbol "power:PWR_FLAG" (power) (pin_numbers hide) (pin_names (offset 0) hide) (in_bom yes) (on_board yes)
+      (property "Reference" "#FLG" (at 0 1.905 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "PWR_FLAG" (at 0 3.81 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Datasheet" "~" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_keywords" "flag power" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_description" "Special symbol for telling ERC where power comes from" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (symbol "PWR_FLAG_0_0"
+        (pin power_out line (at 0 0 90) (length 0)
+          (name "pwr" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+      )
+      (symbol "PWR_FLAG_0_1"
+        (polyline
+          (pts
+            (xy 0 0)
+            (xy 0 1.27)
+            (xy -1.016 1.905)
+            (xy 0 2.54)
+            (xy 1.016 1.905)
+            (xy 0 1.27)
+          )
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+      )
+    )
   )
 
   (junction (at 211.455 81.915) (diameter 0) (color 0 0 0 0)
@@ -578,6 +618,9 @@
   )
   (junction (at 90.805 127) (diameter 0) (color 0 0 0 0)
     (uuid d6f18ad4-17e3-462b-a859-ea1930b1dd9b)
+  )
+  (junction (at 222.885 61.595) (diameter 0) (color 0 0 0 0)
+    (uuid e5f6b534-e925-4400-916a-a00f52f54467)
   )
   (junction (at 96.52 67.945) (diameter 0) (color 0 0 0 0)
     (uuid e87520e1-6325-4d67-aa6d-f026211024b7)
@@ -623,6 +666,10 @@
   (wire (pts (xy 142.875 80.645) (xy 146.685 80.645))
     (stroke (width 0) (type default))
     (uuid 043544e8-b7cb-43f8-ba31-c37ab2e7abbf)
+  )
+  (wire (pts (xy 222.885 61.595) (xy 225.425 61.595))
+    (stroke (width 0) (type default))
+    (uuid 078a3c3c-b51f-4c4b-bc17-ae4fd0a900fd)
   )
   (wire (pts (xy 98.425 72.39) (xy 98.425 74.295))
     (stroke (width 0) (type default))
@@ -909,7 +956,7 @@
   (symbol (lib_id "power:+5V") (at 96.52 66.04 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0ba5e4ff-46bc-4a6c-8524-fc04b633b6c3)
-    (property "Reference" "#PWR053" (at 96.52 69.85 0)
+    (property "Reference" "#PWR050" (at 96.52 69.85 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 96.52 60.96 0)
@@ -925,7 +972,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR053") (unit 1)
+          (reference "#PWR050") (unit 1)
         )
       )
     )
@@ -934,7 +981,7 @@
   (symbol (lib_id "power:GND") (at 98.425 128.905 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 15135887-84e8-402f-bd85-1d2b13a755fa)
-    (property "Reference" "#PWR054" (at 98.425 135.255 0)
+    (property "Reference" "#PWR051" (at 98.425 135.255 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 98.425 133.985 0)
@@ -950,7 +997,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR054") (unit 1)
+          (reference "#PWR051") (unit 1)
         )
       )
     )
@@ -985,7 +1032,7 @@
   (symbol (lib_id "power:GND") (at 238.76 104.14 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 22b4a963-4eec-4c9f-aec7-7cd82cff44dd)
-    (property "Reference" "#PWR059" (at 238.76 110.49 0)
+    (property "Reference" "#PWR056" (at 238.76 110.49 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 238.76 107.95 0)
@@ -1001,7 +1048,32 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR059") (unit 1)
+          (reference "#PWR056") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:PWR_FLAG") (at 225.425 61.595 270) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 2f659a9f-166e-426f-b31c-f9abb5603389)
+    (property "Reference" "#FLG06" (at 227.33 61.595 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "PWR_FLAG" (at 228.6 61.595 90)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "" (at 225.425 61.595 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 225.425 61.595 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid b75d484c-faf6-4d70-860a-8604eded910a))
+    (instances
+      (project "Tandem Leveller Controller"
+        (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
+          (reference "#FLG06") (unit 1)
         )
       )
     )
@@ -1010,7 +1082,7 @@
   (symbol (lib_id "power:GND") (at 176.53 128.905 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 364871f4-645c-4800-9749-caf082d67d9c)
-    (property "Reference" "#PWR057" (at 176.53 135.255 0)
+    (property "Reference" "#PWR054" (at 176.53 135.255 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 176.53 133.985 0)
@@ -1026,7 +1098,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR057") (unit 1)
+          (reference "#PWR054") (unit 1)
         )
       )
     )
@@ -1111,7 +1183,7 @@
   (symbol (lib_id "power:GND") (at 52.705 84.455 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4be9f167-40e4-4cc0-8436-9ff4c5780aa4)
-    (property "Reference" "#PWR052" (at 52.705 90.805 0)
+    (property "Reference" "#PWR049" (at 52.705 90.805 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 52.705 88.265 0)
@@ -1127,7 +1199,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR052") (unit 1)
+          (reference "#PWR049") (unit 1)
         )
       )
     )
@@ -1191,7 +1263,7 @@
   (symbol (lib_id "Device:R") (at 123.825 81.915 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 8cbcb092-4cb0-4c03-b8bc-c4f70bb32d09)
-    (property "Reference" "R21" (at 125.095 80.01 90)
+    (property "Reference" "R18" (at 125.095 80.01 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 121.92 80.01 90)
@@ -1208,7 +1280,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "R21") (unit 1)
+          (reference "R18") (unit 1)
         )
       )
     )
@@ -1243,7 +1315,7 @@
   (symbol (lib_id "Connector:USB_B_Mini") (at 236.22 89.535 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid af282baa-83de-459e-b279-50a9b4681162)
-    (property "Reference" "J15" (at 236.22 76.835 0)
+    (property "Reference" "J16" (at 236.22 76.835 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SLAVE TABLET" (at 236.22 79.375 0)
@@ -1267,7 +1339,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "J15") (unit 1)
+          (reference "J16") (unit 1)
         )
       )
     )
@@ -1326,7 +1398,7 @@
   (symbol (lib_id "Device:R") (at 131.445 84.455 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c1d87070-ac65-4d5f-a356-ec9281c0339f)
-    (property "Reference" "R22" (at 133.35 86.995 90)
+    (property "Reference" "R19" (at 133.35 86.995 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "1k" (at 129.54 86.995 90)
@@ -1343,7 +1415,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "R22") (unit 1)
+          (reference "R19") (unit 1)
         )
       )
     )
@@ -1352,7 +1424,7 @@
   (symbol (lib_id "power:GND") (at 211.455 83.185 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c5c84da9-21c2-4758-981c-c925c847573d)
-    (property "Reference" "#PWR058" (at 211.455 89.535 0)
+    (property "Reference" "#PWR055" (at 211.455 89.535 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 211.455 86.995 0)
@@ -1368,7 +1440,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR058") (unit 1)
+          (reference "#PWR055") (unit 1)
         )
       )
     )
@@ -1377,7 +1449,7 @@
   (symbol (lib_id "power:GND") (at 112.395 69.85 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid ce874f5c-b65c-4ae4-9ce8-ed8288d8e025)
-    (property "Reference" "#PWR055" (at 112.395 76.2 0)
+    (property "Reference" "#PWR052" (at 112.395 76.2 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 112.395 73.66 0)
@@ -1393,7 +1465,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR055") (unit 1)
+          (reference "#PWR052") (unit 1)
         )
       )
     )
@@ -1402,7 +1474,7 @@
   (symbol (lib_id "power:GND") (at 162.56 63.5 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e2136daa-9ba0-4e7d-ab8e-359e615ab2fe)
-    (property "Reference" "#PWR056" (at 162.56 69.85 0)
+    (property "Reference" "#PWR053" (at 162.56 69.85 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 162.56 67.31 0)
@@ -1418,7 +1490,7 @@
     (instances
       (project "Tandem Leveller Controller"
         (path "/56ffd1a6-bbed-43b6-8aa8-f23f49f76448/996de356-8852-43bb-9787-2c246f9a1860"
-          (reference "#PWR056") (unit 1)
+          (reference "#PWR053") (unit 1)
         )
       )
     )
