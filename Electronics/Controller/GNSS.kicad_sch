@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2025-02-19")
+    (date "2025-02-22")
     (rev "V1.0")
     (company "(C) andy@britishideas.com 2025")
     (comment 1 "For personal use only, no commercial use")
@@ -850,10 +850,13 @@
     (property "Value" "GPS SIM" (at 118.11 97.155 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x04_P2.54mm_Vertical" (at 118.11 110.49 0)
+    (property "Footprint" "Connector_JST:JST_PH_B8B-PH-K_1x08_P2.00mm_Vertical" (at 118.11 110.49 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 118.11 110.49 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "manf#" "B8B-PH-K-S" (at 118.11 110.49 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "5" (uuid 65e1862b-b33d-4d5a-bf99-7c20d74e8d10))
