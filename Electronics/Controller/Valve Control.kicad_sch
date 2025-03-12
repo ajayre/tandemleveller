@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2025-02-22")
+    (date "2025-03-11")
     (rev "V1.0")
     (company "(C) andy@britishideas.com 2025")
     (comment 1 "For personal use only, no commercial use")
@@ -238,7 +238,7 @@
     (property "manf#" "B5B-PH-K-S" (at 152.4 83.82 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Field5" "" (at 152.4 83.82 0)
+    (property "LCSC" "C157993" (at 152.4 83.82 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 58a47ea8-1bd4-4080-bf61-b3f560c457c7))
@@ -296,6 +296,9 @@
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "manf#" "B5B-PH-K-S" (at 152.4 102.87 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "LCSC" "C157993" (at 152.4 102.87 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 776076f1-e903-415d-a567-aba9e950aae3))
