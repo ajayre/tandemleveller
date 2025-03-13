@@ -912,7 +912,7 @@
     (property "Datasheet" "" (at 83.185 173.355 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C2897377" (at 83.185 173.355 0)
+    (property "LCSC" "" (at 83.185 173.355 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "16" (uuid 6d8346fe-759a-4077-afc8-05b55c7273ad))
