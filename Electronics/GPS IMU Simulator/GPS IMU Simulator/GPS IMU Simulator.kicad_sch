@@ -1087,7 +1087,7 @@
     (property "Datasheet" "" (at 133.985 190.5 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C2897377" (at 133.985 190.5 0)
+    (property "LCSC" "" (at 133.985 190.5 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "16" (uuid 86596f18-b909-491d-bb78-bc2498c39374))
