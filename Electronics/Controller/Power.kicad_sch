@@ -1837,6 +1837,9 @@
     (property "LCSC" "" (at 123.825 96.52 0)
       (effects (font (size 1.27 1.27)) hide)
     )
+    (property "manf#" "AWVS00808040330M00" (at 123.825 96.52 90)
+      (effects (font (size 1.27 1.27)) hide)
+    )
     (pin "1" (uuid c33e5a5a-9877-4d24-8e5c-dd5278aa8226))
     (pin "2" (uuid a6dc1587-06d8-4596-8547-e31a38c97ce6))
     (instances
