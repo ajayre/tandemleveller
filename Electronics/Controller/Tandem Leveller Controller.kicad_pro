@@ -502,7 +502,7 @@
       "idf": "",
       "netlist": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "CAD/Tandem Leveller Controller.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
