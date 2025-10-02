@@ -1,7 +1,13 @@
 #include <Arduino.h>
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
-//#include "TeensyDebug/TeensyDebug.h"
-//#include <usb_serial.h>
+#include <TimerOne.h>
+
+// front height:
+//  dir = low, PWM output on M1A
+//  dir = high, PWM output on M1B
+// rear height:
+//  dir = low, PWM output on M2A
+//  dir = high, PWM output on M2B
 
 // GPIO pins
 #define FRONT_HEIGHT_DIR 0
@@ -12,11 +18,18 @@
 #define FRONT_DUMP_PWM   5
 #define REAR_DUMP_DIR    6
 #define REAR_DUMP_PWM    7
+#define LED              13
 
 // from EHPR98-G35 specs
 #define PWM_FREQUENCY_HZ 120
 
+// how often to toggle the LED
+#define LED_FLASH_PERIOD_MS 1000
+
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
+static uint32_t Ticks = 0;
+static uint32_t LEDFlashTimestamp;
+static uint8_t LEDState = LOW;
 
 void canSniff
   (
@@ -29,6 +42,7 @@ void canSniff
   CANBus.write(txmsg);
 }
 
+// initialize the hardware
 void setup()
 {
   //debug.begin(Serial);
@@ -54,33 +68,117 @@ void setup()
 
   // set up direction control signals
   pinMode(FRONT_HEIGHT_DIR, OUTPUT);
-  pinMode(REAR_HEIGHT_DIR, OUTPUT);
-  pinMode(FRONT_DUMP_DIR, OUTPUT);
-  pinMode(REAR_DUMP_DIR, OUTPUT);
+  pinMode(REAR_HEIGHT_DIR,  OUTPUT);
+  pinMode(FRONT_DUMP_DIR,   OUTPUT);
+  pinMode(REAR_DUMP_DIR,    OUTPUT);
 
   // initalize direction
   digitalWrite(FRONT_HEIGHT_DIR, LOW);
-  digitalWrite(REAR_HEIGHT_DIR, LOW);
-  digitalWrite(FRONT_DUMP_DIR, LOW);
-  digitalWrite(REAR_DUMP_DIR, LOW);
+  digitalWrite(REAR_HEIGHT_DIR,  LOW);
+  digitalWrite(FRONT_DUMP_DIR,   LOW);
+  digitalWrite(REAR_DUMP_DIR,    LOW);
 
-  // set to 50% PWM
-  analogWrite(FRONT_HEIGHT_PWM, 32767 / 2);
+  // set up LED
+  pinMode(LED, OUTPUT);
+  // LED on
+  digitalWrite(LED, LEDState);
+
+  // 1ms timer
+  Timer1.initialize(1000);
+  Timer1.attachInterrupt(TimerTick);
+  Timer1.start();
+
+  LEDFlashTimestamp = GetTime() + LED_FLASH_PERIOD_MS;
+
+  analogWrite(REAR_HEIGHT_PWM, (int)(32767 * 0.50));
+  //analogWrite(REAR_DUMP_PWM, (int)(32767 * 0.50));
+  digitalWrite(REAR_HEIGHT_DIR, HIGH);
 }
 
-void loop()
+// called once a millsecond to keep track of time
+static void TimerTick
+  (
+  void  
+  )
 {
+  Ticks++;
+}
+
+// gets the current timestamp
+uint32_t GetTime
+  (
+  void
+  )
+{
+  uint32_t TicksCopy;
+
+  //noInterrupts();
+  TicksCopy = Ticks;
+  //interrupts();
+
+  return TicksCopy;
+}
+
+// checks if a timestamp is in the past
+// returns true if timestamps is in the past, false if not
+static int IsTimeExpired
+  (
+  uint32_t Timestamp  // timestamp to check
+  )
+{
+  uint32_t time_now;
+
+  time_now = GetTime();
+  if (time_now >= Timestamp)
+  {
+    if ((time_now - Timestamp) < 0x80000000)
+      return true;
+    else
+      return false;
+  }
+  else
+  {
+    if ((Timestamp - time_now) >= 0x80000000)
+      return true;
+    else
+      return false;
+  }
+}
+
+// main loop
+// perform background tasks
+void loop
+  (
+  void
+  )
+{
+  int c;
+
+  // process can module
   CANBus.events();
 
-  /*// send data only when you receive data:
+  // echo serial data
   if (Serial5.available() > 0)
   {
-  
     // read the incoming byte:
-    incomingByte = Serial5.read();
-  
-    // say what you got:
-    Serial5.print((char)incomingByte);
+    c = Serial5.read();
+    Serial5.print((char)c);
     Serial5.print("Y");
-  }*/ 
+  }
+
+  // flash LED
+  if (IsTimeExpired(LEDFlashTimestamp))
+  {
+    LEDFlashTimestamp = GetTime() + LED_FLASH_PERIOD_MS;
+    
+    if (LEDState == LOW)
+    {
+      LEDState = HIGH;
+    }
+    else 
+    {
+      LEDState = LOW;
+    }
+    digitalWrite(LED, LEDState);
+  }
 }

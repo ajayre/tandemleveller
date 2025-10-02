@@ -9,6 +9,7 @@
             "name": "PlatformIO",
             "includePath": [
                 "C:/Users/andy/OneDrive/Documents/Tandem Leveller/tandemleveller/Firmware/TandemLeveller/src",
+                "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN_T4",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/cores/teensy4",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/ADC",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/AccelStepper/src",
@@ -39,7 +40,6 @@
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FastCRC",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FastLED/src",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN",
-                "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN_T4",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexIO_t4/src",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexiTimer2",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FreqCount",
@@ -115,6 +115,7 @@
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
                     "C:/Users/andy/OneDrive/Documents/Tandem Leveller/tandemleveller/Firmware/TandemLeveller/src",
+                    "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN_T4",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/cores/teensy4",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/ADC",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/AccelStepper/src",
@@ -145,7 +146,6 @@
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FastCRC",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FastLED/src",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN",
-                    "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN_T4",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexIO_t4/src",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexiTimer2",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FreqCount",
