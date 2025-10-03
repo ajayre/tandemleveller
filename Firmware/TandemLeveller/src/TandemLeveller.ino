@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
-#include <TimerOne.h>
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -27,11 +26,10 @@
 #define LED_FLASH_PERIOD_MS 1000
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
-static uint32_t Ticks = 0;
-static uint32_t LEDFlashTimestamp;
-static uint8_t LEDState = LOW;
+static elapsedMillis LEDFlashTimestamp;
 
-void canSniff
+// called when a CAN message is received
+static void CANReceiveHandler
   (
   const CAN_message_t &msg
   )
@@ -54,7 +52,7 @@ void setup()
   CANBus.setBaudRate(125000);
   CANBus.setMaxMB(64);
   CANBus.enableFIFO();
-  CANBus.onReceive(FIFO, canSniff);
+  CANBus.onReceive(FIFO, CANReceiveHandler);
   CANBus.enableFIFOInterrupt();
   CANBus.setFIFOFilter(0, 0x181, STD);
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
@@ -80,69 +78,11 @@ void setup()
 
   // set up LED
   pinMode(LED, OUTPUT);
-  // LED on
-  digitalWrite(LED, LEDState);
+  digitalWrite(LED, HIGH);
 
-  // 1ms timer
-  Timer1.initialize(1000);
-  Timer1.attachInterrupt(TimerTick);
-  Timer1.start();
-
-  LEDFlashTimestamp = GetTime() + LED_FLASH_PERIOD_MS;
-
-  analogWrite(REAR_HEIGHT_PWM, (int)(32767 * 0.50));
-  //analogWrite(REAR_DUMP_PWM, (int)(32767 * 0.50));
-  digitalWrite(REAR_HEIGHT_DIR, HIGH);
-}
-
-// called once a millsecond to keep track of time
-static void TimerTick
-  (
-  void  
-  )
-{
-  Ticks++;
-}
-
-// gets the current timestamp
-uint32_t GetTime
-  (
-  void
-  )
-{
-  uint32_t TicksCopy;
-
-  //noInterrupts();
-  TicksCopy = Ticks;
-  //interrupts();
-
-  return TicksCopy;
-}
-
-// checks if a timestamp is in the past
-// returns true if timestamps is in the past, false if not
-static int IsTimeExpired
-  (
-  uint32_t Timestamp  // timestamp to check
-  )
-{
-  uint32_t time_now;
-
-  time_now = GetTime();
-  if (time_now >= Timestamp)
-  {
-    if ((time_now - Timestamp) < 0x80000000)
-      return true;
-    else
-      return false;
-  }
-  else
-  {
-    if ((Timestamp - time_now) >= 0x80000000)
-      return true;
-    else
-      return false;
-  }
+  //analogWrite(REAR_HEIGHT_PWM, (int)(32767 * 0.50));
+  analogWrite(REAR_DUMP_PWM, (int)(32767 * 0.50));
+  //digitalWrite(REAR_HEIGHT_DIR, HIGH);
 }
 
 // main loop
@@ -167,18 +107,10 @@ void loop
   }
 
   // flash LED
-  if (IsTimeExpired(LEDFlashTimestamp))
+  if (LEDFlashTimestamp >= LED_FLASH_PERIOD_MS)
   {
-    LEDFlashTimestamp = GetTime() + LED_FLASH_PERIOD_MS;
+    LEDFlashTimestamp -= LED_FLASH_PERIOD_MS;
     
-    if (LEDState == LOW)
-    {
-      LEDState = HIGH;
-    }
-    else 
-    {
-      LEDState = LOW;
-    }
-    digitalWrite(LED, LEDState);
+    digitalToggle(LED);
   }
 }
