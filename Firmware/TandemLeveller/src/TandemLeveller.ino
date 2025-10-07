@@ -34,10 +34,10 @@ static void CANReceiveHandler
   const CAN_message_t &msg
   )
 {
-  CAN_message_t txmsg;
+  /*CAN_message_t txmsg;
   txmsg.id = 0x201;
   for (uint8_t i = 0; i < 8; i++ ) txmsg.buf[i] = msg.buf[i];
-  CANBus.write(txmsg);
+  CANBus.write(txmsg);*/
 }
 
 // initialize the hardware
