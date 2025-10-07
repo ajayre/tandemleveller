@@ -10,7 +10,6 @@
             "includePath": [
                 "C:/Users/andy/OneDrive/Documents/Tandem Leveller/tandemleveller/Firmware/TandemLeveller/src",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN_T4",
-                "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimerOne",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/cores/teensy4",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/ADC",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/AccelStepper/src",
@@ -92,6 +91,7 @@
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TeensyThreads",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/Time",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimeAlarms",
+                "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimerOne",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimerThree",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TinyGPS",
                 "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/Tlc5940",
@@ -116,7 +116,6 @@
                 "path": [
                     "C:/Users/andy/OneDrive/Documents/Tandem Leveller/tandemleveller/Firmware/TandemLeveller/src",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/FlexCAN_T4",
-                    "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimerOne",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/cores/teensy4",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/ADC",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/AccelStepper/src",
@@ -198,6 +197,7 @@
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TeensyThreads",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/Time",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimeAlarms",
+                    "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimerOne",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TimerThree",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/TinyGPS",
                     "C:/Users/andy/.platformio/packages/framework-arduinoteensy/libraries/Tlc5940",
