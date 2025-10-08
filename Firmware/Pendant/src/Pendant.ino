@@ -22,6 +22,28 @@
 #define BUTTON1_LED_PIN   1
 #define BUTTON1_ID        0
 
+#define BUTTON2_INPUT_PIN 2
+#define BUTTON2_LED_PIN   3
+#define BUTTON2_ID        1
+
+#define BUTTON3_INPUT_PIN 4
+#define BUTTON3_LED_PIN   5
+#define BUTTON3_ID        2
+
+#define BUTTON4_INPUT_PIN 6
+#define BUTTON4_LED_PIN   7
+#define BUTTON4_ID        3
+
+#define JOYSTICK1_X_PIN      A2
+#define JOYSTICK1_Y_PIN      A1
+#define JOYSTICK1_BUTTON_PIN 14
+#define JOYSTICK1_ID         9
+
+#define JOYSTICK2_X_PIN      A5
+#define JOYSTICK2_Y_PIN      A4
+#define JOYSTICK2_BUTTON_PIN 17
+#define JOYSTICK2_ID         10
+
 // time for power on self test
 #define POST_DELAY_MS 1000
 
@@ -33,30 +55,21 @@ typedef enum _led_state_t
 } led_state_t;
 
 // prototypes
-static void buttonHandler(uint8_t btnId, uint8_t btnState);
+static void ButtonHandler(uint8_t btnId, uint8_t btnState);
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 elapsedMillis HBTime;
 static WDT_T4<WDT1> wdt;
-static Button Button1(BUTTON1_ID, buttonHandler);
+static Button Button1(BUTTON1_ID, ButtonHandler);
+static Button Button2(BUTTON2_ID, ButtonHandler);
+static Button Button3(BUTTON3_ID, ButtonHandler);
+static Button Button4(BUTTON4_ID, ButtonHandler);
+static Button Joystick1Button(JOYSTICK1_ID, ButtonHandler);
+static Button Joystick2Button(JOYSTICK2_ID, ButtonHandler);
 static elapsedMillis POSTTimer;
 static bool POSTCompleted = false;
-
-static void buttonHandler
-  (
-  uint8_t btnId,
-  uint8_t btnState
-  )
-{
-  if (btnState == BTN_PRESSED) {
-    Serial.println("Pushed button");
-    SetButtonLED(BUTTON1_LED_PIN, LED_ON);
-  } else {
-    // btnState == BTN_OPEN.
-    Serial.println("Released button");
-    SetButtonLED(BUTTON1_LED_PIN, LED_OFF);
-  }
-}
+static uint16_t ButtonStates = 0x0000;
+static uint8_t JoystickStates = 0x00;
 
 // reboot the device
 static void Reboot
@@ -122,9 +135,13 @@ static void TxPDO
   void
   )
 {
-  uint8_t Data[6] = { 0 };
+  uint8_t Data[3];
 
-  TxCANMessage(0x180 + NODE_ID, 6, Data);
+  // transmit button and joystick states
+  Data[0] =  ButtonStates       & 0xFF;
+  Data[1] = (ButtonStates >> 8) & 0xFF;
+  Data[2] = JoystickStates;
+  TxCANMessage(0x180 + NODE_ID, 3, Data);
 }
 
 // called when a CAN message is received
@@ -148,6 +165,46 @@ static void CANReceiveHandler
   }
 }
 
+// called when a button is pressed or released
+static void ButtonHandler
+  (
+  uint8_t btnId,     // ID of button that changed
+  uint8_t btnState   // new state of button (BTN_PRESSED, BTN_OPEN)
+  )
+{
+  if (btnState == BTN_PRESSED)
+  {
+    Serial.println("Pushed button");
+
+    switch (btnId)
+    {
+      case BUTTON1_ID:   SetButtonLED(BUTTON1_LED_PIN, LED_ON); ButtonStates |= (1 << 0); break;
+      case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_ON); ButtonStates |= (1 << 1); break;
+      case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_ON); ButtonStates |= (1 << 2); break;
+      case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_ON); ButtonStates |= (1 << 3); break;
+      case JOYSTICK1_ID: SetButtonLED(BUTTON4_LED_PIN, LED_ON); ButtonStates |= (1 << 8); break;
+      case JOYSTICK2_ID: SetButtonLED(BUTTON3_LED_PIN, LED_ON); ButtonStates |= (1 << 9); break;
+    }
+  }
+  else
+  {
+    // btnState == BTN_OPEN
+    Serial.println("Released button");
+
+    switch (btnId)
+    {
+      case BUTTON1_ID:   SetButtonLED(BUTTON1_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 0); break;
+      case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 1); break;
+      case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 2); break;
+      case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 3); break;
+      case JOYSTICK1_ID: SetButtonLED(BUTTON4_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 8); break;
+      case JOYSTICK2_ID: SetButtonLED(BUTTON3_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 9); break;
+    }
+  }
+
+  TxPDO();
+}
+
 // button debounce handling
 static void pollButtons
   (
@@ -155,6 +212,148 @@ static void pollButtons
   )
 {
   Button1.update(digitalRead(BUTTON1_INPUT_PIN));
+  Button2.update(digitalRead(BUTTON2_INPUT_PIN));
+  Button3.update(digitalRead(BUTTON3_INPUT_PIN));
+  Button4.update(digitalRead(BUTTON4_INPUT_PIN));
+  Joystick1Button.update(digitalRead(JOYSTICK1_BUTTON_PIN));
+  Joystick2Button.update(digitalRead(JOYSTICK2_BUTTON_PIN));
+}
+
+// joystick handling
+static void pollJoysticks
+  (
+  void
+  )
+{
+  int X = analogRead(JOYSTICK1_X_PIN);
+  int Y = analogRead(JOYSTICK1_Y_PIN);
+
+  bool Changed = false;
+
+  if (X >= 100)
+  {
+    if (!(JoystickStates & (1 << 0)))
+    {
+      JoystickStates |= (1 << 0); // left
+      Changed = true;
+    }
+  }
+  else if (X <= 923)
+  {
+    if (!(JoystickStates & (1 << 1)))
+    {
+      JoystickStates |= (1 << 1); // right
+      Changed = true;
+    }
+  }
+  else
+  {
+    if (JoystickStates & (1 << 0))
+    {
+      JoystickStates &= ~(1 << 0);
+      Changed = true;
+    }
+    if (JoystickStates & (1 << 1))
+    {
+      JoystickStates &= ~(1 << 1);
+      Changed = true;
+    }
+  }
+
+  if (Y >= 100)
+  {
+    if (!(JoystickStates & (1 << 2)))
+    {
+      JoystickStates |= (1 << 2); // up
+      Changed = true;
+    }
+  }
+  else if (Y <= 923)
+  {
+    if (!(JoystickStates & (1 << 3)))
+    {
+      JoystickStates |= (1 << 3); // down
+      Changed = true;
+    }
+  }
+  else
+  {
+    if (JoystickStates & (1 << 2))
+    {
+      JoystickStates &= ~(1 << 2);
+      Changed = true;
+    }
+    if (JoystickStates & (1 << 3))
+    {
+      JoystickStates &= ~(1 << 3);
+      Changed = true;
+    }
+  }
+
+  X = analogRead(JOYSTICK2_X_PIN);
+  Y = analogRead(JOYSTICK2_Y_PIN);
+
+  if (X <= 100)
+  {
+    if (!(JoystickStates & (1 << 4)))
+    {
+      JoystickStates |= (1 << 4); // left
+      Changed = true;
+    }
+  }
+  else if (X >= 923)
+  {
+    if (!(JoystickStates & (1 << 5)))
+    {
+      JoystickStates |= (1 << 5); // right
+      Changed = true;
+    }
+  }
+  else
+  {
+    if (JoystickStates & (1 << 4))
+    {
+      JoystickStates &= ~(1 << 4);
+      Changed = true;
+    }
+    if (JoystickStates & (1 << 5))
+    {
+      JoystickStates &= ~(1 << 5);
+      Changed = true;
+    }
+  }
+
+  if (Y <= 100)
+  {
+    if (!(JoystickStates & (1 << 6)))
+    {
+      JoystickStates |= (1 << 6); // up
+      Changed = true;
+    }
+  }
+  else if (Y >= 923)
+  {
+    if (!(JoystickStates & (1 << 7)))
+    {
+      JoystickStates |= (1 << 7); // down
+      Changed = true;
+    }
+  }
+  else
+  {
+    if (JoystickStates & (1 << 6))
+    {
+      JoystickStates &= ~(1 << 6);
+      Changed = true;
+    }
+    if (JoystickStates & (1 << 7))
+    {
+      JoystickStates &= ~(1 << 7);
+      Changed = true;
+    }
+  }
+
+  if (Changed) TxPDO();
 }
 
 // sets the LED on a button
@@ -181,12 +380,34 @@ void setup()
 
   // set up I/O
   pinMode(BUTTON1_INPUT_PIN, INPUT_PULLUP);
-  pinMode(BUTTON1_LED_PIN, OUTPUT);
+  pinMode(BUTTON1_LED_PIN,   OUTPUT);
+
+  pinMode(BUTTON2_INPUT_PIN, INPUT_PULLUP);
+  pinMode(BUTTON2_LED_PIN,   OUTPUT);
+
+  pinMode(BUTTON3_INPUT_PIN, INPUT_PULLUP);
+  pinMode(BUTTON3_LED_PIN,   OUTPUT);
+
+  pinMode(BUTTON4_INPUT_PIN, INPUT_PULLUP);
+  pinMode(BUTTON4_LED_PIN,   OUTPUT);
+
+  pinMode(JOYSTICK1_X_PIN, INPUT);
+  pinMode(JOYSTICK1_Y_PIN, INPUT);
+  pinMode(JOYSTICK1_BUTTON_PIN, INPUT_PULLUP);
+
+  pinMode(JOYSTICK2_X_PIN, INPUT);
+  pinMode(JOYSTICK2_Y_PIN, INPUT);
+  pinMode(JOYSTICK2_BUTTON_PIN, INPUT_PULLUP);
 
   // turn on all LEDs for POST
   SetButtonLED(BUTTON1_LED_PIN, LED_ON);
+  SetButtonLED(BUTTON2_LED_PIN, LED_ON);
+  SetButtonLED(BUTTON3_LED_PIN, LED_ON);
+  SetButtonLED(BUTTON4_LED_PIN, LED_ON);
 
   POSTTimer = 0;
+
+  analogReadAveraging(16);
 
   CANBus.begin();
   CANBus.setBaudRate(125000);
@@ -214,6 +435,9 @@ void loop
     
     // turn off all LEDs
     SetButtonLED(BUTTON1_LED_PIN, LED_OFF);
+    SetButtonLED(BUTTON2_LED_PIN, LED_OFF);
+    SetButtonLED(BUTTON3_LED_PIN, LED_OFF);
+    SetButtonLED(BUTTON4_LED_PIN, LED_OFF);
 
     // tell everyone we are ready
     TxBootup();
@@ -227,6 +451,8 @@ void loop
   {
     // process buttons
     pollButtons();
+    // process joysticks
+    pollJoysticks();
 
     // transmit heartbeats
     if (HBTime >= HB_PRODUCER_TIME_MS)
