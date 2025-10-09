@@ -182,6 +182,8 @@ static void ButtonHandler
       case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_ON); ButtonStates |= (1 << 1); break;
       case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_ON); ButtonStates |= (1 << 2); break;
       case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_ON); ButtonStates |= (1 << 3); break;
+      case JOYSTICK1_ID:                                        ButtonStates |= (1 << 8); break;
+      case JOYSTICK2_ID:                                        ButtonStates |= (1 << 9); break;
     }
   }
   else
@@ -195,6 +197,8 @@ static void ButtonHandler
       case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 1); break;
       case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 2); break;
       case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 3); break;
+      case JOYSTICK1_ID:                                         ButtonStates &= ~(1 << 8); break;
+      case JOYSTICK2_ID:                                         ButtonStates &= ~(1 << 9); break;
     }
   }
 
