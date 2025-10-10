@@ -32,7 +32,7 @@
 #define NMT_RESET_ALL 0x00
 
 // time between heartbeats in millseconds
-#define HB_PRODUCER_TIME_MS 1000
+#define HB_PRODUCER_TIME_MS 100
 
 struct euler_t {
   float yaw;

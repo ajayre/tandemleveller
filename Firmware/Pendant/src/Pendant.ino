@@ -16,7 +16,7 @@
 #define NMT_RESET_ALL 0x00
 
 // time between heartbeats in millseconds
-#define HB_PRODUCER_TIME_MS 1000
+#define HB_PRODUCER_TIME_MS 100
 
 #define BUTTON1_INPUT_PIN 0
 #define BUTTON1_LED_PIN   1
@@ -33,6 +33,10 @@
 #define BUTTON4_INPUT_PIN 6
 #define BUTTON4_LED_PIN   7
 #define BUTTON4_ID        3
+
+#define BUTTON5_INPUT_PIN 8
+#define BUTTON5_LED_PIN   9
+#define BUTTON5_ID        4
 
 #define JOYSTICK1_X_PIN      A2
 #define JOYSTICK1_Y_PIN      A1
@@ -64,6 +68,7 @@ static Button Button1(BUTTON1_ID, ButtonHandler);
 static Button Button2(BUTTON2_ID, ButtonHandler);
 static Button Button3(BUTTON3_ID, ButtonHandler);
 static Button Button4(BUTTON4_ID, ButtonHandler);
+static Button Button5(BUTTON5_ID, ButtonHandler);
 static Button Joystick1Button(JOYSTICK1_ID, ButtonHandler);
 static Button Joystick2Button(JOYSTICK2_ID, ButtonHandler);
 static elapsedMillis POSTTimer;
@@ -182,6 +187,7 @@ static void ButtonHandler
       case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_ON); ButtonStates |= (1 << 1); break;
       case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_ON); ButtonStates |= (1 << 2); break;
       case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_ON); ButtonStates |= (1 << 3); break;
+      case BUTTON5_ID:   SetButtonLED(BUTTON5_LED_PIN, LED_ON); ButtonStates |= (1 << 4); break;
       case JOYSTICK1_ID:                                        ButtonStates |= (1 << 8); break;
       case JOYSTICK2_ID:                                        ButtonStates |= (1 << 9); break;
     }
@@ -197,6 +203,7 @@ static void ButtonHandler
       case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 1); break;
       case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 2); break;
       case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 3); break;
+      case BUTTON5_ID:   SetButtonLED(BUTTON5_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 4); break;
       case JOYSTICK1_ID:                                         ButtonStates &= ~(1 << 8); break;
       case JOYSTICK2_ID:                                         ButtonStates &= ~(1 << 9); break;
     }
@@ -215,6 +222,7 @@ static void pollButtons
   Button2.update(digitalRead(BUTTON2_INPUT_PIN));
   Button3.update(digitalRead(BUTTON3_INPUT_PIN));
   Button4.update(digitalRead(BUTTON4_INPUT_PIN));
+  Button5.update(digitalRead(BUTTON5_INPUT_PIN));
   Joystick1Button.update(digitalRead(JOYSTICK1_BUTTON_PIN));
   Joystick2Button.update(digitalRead(JOYSTICK2_BUTTON_PIN));
 }
@@ -230,7 +238,7 @@ static void pollJoysticks
 
   bool Changed = false;
 
-  if (X >= 100)
+  if (X <= 100)
   {
     if (!(JoystickStates & (1 << 0)))
     {
@@ -238,7 +246,7 @@ static void pollJoysticks
       Changed = true;
     }
   }
-  else if (X <= 923)
+  else if (X >= 923)
   {
     if (!(JoystickStates & (1 << 1)))
     {
@@ -260,7 +268,7 @@ static void pollJoysticks
     }
   }
 
-  if (Y >= 100)
+  if (Y <= 100)
   {
     if (!(JoystickStates & (1 << 2)))
     {
@@ -268,7 +276,7 @@ static void pollJoysticks
       Changed = true;
     }
   }
-  else if (Y <= 923)
+  else if (Y >= 923)
   {
     if (!(JoystickStates & (1 << 3)))
     {
@@ -391,6 +399,9 @@ void setup()
   pinMode(BUTTON4_INPUT_PIN, INPUT_PULLUP);
   pinMode(BUTTON4_LED_PIN,   OUTPUT);
 
+  pinMode(BUTTON5_INPUT_PIN, INPUT_PULLUP);
+  pinMode(BUTTON5_LED_PIN,   OUTPUT);
+
   pinMode(JOYSTICK1_X_PIN, INPUT);
   pinMode(JOYSTICK1_Y_PIN, INPUT);
   pinMode(JOYSTICK1_BUTTON_PIN, INPUT_PULLUP);
@@ -404,6 +415,7 @@ void setup()
   SetButtonLED(BUTTON2_LED_PIN, LED_ON);
   SetButtonLED(BUTTON3_LED_PIN, LED_ON);
   SetButtonLED(BUTTON4_LED_PIN, LED_ON);
+  SetButtonLED(BUTTON5_LED_PIN, LED_ON);
 
   POSTTimer = 0;
 
@@ -438,6 +450,7 @@ void loop
     SetButtonLED(BUTTON2_LED_PIN, LED_OFF);
     SetButtonLED(BUTTON3_LED_PIN, LED_OFF);
     SetButtonLED(BUTTON4_LED_PIN, LED_OFF);
+    SetButtonLED(BUTTON5_LED_PIN, LED_OFF);
 
     // tell everyone we are ready
     TxBootup();
