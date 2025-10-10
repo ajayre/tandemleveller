@@ -20,6 +20,7 @@
 #define LED              13
 
 // node IDs
+#define CONTROLLER_NODE_ID       0x01
 #define TRACTOR_IMU_NODE_ID      0x02
 #define FRONTSCRAPER_IMU_NODE_ID 0x03
 #define REARSCRAPER_IMU_NODE_ID  0x04
@@ -42,7 +43,10 @@
 #define NUM_NODES 5
 
 // maximum time to wait for a heartbeat before declaring a node as missing
-#define MAX_HEARTBEAT_TIME 6000
+#define MAX_HEARTBEAT_TIME 300
+
+// CANopen error code for estop
+#define ESTOP_ERROR_CODE 0x1000
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 static elapsedMillis LEDFlashTimestamp;
@@ -58,7 +62,8 @@ typedef union _button_state_t
     unsigned int Button2Pressed   : 1;
     unsigned int Button3Pressed   : 1;
     unsigned int Button4Pressed   : 1;
-    unsigned int Reserved1        : 4;
+    unsigned int EStopArmed       : 1;
+    unsigned int Reserved1        : 3;
     unsigned int Joystick1Pressed : 1;
     unsigned int Joystick2Pressed : 1;
     unsigned int Reserved2        : 6;
@@ -80,6 +85,31 @@ typedef union _joystick_state_t
     unsigned int Joystick2Down  : 1;
   } Fields;
 } joystick_state_t;
+
+// perform an emergency stop of blade control
+static void EmergencyStop
+  (
+  void
+  )
+{
+  // fixme - to do
+
+  // send emergency message so all nodes are aware of the stop
+  CAN_message_t txmsg;
+  
+  txmsg.id = 0x080 + CONTROLLER_NODE_ID;
+  txmsg.len = 8;
+  txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
+  txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
+  txmsg.buf[2] = 0x80;  // manufacturer-specific error
+  txmsg.buf[3] = 0x00;
+  txmsg.buf[4] = 0x00;
+  txmsg.buf[5] = 0x00;
+  txmsg.buf[6] = 0x00;
+  txmsg.buf[7] = 0x00;
+
+  CANBus.write(txmsg);
+}
 
 // process TPDO from IMU
 static void ProcessIMUTPDO
@@ -111,6 +141,12 @@ static void ProcessPendantTPDO
 
     ButtonState.RawValue = (pData[0] | ((uint16_t)pData[1] << 8));
     JoystickState.RawValue = pData[2];
+
+    // ESTOP PRESSED
+    if (!ButtonState.Fields.EStopArmed)
+    {
+      EmergencyStop();
+    }
   }
 }
 
@@ -130,6 +166,7 @@ static void ProcessHeartbeat
     if (NMTState == NMT_STATE_BOOTUP)
     {
       NodeFound[NodeId - 1] = true;
+      HBTime[NodeId - 1] = 0;
       Serial.println("Found node");
     }
 
@@ -162,6 +199,13 @@ static void CheckForMissingNodes
       {
         Serial.println("NODE MISSING");
         NodeFound[n] = false;
+
+        // if the pendant has dissappeared then perform emergency stop
+        // as we can't see the ESTOP button
+        if ((n + 1) == PENDANT_NODE_ID)
+        {
+          EmergencyStop();
+        }
       }
     }
   }
