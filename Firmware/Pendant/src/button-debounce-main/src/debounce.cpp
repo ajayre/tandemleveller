@@ -20,6 +20,11 @@ Button::Button(uint8_t id, buttonHandler_t handlerFn):
   }
 }
 
+void Button::setNormallyClosed(void) {
+  _curState = BTN_PRESSED;
+  _priorPoll = BTN_PRESSED;
+}
+
 bool Button::update(uint8_t latestPoll) {
   latestPoll = (latestPoll != 0); // Collapse input into a 1/0 universe.
 

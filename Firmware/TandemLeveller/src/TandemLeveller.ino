@@ -48,10 +48,8 @@
 // CANopen error code for estop
 #define ESTOP_ERROR_CODE 0x1000
 
-static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
-static elapsedMillis LEDFlashTimestamp;
-static elapsedMillis HBTime[NUM_NODES];
-static bool NodeFound[NUM_NODES];
+// max time to find the pendant before we assume emergency stop
+#define MAX_PENDANT_SEARCH_TIME 4000
 
 typedef union _button_state_t
 {
@@ -85,6 +83,15 @@ typedef union _joystick_state_t
     unsigned int Joystick2Down  : 1;
   } Fields;
 } joystick_state_t;
+
+static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
+static elapsedMillis LEDFlashTimestamp;
+static elapsedMillis HBTime[NUM_NODES];
+static bool NodeFound[NUM_NODES];
+static elapsedMillis PendantSearchTimestamp;
+static button_state_t ButtonState;
+static joystick_state_t JoystickState;
+static bool PendantSearch;
 
 // perform an emergency stop of blade control
 static void EmergencyStop
@@ -136,9 +143,6 @@ static void ProcessPendantTPDO
 {
   if (Length == 3)
   {
-    button_state_t ButtonState;
-    joystick_state_t JoystickState;
-
     ButtonState.RawValue = (pData[0] | ((uint16_t)pData[1] << 8));
     JoystickState.RawValue = pData[2];
 
@@ -312,6 +316,14 @@ void setup()
     NodeFound[n] = false;
   }
 
+  // start looking for pendant, we can't operate without it
+  PendantSearchTimestamp = 0;
+  PendantSearch = true;
+
+  // reset buttons and joysticks
+  ButtonState.RawValue = 0;
+  JoystickState.RawValue = 0;
+
   ResetAllNodes();
 }
 
@@ -336,6 +348,24 @@ void loop
     c = Serial5.read();
     Serial5.print((char)c);
     Serial5.print("Y");
+  }
+
+  // check for pendant
+  if (PendantSearch && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
+  {
+    // stop search
+    PendantSearch = false;
+
+    // not found
+    if (!NodeFound[PENDANT_NODE_ID - 1])
+    {
+      EmergencyStop();
+    }
+    // found pendant but emergency stop is not armed
+    else if (!ButtonState.Fields.EStopArmed)
+    {
+      EmergencyStop();
+    }
   }
 
   // flash LED

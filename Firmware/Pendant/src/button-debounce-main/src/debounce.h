@@ -37,6 +37,8 @@ public:
   unsigned int getPushDebounceInterval() const { return _pushDebounceInterval; };
   void setPushDebounceInterval(unsigned int debounce) { _pushDebounceInterval = debounce; };
   void setReleaseDebounceInterval(unsigned int debounce) { _releaseDebounceInterval = debounce; };
+  
+  void setNormallyClosed(void);
 
 private:
   uint8_t _id;

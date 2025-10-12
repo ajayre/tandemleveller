@@ -83,6 +83,7 @@ static void Reboot
   )
 {
   SCB_AIRCR = 0x05FA0004;
+  while(1);
 }
 
 // transmits a CAN message
@@ -410,6 +411,10 @@ void setup()
   pinMode(JOYSTICK2_Y_PIN, INPUT);
   pinMode(JOYSTICK2_BUTTON_PIN, INPUT_PULLUP);
 
+  // button 5 is the estop
+  Button5.setNormallyClosed();
+  ButtonStates |= (1 << 4);
+
   // turn on all LEDs for POST
   SetButtonLED(BUTTON1_LED_PIN, LED_ON);
   SetButtonLED(BUTTON2_LED_PIN, LED_ON);
@@ -429,6 +434,11 @@ void setup()
   CANBus.enableFIFOInterrupt();
   CANBus.setFIFOFilter(0, 0x000, STD);
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
+
+  // tell everyone we are ready
+  TxBootup();
+
+  HBTime = 0;
 }
 
 // main loop
@@ -441,6 +451,11 @@ void loop
   // process can module
   CANBus.events();
 
+  // process buttons
+  pollButtons();
+  // process joysticks
+  pollJoysticks();
+
   if (!POSTCompleted && (POSTTimer >= POST_DELAY_MS))
   {
     POSTCompleted = true;
@@ -451,29 +466,14 @@ void loop
     SetButtonLED(BUTTON3_LED_PIN, LED_OFF);
     SetButtonLED(BUTTON4_LED_PIN, LED_OFF);
     SetButtonLED(BUTTON5_LED_PIN, LED_OFF);
-
-    // tell everyone we are ready
-    TxBootup();
-
-    HBTime = 0;
-    wdt.feed();
   }
 
-  // only execute once we have done the power on self test
-  if (POSTCompleted)
+  // transmit heartbeats
+  if (HBTime >= HB_PRODUCER_TIME_MS)
   {
-    // process buttons
-    pollButtons();
-    // process joysticks
-    pollJoysticks();
+    HBTime -= HB_PRODUCER_TIME_MS;
 
-    // transmit heartbeats
-    if (HBTime >= HB_PRODUCER_TIME_MS)
-    {
-      HBTime -= HB_PRODUCER_TIME_MS;
-
-      TxHeartbeat();
-      wdt.feed();
-    }
+    TxHeartbeat();
+    wdt.feed();
   }
 }
