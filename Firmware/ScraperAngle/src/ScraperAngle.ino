@@ -20,7 +20,14 @@
 // time between transmission of TPDO in milliseconds
 #define TPDO_EVENT_TIME_MS 10
 
-#define JOYSTICK1_X_PIN A2
+#define SENSOR_PIN A2
+
+// range of measurement of sensor
+#define ANGLE_RANGE_DEG 65
+
+// min and max ADC values
+#define MIN_ADC_VALUE 128
+#define MAX_ADC_VALUE 1023
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 elapsedMillis HBTime;
@@ -127,10 +134,12 @@ static void PollSensor
   void
   )
 {
-  int X = analogRead(JOYSTICK1_X_PIN);
+  int ADCValue = analogRead(SENSOR_PIN);
 
-  // convert voltage to an angle
-  Angle = (uint16_t)(X * 100);
+  double ADCRange = MAX_ADC_VALUE - MIN_ADC_VALUE;
+  double DegRange = ANGLE_RANGE_DEG;
+  double DegPerStep = DegRange / ADCRange;
+  Angle = ((ADCValue - MIN_ADC_VALUE) * DegPerStep) * 100.0;
 
   // transmit PDO periodically
   if (TPDOTime >= TPDO_EVENT_TIME_MS)
@@ -153,7 +162,7 @@ void setup()
   wdt.begin(config);
 
   // set up I/O
-  pinMode(JOYSTICK1_X_PIN, INPUT);
+  pinMode(SENSOR_PIN, INPUT);
 
   analogReadAveraging(16);
 
