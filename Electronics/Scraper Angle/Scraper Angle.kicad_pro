@@ -405,7 +405,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "User Controls.kicad_pro",
+    "filename": "Scraper Angle.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -441,7 +441,7 @@
       "idf": "",
       "netlist": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "CAD/Scraper Angle.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
