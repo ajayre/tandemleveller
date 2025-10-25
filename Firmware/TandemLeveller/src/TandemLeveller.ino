@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
+#include "SerialTransfer.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -32,6 +33,9 @@
 // how often to toggle the LED
 #define LED_FLASH_PERIOD_MS 1000
 
+// how often to send status to OpenGrade3D
+#define STATUS_OUTPUT_PERIOD_MS 200
+
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
 
@@ -50,6 +54,26 @@
 
 // max time to find the pendant before we assume emergency stop
 #define MAX_PENDANT_SEARCH_TIME 4000
+
+// serial connection speed expected by opengrade3d
+#define OPENGRADE3D_BAUDRATE 38400
+
+// CAN bus speed
+#define CAN_BITRATE_BPS 125000
+
+// status information that is transmitted to OpenGrade3D
+struct __attribute__((packed)) _TxStatus
+{
+  float x=4.5;
+  float y=36.7;
+} TxStatus;
+
+// commands that are received from OpenGrade3D
+struct __attribute__((pavcked)) _RxCommand
+{
+  uint16_t PGN;
+  uint32_t Value;
+} RxCommand;
 
 typedef union _button_state_t
 {
@@ -92,6 +116,8 @@ static elapsedMillis PendantSearchTimestamp;
 static button_state_t ButtonState;
 static joystick_state_t JoystickState;
 static bool PendantSearch;
+static elapsedMillis StatusOutputTimestamp;
+static SerialTransfer OpenGrade3D;
 
 // perform an emergency stop of blade control
 static void EmergencyStop
@@ -99,8 +125,6 @@ static void EmergencyStop
   void
   )
 {
-  // fixme - to do
-
   // send emergency message so all nodes are aware of the stop
   CAN_message_t txmsg;
   
@@ -264,10 +288,13 @@ void setup()
   //debug.begin(Serial);
   //halt_cpu(); 
 
-  Serial5.begin(9600);    // opens serial port, sets data rate to 9600 bps
+  // configure connection to opengrade3d
+  Serial5.begin(OPENGRADE3D_BAUDRATE);
+  OpenGrade3D.begin(Serial5);
 
+  // configure CAN bus
   CANBus.begin();
-  CANBus.setBaudRate(125000);
+  CANBus.setBaudRate(CAN_BITRATE_BPS);
   CANBus.setMaxMB(64);
   CANBus.enableFIFO();
   CANBus.onReceive(FIFO, CANReceiveHandler);
@@ -320,6 +347,8 @@ void setup()
   PendantSearchTimestamp = 0;
   PendantSearch = true;
 
+  StatusOutputTimestamp = 0;
+
   // reset buttons and joysticks
   ButtonState.RawValue = 0;
   JoystickState.RawValue = 0;
@@ -334,20 +363,31 @@ void loop
   void
   )
 {
-  int c;
-
   // process can module
   CANBus.events();
 
   CheckForMissingNodes();
 
-  // echo serial data
-  if (Serial5.available() > 0)
+  // get data from OpenGrade3D
+  if(OpenGrade3D.available() >= sizeof(RxCommand))
   {
-    // read the incoming byte:
-    c = Serial5.read();
-    Serial5.print((char)c);
-    Serial5.print("Y");
+    if (OpenGrade3D.rxObj(RxCommand, sizeof(RxCommand)) == sizeof(RxCommand))
+    {
+      switch (RxCommand.PGN)
+      {
+        case 0:
+          break;
+      }
+    }
+  }
+
+  // periodically send status to OpenGrade3D
+  if (StatusOutputTimestamp >= STATUS_OUTPUT_PERIOD_MS)
+  {
+    StatusOutputTimestamp = 0;
+
+    // output status
+    OpenGrade3D.sendDatum(TxStatus);
   }
 
   // check for pendant
