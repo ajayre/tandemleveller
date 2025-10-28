@@ -34,7 +34,7 @@
 #define LED_FLASH_PERIOD_MS 1000
 
 // how often to send status to OpenGrade3D
-#define STATUS_OUTPUT_PERIOD_MS 200
+#define STATUS_OUTPUT_PERIOD_MS 100
 
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
@@ -61,19 +61,25 @@
 // CAN bus speed
 #define CAN_BITRATE_BPS 125000
 
-// status information that is transmitted to OpenGrade3D
-struct __attribute__((packed)) _TxStatus
+// supported PGNs
+typedef enum _pgn_t : uint16_t
 {
-  float x=4.5;
-  float y=36.7;
-} TxStatus;
+  PGN_ESTOP = 0x0000
+} pgn_t;
+
+// status information that is transmitted to OpenGrade3D
+typedef struct _controllerstatus_t
+{
+  pgn_t PGN;
+  uint32_t Value;
+} controllerstatus_t;
 
 // commands that are received from OpenGrade3D
-struct __attribute__((pavcked)) _RxCommand
+typedef struct _opengrade3dcommand_t
 {
-  uint16_t PGN;
+  pgn_t PGN;
   uint32_t Value;
-} RxCommand;
+} opengrade3dcommand_t;
 
 typedef union _button_state_t
 {
@@ -282,6 +288,38 @@ static void ResetAllNodes
   CANBus.write(txmsg);
 }
 
+// sends status value to OpenGrade3D
+static void SendStatus
+  (
+  controllerstatus_t *pStatus
+  )
+{
+  OpenGrade3D.packet.txBuff[0] = (byte)(pStatus->PGN & 0xFF);
+  OpenGrade3D.packet.txBuff[1] = (byte)((pStatus->PGN >> 8) & 0xFF);
+  OpenGrade3D.packet.txBuff[2] = (byte)(pStatus->Value & 0xFF);
+  OpenGrade3D.packet.txBuff[3] = (byte)((pStatus->Value >> 8) & 0xFF);
+  OpenGrade3D.packet.txBuff[4] = (byte)((pStatus->Value >> 16) & 0xFF);
+  OpenGrade3D.packet.txBuff[5] = (byte)((pStatus->Value >> 24) & 0xFF);
+  OpenGrade3D.sendData(6);
+}
+
+// gets a command from OpenGrade3D
+static opengrade3dcommand_t GetCommand
+  (
+  void
+  )
+{
+  opengrade3dcommand_t Command;
+
+  Command.PGN = (pgn_t)(((uint16_t)OpenGrade3D.packet.rxBuff[1] << 8) | OpenGrade3D.packet.rxBuff[0]);
+  Command.Value = ((uint32_t)OpenGrade3D.packet.rxBuff[5] << 24) |
+                  ((uint32_t)OpenGrade3D.packet.rxBuff[4] << 16) |
+                  ((uint32_t)OpenGrade3D.packet.rxBuff[3] << 8)  |
+                   (uint32_t)OpenGrade3D.packet.rxBuff[2];
+
+  return Command;
+}
+
 // initialize the hardware
 void setup()
 {
@@ -289,8 +327,11 @@ void setup()
   //halt_cpu(); 
 
   // configure connection to opengrade3d
-  Serial5.begin(OPENGRADE3D_BAUDRATE);
-  OpenGrade3D.begin(Serial5);
+  //Serial5.begin(OPENGRADE3D_BAUDRATE);
+  //OpenGrade3D.begin(Serial5);
+  // fixme - swap back
+  Serial.begin(OPENGRADE3D_BAUDRATE);
+  OpenGrade3D.begin(Serial);
 
   // configure CAN bus
   CANBus.begin();
@@ -356,6 +397,8 @@ void setup()
   ResetAllNodes();
 }
 
+static volatile uint32_t x = 0;
+
 // main loop
 // perform background tasks
 void loop
@@ -369,15 +412,17 @@ void loop
   CheckForMissingNodes();
 
   // get data from OpenGrade3D
-  if(OpenGrade3D.available() >= sizeof(RxCommand))
+  if (OpenGrade3D.available())
   {
-    if (OpenGrade3D.rxObj(RxCommand, sizeof(RxCommand)) == sizeof(RxCommand))
+    opengrade3dcommand_t Command;
+
+    Command = GetCommand();
+
+    switch (Command.PGN)
     {
-      switch (RxCommand.PGN)
-      {
-        case 0:
-          break;
-      }
+      case 0:
+        x = Command.Value;
+        break;
     }
   }
 
@@ -386,8 +431,13 @@ void loop
   {
     StatusOutputTimestamp = 0;
 
+    controllerstatus_t Status;
+
     // output status
-    OpenGrade3D.sendDatum(TxStatus);
+    Status.PGN = PGN_ESTOP;
+    Status.Value = x;
+
+    SendStatus(&Status);
   }
 
   // check for pendant
