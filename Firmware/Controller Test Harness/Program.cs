@@ -15,7 +15,41 @@ namespace Controller_Test_Harness
     {
         enum PGNValues
         {
-            PGN_EStop = 0x0000
+            // misc
+            PGN_ESTOP                    = 0x0000,
+
+            // blade control
+            PGN_CUT_VALVE                = 0x1000,   // 0 - 200
+            PGN_BLADE_OFFSET             = 0x1001,
+
+            // blade configuration
+            PGN_PWM_GAIN_UP              = 0x2002,
+            PGN_PWM_GAIN_DOWN            = 0x2003,
+            PGN_PWM_MIN_UP               = 0x2004,
+            PGN_PWM_MIN_DOWN             = 0x2005,
+            PGN_PWM_MAX_UP               = 0x2006,
+            PGN_PWM_MAX_DOWN             = 0x2007,
+            PGN_INTEGRAL_MULTPLIER       = 0x2008,
+            PGN_DEADBAND                 = 0x2009,
+
+            // autosteer control
+            PGN_AUTOSTEER_RELAY          = 0x3000,
+            PGN_AUTOSTEER_SPEED          = 0x3001,
+            PGN_AUTOSTEER_DISTANCE       = 0x3002,
+            PGN_AUTOSTEER_ANGLE          = 0x3003,
+
+            // autosteer configuration
+            PGN_AUTOSTEER_KP             = 0x4000,
+            PGN_AUTOSTEER_KI             = 0x4001,
+            PGN_AUTOSTEER_KD             = 0x4002,
+            PGN_AUTOSTEER_KO             = 0x4003,
+            PGN_AUTOSTEER_OFFSET         = 0x4004,
+            PGN_AUTOSTEER_MIN_PWM        = 0x4005,
+            PGN_AUTOSTEER_MAX_INTEGRAL   = 0x4006,
+            PGN_AUTOSTEER_COUNTS_PER_DEG = 0x4007,
+
+            // controller status
+            PGN_BLADE_OFFSET_SLAVE       = 0x5000,
         }
 
         struct ControllerCommand
@@ -47,6 +81,16 @@ namespace Controller_Test_Harness
             Controller = new SerialTransfer.SerialTransfer();
             Controller.Begin(port);
 
+            // send configuration
+            SendControllerCommand(PGNValues.PGN_PWM_GAIN_UP, 4);
+            SendControllerCommand(PGNValues.PGN_PWM_GAIN_DOWN, 3);
+            SendControllerCommand(PGNValues.PGN_PWM_MIN_UP, 50);
+            SendControllerCommand(PGNValues.PGN_PWM_MIN_DOWN, 50);
+            SendControllerCommand(PGNValues.PGN_PWM_MAX_UP, 180);
+            SendControllerCommand(PGNValues.PGN_PWM_MAX_DOWN, 180);
+            SendControllerCommand(PGNValues.PGN_INTEGRAL_MULTPLIER, 20);
+            SendControllerCommand(PGNValues.PGN_DEADBAND, 3);
+
             uint x = 0;
             DateTime TxTime = DateTime.Now.AddMilliseconds(500);
 
@@ -57,7 +101,7 @@ namespace Controller_Test_Harness
                     TxTime = DateTime.Now.AddMilliseconds(500);
 
                     ControllerCommand TxCmd;
-                    TxCmd.PGN = 0;
+                    TxCmd.PGN = PGNValues.PGN_CUT_VALVE;
                     TxCmd.Value = x++;
                     SendControllerCommand(TxCmd);
                 }
@@ -65,8 +109,30 @@ namespace Controller_Test_Harness
                 if (Controller.Available() > 0)
                 {
                     ControllerStatus Stat = GetControllerStatus();
+                    switch (Stat.PGN)
+                    {
+                        case PGNValues.PGN_ESTOP:
+                            Console.WriteLine("EMERGENCY STOP!");
+                            break;
+
+                        case PGNValues.PGN_BLADE_OFFSET_SLAVE:
+                            Console.WriteLine("Blade offset (slave): " + Stat.Value.ToString());
+                            break;
+                    }
                 }
             }
+        }
+
+        private static void SendControllerCommand
+            (
+            PGNValues PGN,
+            UInt32 Value
+            )
+        {
+            ControllerCommand Cmd;
+            Cmd.PGN = PGN;
+            Cmd.Value = Value;
+            SendControllerCommand(Cmd);
         }
 
         private static void SendControllerCommand

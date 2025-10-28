@@ -34,7 +34,7 @@
 #define LED_FLASH_PERIOD_MS 1000
 
 // how often to send status to OpenGrade3D
-#define STATUS_OUTPUT_PERIOD_MS 100
+#define STATUS_OUTPUT_PERIOD_MS 1000
 
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
@@ -64,7 +64,41 @@
 // supported PGNs
 typedef enum _pgn_t : uint16_t
 {
-  PGN_ESTOP = 0x0000
+  // misc
+  PGN_ESTOP                    = 0x0000,
+
+  // blade control
+  PGN_CUT_VALVE                = 0x1000,   // 0 - 200
+  PGN_BLADE_OFFSET             = 0x1001,
+
+  // blade configuration
+  PGN_PWM_GAIN_UP              = 0x2002,
+  PGN_PWM_GAIN_DOWN            = 0x2003,
+  PGN_PWM_MIN_UP               = 0x2004,
+  PGN_PWM_MIN_DOWN             = 0x2005,
+  PGN_PWM_MAX_UP               = 0x2006,
+  PGN_PWM_MAX_DOWN             = 0x2007,
+  PGN_INTEGRAL_MULTPLIER       = 0x2008,
+  PGN_DEADBAND                 = 0x2009,
+
+  // autosteer control
+  PGN_AUTOSTEER_RELAY          = 0x3000,
+  PGN_AUTOSTEER_SPEED          = 0x3001,
+  PGN_AUTOSTEER_DISTANCE       = 0x3002,
+  PGN_AUTOSTEER_ANGLE          = 0x3003,
+
+  // autosteer configuration
+  PGN_AUTOSTEER_KP             = 0x4000,
+  PGN_AUTOSTEER_KI             = 0x4001,
+  PGN_AUTOSTEER_KD             = 0x4002,
+  PGN_AUTOSTEER_KO             = 0x4003,
+  PGN_AUTOSTEER_OFFSET         = 0x4004,
+  PGN_AUTOSTEER_MIN_PWM        = 0x4005,
+  PGN_AUTOSTEER_MAX_INTEGRAL   = 0x4006,
+  PGN_AUTOSTEER_COUNTS_PER_DEG = 0x4007,
+
+  // controller status
+  PGN_BLADE_OFFSET_SLAVE       = 0x5000,
 } pgn_t;
 
 // status information that is transmitted to OpenGrade3D
@@ -80,6 +114,32 @@ typedef struct _opengrade3dcommand_t
   pgn_t PGN;
   uint32_t Value;
 } opengrade3dcommand_t;
+
+// configuration of blade control
+typedef struct _blade_config_t
+{
+  int PWMGainUp;
+  int PWMGainDown;
+  uint8_t PWMMinUp;
+  uint8_t PWMMinDown;
+  uint8_t PWMMaxUp;
+  uint8_t PWMMaxDown;
+  int IntegralMultiplier;
+  int Deadband;
+} blade_config_t;
+
+// current status of the blade
+typedef struct _blade_status_t
+{
+  int Offset;
+} blade_status_t;
+
+// movement command for blade
+typedef struct _blade_command_t
+{
+  int Offset;
+  int CutValve;
+} blade_command_t;
 
 typedef union _button_state_t
 {
@@ -124,6 +184,23 @@ static joystick_state_t JoystickState;
 static bool PendantSearch;
 static elapsedMillis StatusOutputTimestamp;
 static SerialTransfer OpenGrade3D;
+static blade_config_t BladeConfig;
+static blade_status_t BladeStatus;
+static blade_command_t BladeCommand;
+
+// processes the current blade command
+static void ProcessBladeCommand
+  (
+  blade_command_t *pCommand     // command to process
+  )
+{
+  // update status
+  BladeStatus.Offset = pCommand->Offset;
+  controllerstatus_t Status;
+  Status.PGN = PGN_BLADE_OFFSET_SLAVE;
+  Status.Value = BladeStatus.Offset;
+  SendStatus(&Status);
+}
 
 // perform an emergency stop of blade control
 static void EmergencyStop
@@ -131,7 +208,13 @@ static void EmergencyStop
   void
   )
 {
-  // send emergency message so all nodes are aware of the stop
+  // tell OpenGrade3D
+  controllerstatus_t Status;
+  Status.PGN = PGN_ESTOP;
+  Status.Value = 0;
+  SendStatus(&Status);
+
+  // send emergency message so all CAN nodes are aware of the stop
   CAN_message_t txmsg;
   
   txmsg.id = 0x080 + CONTROLLER_NODE_ID;
@@ -394,10 +477,12 @@ void setup()
   ButtonState.RawValue = 0;
   JoystickState.RawValue = 0;
 
+  // initial blade status
+  // fixme - to do - read from angle sensor
+  BladeStatus.Offset = 100;
+
   ResetAllNodes();
 }
-
-static volatile uint32_t x = 0;
 
 // main loop
 // perform background tasks
@@ -420,8 +505,40 @@ void loop
 
     switch (Command.PGN)
     {
-      case 0:
-        x = Command.Value;
+      // blade configuration
+      case PGN_PWM_GAIN_UP:
+        BladeConfig.PWMGainUp = Command.Value;
+        break;
+      case PGN_PWM_GAIN_DOWN:
+        BladeConfig.PWMGainDown = Command.Value;
+        break;
+      case PGN_PWM_MIN_UP:
+        BladeConfig.PWMMinUp = Command.Value;
+        break;
+      case PGN_PWM_MIN_DOWN:
+        BladeConfig.PWMMinDown = Command.Value;
+        break;
+      case PGN_PWM_MAX_UP:
+        BladeConfig.PWMMaxUp = Command.Value;
+        break;
+      case PGN_PWM_MAX_DOWN:
+        BladeConfig.PWMMaxDown = Command.Value;
+        break;
+      case PGN_INTEGRAL_MULTPLIER:
+        BladeConfig.IntegralMultiplier = Command.Value;
+        break;
+      case PGN_DEADBAND:
+        BladeConfig.Deadband = Command.Value;
+        break;
+
+      // blade commands
+      case PGN_CUT_VALVE:
+        BladeCommand.CutValve = Command.Value;
+        ProcessBladeCommand(&BladeCommand);
+        break;
+      case PGN_BLADE_OFFSET:
+        BladeCommand.Offset = Command.Value;
+        ProcessBladeCommand(&BladeCommand);
         break;
     }
   }
@@ -433,10 +550,9 @@ void loop
 
     controllerstatus_t Status;
 
-    // output status
-    Status.PGN = PGN_ESTOP;
-    Status.Value = x;
-
+    // output blade offset
+    Status.PGN = PGN_BLADE_OFFSET_SLAVE;
+    Status.Value = BladeStatus.Offset;
     SendStatus(&Status);
   }
 
