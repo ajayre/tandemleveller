@@ -61,6 +61,9 @@
 // CAN bus speed
 #define CAN_BITRATE_BPS 125000
 
+// perform blade control periodically
+#define BLADE_CONTROL_PERIOD_MS 50
+
 // supported PGNs
 typedef enum _pgn_t : uint16_t
 {
@@ -99,6 +102,8 @@ typedef enum _pgn_t : uint16_t
 
   // controller status
   PGN_BLADE_OFFSET_SLAVE       = 0x5000,
+  PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
+  PGN_FRONT_BLADE_DIRECTION    = 0x5002,
 } pgn_t;
 
 // status information that is transmitted to OpenGrade3D
@@ -138,7 +143,7 @@ typedef struct _blade_status_t
 typedef struct _blade_command_t
 {
   int Offset;
-  int CutValve;
+  int CutValve;       // target blade height in mm. 100 = on target, < 100 below target, > 100 above target. Range is 0 - 200
 } blade_command_t;
 
 typedef union _button_state_t
@@ -187,6 +192,9 @@ static SerialTransfer OpenGrade3D;
 static blade_config_t BladeConfig;
 static blade_status_t BladeStatus;
 static blade_command_t BladeCommand;
+static bool AutoBlade;
+static elapsedMillis BladeControlTimestamp;
+static int pwm1ago = 0, pwm2ago = 0, pwm3ago = 0, pwm4ago = 0, pwm5ago = 0;
 
 // processes the current blade command
 static void ProcessBladeCommand
@@ -403,6 +411,87 @@ static opengrade3dcommand_t GetCommand
   return Command;
 }
 
+// calculate new output for blade
+static void ControlBlade
+  (
+  void
+  )
+{
+  int PWMValue;
+  float PWMHist;
+  byte PWMDrive;
+
+  if (AutoBlade)
+  {
+    // lower the blade
+    if (BladeCommand.CutValve >= (100 + BladeConfig.Deadband))
+    {
+      // PWM value is negative
+      PWMValue = -((BladeCommand.CutValve - 100 - BladeConfig.Deadband) * BladeConfig.PWMGainDown + BladeConfig.PWMMinDown);
+    }
+    // lift the blade
+    else if (BladeCommand.CutValve <= (100 - BladeConfig.Deadband))
+    {
+      // PWM value is positive
+      PWMValue = -((BladeCommand.CutValve - 100 + BladeConfig.Deadband) * BladeConfig.PWMGainUp - BladeConfig.PWMMinUp);
+    }
+    else
+    {
+      PWMValue = 0;
+    }
+
+    // calculate a derivative
+    if (BladeCommand.CutValve != 100 && PWMValue != 0)
+    {
+      PWMHist = ((((pwm1ago) + pwm2ago + (pwm3ago) + (pwm4ago) + (pwm5ago / 2.000)) * (sq(BladeConfig.IntegralMultiplier) / 100.0000)) / sq(BladeCommand.CutValve - 100.0000));
+
+      //put pwmHist to 0 when the blade cross the line.
+      if (BladeCommand.CutValve > 100 && (pwm1ago + pwm2ago + pwm3ago + pwm4ago + pwm5ago) > 0) PWMHist = 0;
+      if (BladeCommand.CutValve < 100 && (pwm1ago + pwm2ago + pwm3ago + pwm4ago + pwm5ago) < 0) PWMHist = 0;
+
+      PWMValue = (PWMValue - PWMHist);
+    }
+
+    // shuffle samples down
+    pwm5ago = pwm4ago;
+    pwm4ago = pwm3ago;
+    pwm3ago = pwm2ago;
+    pwm2ago = pwm1ago;
+    pwm1ago = PWMValue;
+  
+    // enforce limits
+    if (BladeCommand.CutValve > 100 && PWMValue > 0) PWMValue = 0;
+    if (BladeCommand.CutValve > 100 && PWMValue < -(BladeConfig.PWMMaxDown)) PWMValue = -(BladeConfig.PWMMaxDown);
+    if (BladeCommand.CutValve < 100 && PWMValue < 0) PWMValue = 0;
+    if (BladeCommand.CutValve < 100 && PWMValue > BladeConfig.PWMMaxUp) PWMValue = BladeConfig.PWMMaxUp;
+    if (PWMValue > 0 && PWMValue < BladeConfig.PWMMinUp) PWMValue = 0;
+    if (PWMValue < 0 && PWMValue > -(BladeConfig.PWMMinDown)) PWMValue = 0;
+
+    if (PWMValue < 0)
+    {
+      digitalWrite(FRONT_HEIGHT_DIR, HIGH);
+    }
+    else
+    {
+      digitalWrite(FRONT_HEIGHT_DIR, LOW);
+    }
+
+    // set to 0 - 255
+    // scale to 0 - 32767
+    PWMDrive = abs(PWMValue);
+    analogWrite(FRONT_HEIGHT_PWM, (int)(32767.0 / 255.0 * PWMDrive));
+
+    controllerstatus_t Status;
+    Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
+    Status.Value = PWMDrive;
+    SendStatus(&Status);
+
+    Status.PGN = PGN_FRONT_BLADE_DIRECTION;
+    Status.Value = digitalRead(FRONT_HEIGHT_DIR);
+    SendStatus(&Status);
+  }
+}
+
 // initialize the hardware
 void setup()
 {
@@ -456,10 +545,6 @@ void setup()
   pinMode(LED, OUTPUT);
   digitalWrite(LED, HIGH);
 
-  //analogWrite(REAR_HEIGHT_PWM, (int)(32767 * 0.50));
-  analogWrite(REAR_DUMP_PWM, (int)(32767 * 0.50));
-  //digitalWrite(REAR_HEIGHT_DIR, HIGH);
-
   // reset heartbeat timers and flags
   for (int n = 0; n < NUM_NODES; n++)
   {
@@ -480,6 +565,11 @@ void setup()
   // initial blade status
   // fixme - to do - read from angle sensor
   BladeStatus.Offset = 100;
+
+  // fixme - change to false
+  AutoBlade = true;
+
+  BladeControlTimestamp = 0;
 
   ResetAllNodes();
 }
@@ -541,6 +631,14 @@ void loop
         ProcessBladeCommand(&BladeCommand);
         break;
     }
+  }
+
+  // perform blade control
+  if (BladeControlTimestamp >= BLADE_CONTROL_PERIOD_MS)
+  {
+    BladeControlTimestamp = 0;
+
+    ControlBlade();
   }
 
   // periodically send status to OpenGrade3D

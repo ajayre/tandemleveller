@@ -50,6 +50,8 @@ namespace Controller_Test_Harness
 
             // controller status
             PGN_BLADE_OFFSET_SLAVE       = 0x5000,
+            PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
+            PGN_FRONT_BLADE_DIRECTION    = 0x5002,
         }
 
         struct ControllerCommand
@@ -71,7 +73,7 @@ namespace Controller_Test_Harness
             // Create and configure SerialPort
             SerialPort port = new SerialPort
             {
-                PortName = "COM14",
+                PortName = "COM12",
                 BaudRate = 38400,
                 DataBits = 8,
                 Parity = Parity.None,
@@ -102,7 +104,7 @@ namespace Controller_Test_Harness
 
                     ControllerCommand TxCmd;
                     TxCmd.PGN = PGNValues.PGN_CUT_VALVE;
-                    TxCmd.Value = x++;
+                    TxCmd.Value = 80;
                     SendControllerCommand(TxCmd);
                 }
 
