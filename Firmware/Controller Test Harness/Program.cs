@@ -104,7 +104,7 @@ namespace Controller_Test_Harness
 
                     ControllerCommand TxCmd;
                     TxCmd.PGN = PGNValues.PGN_CUT_VALVE;
-                    TxCmd.Value = 80;
+                    TxCmd.Value = 90;
                     SendControllerCommand(TxCmd);
                 }
 
