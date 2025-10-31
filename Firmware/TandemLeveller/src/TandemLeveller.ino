@@ -36,6 +36,9 @@
 // how often to send status to OpenGrade3D
 #define STATUS_OUTPUT_PERIOD_MS 1000
 
+// how often to transmit TPDO1
+#define TPDO1_OUTPUT_PERIOD_MS 50
+
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
 
@@ -48,6 +51,9 @@
 
 // maximum time to wait for a heartbeat before declaring a node as missing
 #define MAX_HEARTBEAT_TIME 300
+
+// time between heartbeats in millseconds
+#define HB_PRODUCER_TIME_MS 100
 
 // CANopen error code for estop
 #define ESTOP_ERROR_CODE 0x1000
@@ -63,6 +69,9 @@
 
 // perform blade control periodically
 #define BLADE_CONTROL_PERIOD_MS 50
+
+// mimumum time between two jog moves per mm
+#define MIN_TIME_BETWEEN_JOGS_MS 200
 
 // supported PGNs
 typedef enum _pgn_t : uint16_t
@@ -133,16 +142,35 @@ typedef struct _blade_config_t
   int Deadband;
 } blade_config_t;
 
+typedef enum _blade_direction_t
+{
+  BLADE_DIR_DOWN = 0,
+  BLADE_DIR_UP   = 1
+} blade_direction_t;
+
+typedef enum _state_t
+{
+  STATE_RUN,
+  STATE_ESTOP
+} state_t;
+
 // current status of the blade
 typedef struct _blade_status_t
 {
+  int FrontBladePWM;
+  int FrontBladeCommand;
+  blade_direction_t FrontBladeDirection;
+  bool FrontBladeAuto;
+  int RearBladePWM;
+  int RearBladeCommand;
+  blade_direction_t RearBladeDirection;
+  bool RearBladeAuto;
   int Offset;
 } blade_status_t;
 
 // movement command for blade
 typedef struct _blade_command_t
 {
-  int Offset;
   int CutValve;       // target blade height in mm. 100 = on target, < 100 below target, > 100 above target. Range is 0 - 200
 } blade_command_t;
 
@@ -168,14 +196,14 @@ typedef union _joystick_state_t
   uint8_t RawValue;
   struct
   {
-    unsigned int Joystick1Left  : 1;
-    unsigned int Joystick1Right : 1;
     unsigned int Joystick1Up    : 1;
     unsigned int Joystick1Down  : 1;
-    unsigned int Joystick2Left  : 1;
-    unsigned int Joystick2Right : 1;
+    unsigned int Joystick1Right : 1;
+    unsigned int Joystick1Left  : 1;
     unsigned int Joystick2Up    : 1;
     unsigned int Joystick2Down  : 1;
+    unsigned int Joystick2Right : 1;
+    unsigned int Joystick2Left  : 1;
   } Fields;
 } joystick_state_t;
 
@@ -192,22 +220,68 @@ static SerialTransfer OpenGrade3D;
 static blade_config_t BladeConfig;
 static blade_status_t BladeStatus;
 static blade_command_t BladeCommand;
-static bool AutoBlade;
 static elapsedMillis BladeControlTimestamp;
 static int pwm1ago = 0, pwm2ago = 0, pwm3ago = 0, pwm4ago = 0, pwm5ago = 0;
+static elapsedMillis TPDO1Timestamp;
+static elapsedMillis HBTimestamp;
+static state_t State;
+static elapsedMillis LastJogTime;
 
-// processes the current blade command
-static void ProcessBladeCommand
+// transmits a CAN message
+static void TxCANMessage
   (
-  blade_command_t *pCommand     // command to process
+  uint16_t Id,
+  uint8_t Length,
+  uint8_t Data[]
   )
 {
-  // update status
-  BladeStatus.Offset = pCommand->Offset;
-  controllerstatus_t Status;
-  Status.PGN = PGN_BLADE_OFFSET_SLAVE;
-  Status.Value = BladeStatus.Offset;
-  SendStatus(&Status);
+  CAN_message_t txmsg;
+  txmsg.id = Id;
+  txmsg.len = Length;
+  for (uint8_t i = 0; i < Length; i++ ) txmsg.buf[i] = Data[i];
+  CANBus.write(txmsg);
+}
+
+// transmits a bootup message
+static void TxBootup
+  (
+  void
+  )
+{
+  uint8_t Data[1];
+
+  Data[0] = NMT_STATE_BOOTUP;
+  TxCANMessage(0x700 + CONTROLLER_NODE_ID, 1, Data);
+}
+
+// transmits a heartbeat message
+static void TxHeartbeat
+  (
+  void
+  )
+{
+  uint8_t Data[1];
+
+  Data[0] = NMT_STATE_OPERATIONAL;
+  TxCANMessage(0x700 + CONTROLLER_NODE_ID, 1, Data);
+}
+
+// transmit PDO1
+static void TxTPDO1
+  (
+  void
+  )
+{
+  uint8_t Data[8];
+  Data[0] = BladeStatus.FrontBladePWM & 0xFF;
+  Data[1] = (BladeStatus.FrontBladePWM >> 8) & 0xFF;
+  Data[2] = BladeStatus.FrontBladeCommand;
+  Data[3] = (BladeStatus.FrontBladeDirection & 0x01) | ((BladeStatus.FrontBladeAuto & 0x01) << 1);
+  Data[4] = BladeStatus.RearBladePWM & 0xFF;
+  Data[5] = (BladeStatus.RearBladePWM >> 8) & 0xFF;
+  Data[6] = BladeStatus.RearBladeCommand;
+  Data[7] = (BladeStatus.RearBladeDirection & 0x01) | ((BladeStatus.RearBladeAuto & 0x01) << 1);
+  TxCANMessage(0x180 + CONTROLLER_NODE_ID, 8, Data);
 }
 
 // perform an emergency stop of blade control
@@ -216,27 +290,38 @@ static void EmergencyStop
   void
   )
 {
-  // tell OpenGrade3D
-  controllerstatus_t Status;
-  Status.PGN = PGN_ESTOP;
-  Status.Value = 0;
-  SendStatus(&Status);
+  if (State == STATE_RUN)
+  {
+    State = STATE_ESTOP;
 
-  // send emergency message so all CAN nodes are aware of the stop
-  CAN_message_t txmsg;
-  
-  txmsg.id = 0x080 + CONTROLLER_NODE_ID;
-  txmsg.len = 8;
-  txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
-  txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
-  txmsg.buf[2] = 0x80;  // manufacturer-specific error
-  txmsg.buf[3] = 0x00;
-  txmsg.buf[4] = 0x00;
-  txmsg.buf[5] = 0x00;
-  txmsg.buf[6] = 0x00;
-  txmsg.buf[7] = 0x00;
+    // tell OpenGrade3D
+    controllerstatus_t Status;
+    Status.PGN = PGN_ESTOP;
+    Status.Value = 0;
+    SendStatus(&Status);
 
-  CANBus.write(txmsg);
+    // send emergency message so all CAN nodes are aware of the stop
+    CAN_message_t txmsg;
+    txmsg.id = 0x080 + CONTROLLER_NODE_ID;
+    txmsg.len = 8;
+    txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
+    txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
+    txmsg.buf[2] = 0x80;  // manufacturer-specific error
+    txmsg.buf[3] = 0x00;
+    txmsg.buf[4] = 0x00;
+    txmsg.buf[5] = 0x00;
+    txmsg.buf[6] = 0x00;
+    txmsg.buf[7] = 0x00;
+    CANBus.write(txmsg);
+
+    Serial.println("ESTOP!");
+
+    // switch to manual control, stop movement
+    BladeStatus.FrontBladeAuto = false;
+    BladeStatus.RearBladeAuto  = false;
+    BladeCommand.CutValve = 100;
+    SetValvePWM(0);
+  }
 }
 
 // process TPDO from IMU
@@ -267,10 +352,41 @@ static void ProcessPendantTPDO
     ButtonState.RawValue = (pData[0] | ((uint16_t)pData[1] << 8));
     JoystickState.RawValue = pData[2];
 
+    //Serial.printf("%s %s %s %s",
+    //  JoystickState.Fields.Joystick1Up    ? "U" : "-",
+    //  JoystickState.Fields.Joystick1Down  ? "D" : "-",
+    //  JoystickState.Fields.Joystick1Left  ? "L" : "-",
+    //  JoystickState.Fields.Joystick1Right ? "R" : "-"
+    //);
+    //Serial.println();
+
     // ESTOP PRESSED
     if (!ButtonState.Fields.EStopArmed)
     {
       EmergencyStop();
+    }
+
+    if (!BladeStatus.FrontBladeAuto)
+    {
+      // manual jogging of front blade
+      if (JoystickState.Fields.Joystick1Up)
+      {
+        if (LastJogTime >= MIN_TIME_BETWEEN_JOGS_MS)
+        {
+          BladeCommand.CutValve += 1;
+          if (BladeCommand.CutValve > 200) BladeCommand.CutValve = 200;
+          LastJogTime = 0;
+        }
+      }
+      else if (JoystickState.Fields.Joystick1Down)
+      {
+        if (LastJogTime >= MIN_TIME_BETWEEN_JOGS_MS)
+        {
+          BladeCommand.CutValve -= 1;
+          if (BladeCommand.CutValve < 0) BladeCommand.CutValve = 0;
+          LastJogTime = 0;
+        }
+      }
     }
   }
 }
@@ -305,7 +421,6 @@ static void ProcessHeartbeat
       }
 
       HBTime[NodeId - 1] = 0;
-      Serial.println("hb reset");
     }
   }
 }
@@ -419,77 +534,93 @@ static void ControlBlade
 {
   int PWMValue;
   float PWMHist;
-  byte PWMDrive;
 
-  if (AutoBlade)
+  // only control the blade if we are in the run state
+  if (State != STATE_RUN)
   {
-    // lower the blade
-    if (BladeCommand.CutValve >= (100 + BladeConfig.Deadband))
-    {
-      // PWM value is negative
-      PWMValue = -((BladeCommand.CutValve - 100 - BladeConfig.Deadband) * BladeConfig.PWMGainDown + BladeConfig.PWMMinDown);
-    }
-    // lift the blade
-    else if (BladeCommand.CutValve <= (100 - BladeConfig.Deadband))
-    {
-      // PWM value is positive
-      PWMValue = -((BladeCommand.CutValve - 100 + BladeConfig.Deadband) * BladeConfig.PWMGainUp - BladeConfig.PWMMinUp);
-    }
-    else
-    {
-      PWMValue = 0;
-    }
-
-    // calculate a derivative
-    if (BladeCommand.CutValve != 100 && PWMValue != 0)
-    {
-      PWMHist = ((((pwm1ago) + pwm2ago + (pwm3ago) + (pwm4ago) + (pwm5ago / 2.000)) * (sq(BladeConfig.IntegralMultiplier) / 100.0000)) / sq(BladeCommand.CutValve - 100.0000));
-
-      //put pwmHist to 0 when the blade cross the line.
-      if (BladeCommand.CutValve > 100 && (pwm1ago + pwm2ago + pwm3ago + pwm4ago + pwm5ago) > 0) PWMHist = 0;
-      if (BladeCommand.CutValve < 100 && (pwm1ago + pwm2ago + pwm3ago + pwm4ago + pwm5ago) < 0) PWMHist = 0;
-
-      PWMValue = (PWMValue - PWMHist);
-    }
-
-    // shuffle samples down
-    pwm5ago = pwm4ago;
-    pwm4ago = pwm3ago;
-    pwm3ago = pwm2ago;
-    pwm2ago = pwm1ago;
-    pwm1ago = PWMValue;
-  
-    // enforce limits
-    if (BladeCommand.CutValve > 100 && PWMValue > 0) PWMValue = 0;
-    if (BladeCommand.CutValve > 100 && PWMValue < -(BladeConfig.PWMMaxDown)) PWMValue = -(BladeConfig.PWMMaxDown);
-    if (BladeCommand.CutValve < 100 && PWMValue < 0) PWMValue = 0;
-    if (BladeCommand.CutValve < 100 && PWMValue > BladeConfig.PWMMaxUp) PWMValue = BladeConfig.PWMMaxUp;
-    if (PWMValue > 0 && PWMValue < BladeConfig.PWMMinUp) PWMValue = 0;
-    if (PWMValue < 0 && PWMValue > -(BladeConfig.PWMMinDown)) PWMValue = 0;
-
-    if (PWMValue < 0)
-    {
-      digitalWrite(FRONT_HEIGHT_DIR, HIGH);
-    }
-    else
-    {
-      digitalWrite(FRONT_HEIGHT_DIR, LOW);
-    }
-
-    // set to 0 - 255
-    // scale to 0 - 32767
-    PWMDrive = abs(PWMValue);
-    analogWrite(FRONT_HEIGHT_PWM, (int)(32767.0 / 255.0 * PWMDrive));
-
-    controllerstatus_t Status;
-    Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
-    Status.Value = PWMDrive;
-    SendStatus(&Status);
-
-    Status.PGN = PGN_FRONT_BLADE_DIRECTION;
-    Status.Value = digitalRead(FRONT_HEIGHT_DIR);
-    SendStatus(&Status);
+    return;
   }
+
+  // store command
+  BladeStatus.FrontBladeCommand = BladeCommand.CutValve;
+
+  // lower the blade
+  if (BladeCommand.CutValve >= (100 + BladeConfig.Deadband))
+  {
+    // PWM value is negative
+    PWMValue = -((BladeCommand.CutValve - 100 - BladeConfig.Deadband) * BladeConfig.PWMGainDown + BladeConfig.PWMMinDown);
+  }
+  // lift the blade
+  else if (BladeCommand.CutValve <= (100 - BladeConfig.Deadband))
+  {
+    // PWM value is positive
+    PWMValue = -((BladeCommand.CutValve - 100 + BladeConfig.Deadband) * BladeConfig.PWMGainUp - BladeConfig.PWMMinUp);
+  }
+  else
+  {
+    PWMValue = 0;
+  }
+
+  // calculate a derivative
+  if (BladeCommand.CutValve != 100 && PWMValue != 0)
+  {
+    PWMHist = ((((pwm1ago) + pwm2ago + (pwm3ago) + (pwm4ago) + (pwm5ago / 2.000)) * (sq(BladeConfig.IntegralMultiplier) / 100.0000)) / sq(BladeCommand.CutValve - 100.0000));
+
+    //put pwmHist to 0 when the blade cross the line.
+    if (BladeCommand.CutValve > 100 && (pwm1ago + pwm2ago + pwm3ago + pwm4ago + pwm5ago) > 0) PWMHist = 0;
+    if (BladeCommand.CutValve < 100 && (pwm1ago + pwm2ago + pwm3ago + pwm4ago + pwm5ago) < 0) PWMHist = 0;
+
+    PWMValue = (PWMValue - PWMHist);
+  }
+
+  // shuffle samples down
+  pwm5ago = pwm4ago;
+  pwm4ago = pwm3ago;
+  pwm3ago = pwm2ago;
+  pwm2ago = pwm1ago;
+  pwm1ago = PWMValue;
+  
+  // enforce limits
+  if (BladeCommand.CutValve > 100 && PWMValue > 0) PWMValue = 0;
+  if (BladeCommand.CutValve > 100 && PWMValue < -(BladeConfig.PWMMaxDown)) PWMValue = -(BladeConfig.PWMMaxDown);
+  if (BladeCommand.CutValve < 100 && PWMValue < 0) PWMValue = 0;
+  if (BladeCommand.CutValve < 100 && PWMValue > BladeConfig.PWMMaxUp) PWMValue = BladeConfig.PWMMaxUp;
+  if (PWMValue > 0 && PWMValue < BladeConfig.PWMMinUp) PWMValue = 0;
+  if (PWMValue < 0 && PWMValue > -(BladeConfig.PWMMinDown)) PWMValue = 0;
+
+  if (PWMValue < 0)
+  {
+    digitalWrite(FRONT_HEIGHT_DIR, HIGH);
+    BladeStatus.FrontBladeDirection = BLADE_DIR_DOWN;
+  }
+  else
+  {
+    digitalWrite(FRONT_HEIGHT_DIR, LOW);
+    BladeStatus.FrontBladeDirection = BLADE_DIR_UP;
+  }
+
+  SetValvePWM(abs(PWMValue));
+}
+
+// sets the PWM value for the valve
+static void SetValvePWM
+  (
+  uint8_t Value          // new valve PWM setting 0 - 255
+  )
+{
+  // set to 0 - 255
+  BladeStatus.FrontBladePWM = abs(Value);
+  analogWrite(FRONT_HEIGHT_PWM, BladeStatus.FrontBladePWM);
+
+  // update OG3D
+  controllerstatus_t Status;
+  Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
+  Status.Value = BladeStatus.FrontBladePWM;
+  SendStatus(&Status);
+
+  Status.PGN = PGN_FRONT_BLADE_DIRECTION;
+  Status.Value = digitalRead(FRONT_HEIGHT_DIR);
+  SendStatus(&Status);
 }
 
 // initialize the hardware
@@ -498,10 +629,8 @@ void setup()
   //debug.begin(Serial);
   //halt_cpu(); 
 
+  // fixme - change back to Serial5
   // configure connection to opengrade3d
-  //Serial5.begin(OPENGRADE3D_BAUDRATE);
-  //OpenGrade3D.begin(Serial5);
-  // fixme - swap back
   Serial.begin(OPENGRADE3D_BAUDRATE);
   OpenGrade3D.begin(Serial);
 
@@ -527,7 +656,7 @@ void setup()
   analogWriteFrequency(REAR_HEIGHT_PWM,  PWM_FREQUENCY_HZ);
   analogWriteFrequency(FRONT_DUMP_PWM,   PWM_FREQUENCY_HZ);
   analogWriteFrequency(REAR_DUMP_PWM,    PWM_FREQUENCY_HZ);
-  analogWriteResolution(15); // 0 - 32767
+  analogWriteResolution(8); // 0 - 255
 
   // set up direction control signals
   pinMode(FRONT_HEIGHT_DIR, OUTPUT);
@@ -562,14 +691,35 @@ void setup()
   ButtonState.RawValue = 0;
   JoystickState.RawValue = 0;
 
-  // initial blade status
-  // fixme - to do - read from angle sensor
-  BladeStatus.Offset = 100;
+  HBTimestamp = 0;
+  TPDO1Timestamp = 0;
 
-  // fixme - change to false
-  AutoBlade = true;
+  LastJogTime = 0;
+
+  // initial blade status
+  memset(&BladeStatus, 0, sizeof(blade_status_t));
+  BladeStatus.FrontBladeAuto = false;
+  BladeStatus.RearBladeAuto  = false;
+
+  // initial state is no movement
+  BladeCommand.CutValve = 100;
 
   BladeControlTimestamp = 0;
+
+  // default PWM configuruation
+  BladeConfig.PWMGainUp          = 4;
+  BladeConfig.PWMGainDown        = 3;
+  BladeConfig.PWMMinUp           = 50;
+  BladeConfig.PWMMinDown         = 50;
+  BladeConfig.PWMMaxUp           = 180;
+  BladeConfig.PWMMaxDown         = 180;
+  BladeConfig.IntegralMultiplier = 20;
+  BladeConfig.Deadband           = 3;
+
+  State = STATE_RUN;
+
+  TxBootup();
+  TxTPDO1();
 
   ResetAllNodes();
 }
@@ -623,12 +773,14 @@ void loop
 
       // blade commands
       case PGN_CUT_VALVE:
-        BladeCommand.CutValve = Command.Value;
-        ProcessBladeCommand(&BladeCommand);
+        if (BladeStatus.FrontBladeAuto)
+        {
+          // store for use on next calculation pass
+          BladeCommand.CutValve = Command.Value;
+        }
         break;
       case PGN_BLADE_OFFSET:
-        BladeCommand.Offset = Command.Value;
-        ProcessBladeCommand(&BladeCommand);
+        // not used
         break;
     }
   }
@@ -654,6 +806,14 @@ void loop
     SendStatus(&Status);
   }
 
+  // periodically transmit data onto the CAN bus
+  if (TPDO1Timestamp >= TPDO1_OUTPUT_PERIOD_MS)
+  {
+    TPDO1Timestamp = 0;
+
+    TxTPDO1();
+  }
+
   // check for pendant
   if (PendantSearch && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
   {
@@ -670,6 +830,14 @@ void loop
     {
       EmergencyStop();
     }
+  }
+
+  // transmit heartbeats
+  if (HBTimestamp >= HB_PRODUCER_TIME_MS)
+  {
+    HBTimestamp = 0;
+
+    TxHeartbeat();
   }
 
   // flash LED

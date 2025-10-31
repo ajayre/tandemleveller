@@ -38,6 +38,18 @@
         <EDS Path="yes">
         </EDS>
       </Node>
+      <Node>
+        <Id>1</Id>
+        <Name>Controller</Name>
+        <EDS Path="yes">
+        </EDS>
+      </Node>
+      <Node>
+        <Id>7</Id>
+        <Name>Rear Scraper Angle</Name>
+        <EDS Path="yes">
+        </EDS>
+      </Node>
     </Nodes>
     <AbortCodes />
     <ErrorCodes />
@@ -278,7 +290,447 @@
         <PostOffset>0</PostOffset>
         <Units>deg</Units>
         <Guid>b3f085ad-c380-4de4-a567-3a2b065dda51</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>391</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>RS Angle</Name>
+        <StartBit>0</StartBit>
+        <TypeId>Unsigned16</TypeId>
+        <BitSize>16</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>0.01</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>deg</Units>
+        <Guid>3134012c-991f-4447-8ba9-c4add06598ad</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>FS Blade PWM</Name>
+        <StartBit>0</StartBit>
+        <TypeId>Unsigned16</TypeId>
+        <BitSize>16</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>12fa31c0-0fa3-43fc-ba57-1cd2f0c89565</Guid>
         <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>FS Blade Cmd</Name>
+        <StartBit>16</StartBit>
+        <TypeId>Unsigned8</TypeId>
+        <BitSize>8</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>d93ff739-bd1d-4ac8-a782-1809f6e50e0e</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>FS Blade Dir</Name>
+        <StartBit>24</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>13c78112-ea45-4882-8866-9f9dd7c748fc</Guid>
+        <Enums>0=Down,1=Up</Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>FS Blade Auto</Name>
+        <StartBit>25</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>abeb0a41-6137-4688-ae08-64d103563814</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>RS Blade PWM</Name>
+        <StartBit>32</StartBit>
+        <TypeId>Unsigned16</TypeId>
+        <BitSize>16</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>849d29ce-7b87-4ca2-96d5-caf12e520192</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>RS Blade Cmd</Name>
+        <StartBit>48</StartBit>
+        <TypeId>Unsigned8</TypeId>
+        <BitSize>8</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>4be20d7a-5ab3-4d02-bb91-7940383ac04b</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>RS Blade Dir</Name>
+        <StartBit>56</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>b3930093-bcac-4cb5-a29a-e6983762261c</Guid>
+        <Enums>0=Down,1=Up</Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>385</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>RS Blade Auto</Name>
+        <StartBit>57</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>a9ac0c79-a307-48d4-8cbb-17a95e172170</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Button 1</Name>
+        <StartBit>0</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>73351209-8232-4c0b-bae3-437d1369ed14</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Joystick 1</Name>
+        <StartBit>16</StartBit>
+        <TypeId>Unsigned4</TypeId>
+        <BitSize>4</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>f924f29c-4ca2-4795-b2d9-b8ee83e226ee</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Joystick 2</Name>
+        <StartBit>20</StartBit>
+        <TypeId>Unsigned4</TypeId>
+        <BitSize>4</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>9f54f2b0-a46f-42c1-8ac2-6867b713a253</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Button 2</Name>
+        <StartBit>1</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>ee8680f9-b5e9-4217-b935-7f84d25b3541</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Button 3</Name>
+        <StartBit>2</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>a3e54400-41b9-49e5-94ad-7fdfd5997bed</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Button 4</Name>
+        <StartBit>3</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>dd525f82-2443-4f56-9e6d-6492109b1234</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>ESTOP Armed</Name>
+        <StartBit>4</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>0e51203f-7a94-403b-89c7-dd55b7434672</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Joystick 1 Btn</Name>
+        <StartBit>8</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>d6ba5617-92a3-4e62-81f0-691a3c8b0de8</Guid>
+        <Enums />
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>389</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Joystick 2 Btn</Name>
+        <StartBit>9</StartBit>
+        <TypeId>Boolean</TypeId>
+        <BitSize>1</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>1</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>
+        </Units>
+        <Guid>7b243d35-a8db-442c-8cc6-8ace9eaca04b</Guid>
+        <Enums>
+        </Enums>
         <SimpleView>false</SimpleView>
         <ReadOnly>false</ReadOnly>
         <BufferSize>5000</BufferSize>
@@ -348,8 +800,8 @@
         <Width>36</Width>
         <Width>100</Width>
         <Width>100</Width>
-        <Width>300</Width>
-        <Width>342</Width>
+        <Width>241</Width>
+        <Width>940</Width>
         <Width>140</Width>
         <Width>140</Width>
         <Width>140</Width>
@@ -645,7 +1097,7 @@
       <MaxPreTriggerPoints>10</MaxPreTriggerPoints>
       <AutoY>true</AutoY>
       <MinY>-5</MinY>
-      <MaxY>70</MaxY>
+      <MaxY>185</MaxY>
       <Series>
         <RealTimeChartSeries>
           <Enabled>false</Enabled>
@@ -693,7 +1145,7 @@
           <UseEndTrigger>false</UseEndTrigger>
         </RealTimeChartSeries>
         <RealTimeChartSeries>
-          <Enabled>true</Enabled>
+          <Enabled>false</Enabled>
           <PointSize>6</PointSize>
           <PointLineThickness>1.5</PointLineThickness>
           <LineThickness>1.5</LineThickness>
@@ -707,6 +1159,21 @@
           <UseStartTrigger>false</UseStartTrigger>
           <UseEndTrigger>false</UseEndTrigger>
         </RealTimeChartSeries>
+        <RealTimeChartSeries>
+          <Enabled>true</Enabled>
+          <PointSize>0.1</PointSize>
+          <PointLineThickness>1.5</PointLineThickness>
+          <LineThickness>1.5</LineThickness>
+          <PointColor>-15085517</PointColor>
+          <LineColor>-15085517</LineColor>
+          <LineSmoothness>0</LineSmoothness>
+          <Fill>false</Fill>
+          <FillColor>-15085517</FillColor>
+          <FillOpacity>0</FillOpacity>
+          <ProcessDataGuid>12fa31c0-0fa3-43fc-ba57-1cd2f0c89565</ProcessDataGuid>
+          <UseStartTrigger>false</UseStartTrigger>
+          <UseEndTrigger>false</UseEndTrigger>
+        </RealTimeChartSeries>
       </Series>
     </RealTimeChart>
   </RealTimeChartDocument>
@@ -716,30 +1183,32 @@
     <State>Maximized</State>
     <Layout>&lt;?xml version="1.0" encoding="utf-16"?&gt;
 &lt;Layout&gt;
-  &lt;Window Guid="505abfa9-96d6-4750-a743-ac5a87b85fce" LastFocused="134042730303254877" DockedSize="300" PopupSize="300" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Left" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="15825ba0-b5b3-48c4-a3d6-7e6564b2ba78" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Window Guid="073e9d8c-7e52-4040-81e9-8e66063af3ea" LastFocused="134049678997179324" DockedSize="200" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="550, 400" LastOpenDockSituation="Document" LastFixedDockSituation="Document" LastFixedDockLocation="Right" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="0" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="00000000-0000-0000-0000-000000000000" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="74765791-eb36-4375-a19f-8341d2f9e704" DocumentIndexInWindowGroup="1" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Window Guid="4653a478-5c40-4c76-88c0-88047093507f" LastFocused="134049678768102987" DockedSize="77" PopupSize="0" FloatingLocation="593, 179" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Right" LastFloatingWindowGuid="a5a3aff2-f945-48af-a0be-c67ad6f9cc0b" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Window Guid="505abfa9-96d6-4750-a743-ac5a87b85fce" LastFocused="134063547872045169" DockedSize="291" PopupSize="300" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Left" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="15825ba0-b5b3-48c4-a3d6-7e6564b2ba78" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Window Guid="073e9d8c-7e52-4040-81e9-8e66063af3ea" LastFocused="134063544132783457" DockedSize="200" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="550, 400" LastOpenDockSituation="Document" LastFixedDockSituation="Document" LastFixedDockLocation="Right" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="0" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="00000000-0000-0000-0000-000000000000" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="74765791-eb36-4375-a19f-8341d2f9e704" DocumentIndexInWindowGroup="1" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Window Guid="4653a478-5c40-4c76-88c0-88047093507f" LastFocused="134063547792408047" DockedSize="378" PopupSize="0" FloatingLocation="421, 72" FloatingSize="1193, 821" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Right" LastFloatingWindowGuid="1a0de558-e71a-46e6-8bf9-970e05921b51" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" DockedIndexInWindowGroup="0" DockedSplitPath="0|0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
   &lt;Window Guid="f38bf915-d069-4891-bd3a-3a839bde84e5" LastFocused="134042729230009129" DockedSize="200" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="550, 400" LastOpenDockSituation="Document" LastFixedDockSituation="Document" LastFixedDockLocation="Right" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="0" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="00000000-0000-0000-0000-000000000000" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="74765791-eb36-4375-a19f-8341d2f9e704" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Window Guid="ad90c367-b696-44e8-9661-160abe5e78ce" LastFocused="134042725697273414" DockedSize="202" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Bottom" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="36d80b79-2898-4e1a-8f01-5f9c62378481" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Container Dock="4" ContentSize="77"&gt;
+  &lt;Window Guid="ad90c367-b696-44e8-9661-160abe5e78ce" LastFocused="134063547310615578" DockedSize="251" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Bottom" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="36d80b79-2898-4e1a-8f01-5f9c62378481" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Container Dock="4" ContentSize="378"&gt;
     &lt;SplitLayoutSystem WorkingSize="250, 400" SplitMode="0"&gt;
-      &lt;ControlLayoutSystem WorkingSize="250, 400" Guid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" Collapsed="0" SelectedControl="4653a478-5c40-4c76-88c0-88047093507f"&gt;
-        &lt;Controls&gt;
-          &lt;Control Guid="4653a478-5c40-4c76-88c0-88047093507f" /&gt;
-        &lt;/Controls&gt;
-      &lt;/ControlLayoutSystem&gt;
+      &lt;SplitLayoutSystem WorkingSize="250, 400" SplitMode="0"&gt;
+        &lt;ControlLayoutSystem WorkingSize="250, 400" Guid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" Collapsed="0" SelectedControl="4653a478-5c40-4c76-88c0-88047093507f"&gt;
+          &lt;Controls&gt;
+            &lt;Control Guid="4653a478-5c40-4c76-88c0-88047093507f" /&gt;
+          &lt;/Controls&gt;
+        &lt;/ControlLayoutSystem&gt;
+      &lt;/SplitLayoutSystem&gt;
     &lt;/SplitLayoutSystem&gt;
   &lt;/Container&gt;
-  &lt;Container Dock="3" ContentSize="300"&gt;
+  &lt;Container Dock="3" ContentSize="291"&gt;
     &lt;SplitLayoutSystem WorkingSize="250, 400" SplitMode="0"&gt;
-      &lt;ControlLayoutSystem WorkingSize="250, 400" Guid="15825ba0-b5b3-48c4-a3d6-7e6564b2ba78" Collapsed="1" SelectedControl="505abfa9-96d6-4750-a743-ac5a87b85fce"&gt;
+      &lt;ControlLayoutSystem WorkingSize="250, 400" Guid="15825ba0-b5b3-48c4-a3d6-7e6564b2ba78" Collapsed="0" SelectedControl="505abfa9-96d6-4750-a743-ac5a87b85fce"&gt;
         &lt;Controls&gt;
           &lt;Control Guid="505abfa9-96d6-4750-a743-ac5a87b85fce" /&gt;
         &lt;/Controls&gt;
       &lt;/ControlLayoutSystem&gt;
     &lt;/SplitLayoutSystem&gt;
   &lt;/Container&gt;
-  &lt;Container Dock="2" ContentSize="202"&gt;
+  &lt;Container Dock="2" ContentSize="251"&gt;
     &lt;SplitLayoutSystem WorkingSize="250, 400" SplitMode="1"&gt;
       &lt;ControlLayoutSystem WorkingSize="250, 400" Guid="36d80b79-2898-4e1a-8f01-5f9c62378481" Collapsed="0" SelectedControl="ad90c367-b696-44e8-9661-160abe5e78ce"&gt;
         &lt;Controls&gt;

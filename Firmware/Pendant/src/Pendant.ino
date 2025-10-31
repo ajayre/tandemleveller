@@ -51,6 +51,9 @@
 // time for power on self test
 #define POST_DELAY_MS 1000
 
+// how often to transmit TPDO1
+#define TPDO1_OUTPUT_PERIOD_MS 50
+
 // supported LED states
 typedef enum _led_state_t
 {
@@ -62,7 +65,7 @@ typedef enum _led_state_t
 static void ButtonHandler(uint8_t btnId, uint8_t btnState);
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
-elapsedMillis HBTime;
+static elapsedMillis HBTime;
 static WDT_T4<WDT1> wdt;
 static Button Button1(BUTTON1_ID, ButtonHandler);
 static Button Button2(BUTTON2_ID, ButtonHandler);
@@ -75,6 +78,7 @@ static elapsedMillis POSTTimer;
 static bool POSTCompleted = false;
 static uint16_t ButtonStates = 0x0000;
 static uint8_t JoystickStates = 0x00;
+static elapsedMillis TPDO1Timestamp;
 
 // reboot the device
 static void Reboot
@@ -435,6 +439,8 @@ void setup()
   CANBus.setFIFOFilter(0, 0x000, STD);
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
 
+  TPDO1Timestamp = 0;
+
   // tell everyone we are ready
   TxBootup();
 
@@ -475,5 +481,13 @@ void loop
 
     TxHeartbeat();
     wdt.feed();
+  }
+
+  // transmit TPDO1
+  if (TPDO1Timestamp >= TPDO1_OUTPUT_PERIOD_MS)
+  {
+    TPDO1Timestamp = 0;
+
+    TxPDO();
   }
 }
