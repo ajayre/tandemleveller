@@ -111,6 +111,8 @@ static elapsedMillis TPDO1Timestamp;
 static blade_status_t BladeStatus;
 static elapsedMillis Button1FlashTimestamp;
 static elapsedMillis Button2FlashTimestamp;
+static bool LastFrontBladeAuto;
+static bool LastRearBladeAuto;
 
 // reboot the device
 static void Reboot
@@ -186,6 +188,32 @@ static void TxPDO
   TxCANMessage(0x180 + NODE_ID, 3, Data);
 }
 
+// the front blade just entered or exited auto mode
+static void FrontBladeAutoChanged
+  (
+  bool IsAuto                      // new auto state
+  )
+{
+  // if just exited auto turn off button LED to stop flashing
+  if (!IsAuto)
+  {
+    SetButtonLED(BUTTON1_LED_PIN, LED_OFF);
+  }
+}
+
+// the rear blade just entered or exited auto mode
+static void RearBladeAutoChanged
+  (
+  bool IsAuto                      // new auto state
+  )
+{
+  // if just exited auto turn off button LED to stop flashing
+  if (!IsAuto)
+  {
+    SetButtonLED(BUTTON2_LED_PIN, LED_OFF);
+  }
+}
+
 // process TPDO1 from the controller
 static void ProcessControllerTPDO1
   (
@@ -200,10 +228,22 @@ static void ProcessControllerTPDO1
     BladeStatus.FrontBladeDirection = (blade_direction_t)(pData[3] & 0x01);
     BladeStatus.FrontBladeAuto      = (bool)((pData[3] >> 1) & 0x01);
 
+    if (BladeStatus.FrontBladeAuto != LastFrontBladeAuto)
+    {
+      FrontBladeAutoChanged(BladeStatus.FrontBladeAuto);
+    }
+    LastFrontBladeAuto = BladeStatus.FrontBladeAuto;
+
     BladeStatus.RearBladePWM       = ((int)pData[5] << 8) | pData[4];
     BladeStatus.RearBladeCommand   = pData[6];
     BladeStatus.RearBladeDirection = (blade_direction_t)(pData[7] & 0x01);
     BladeStatus.RearBladeAuto      = (bool)((pData[7] >> 1) & 0x01);
+
+    if (BladeStatus.RearBladeAuto != LastRearBladeAuto)
+    {
+      RearBladeAutoChanged(BladeStatus.RearBladeAuto);
+    }
+    LastRearBladeAuto = BladeStatus.RearBladeAuto;
   }
 }
 
@@ -235,10 +275,7 @@ static void CANReceiveHandler
     // ESTOP, set LEDs to indicate a stop
     if (ErrorCode == ESTOP_ERROR_CODE)
     {
-      SetButtonLED(BUTTON1_LED_PIN, LED_ON);
-      SetButtonLED(BUTTON2_LED_PIN, LED_ON);
-      SetButtonLED(BUTTON3_LED_PIN, LED_ON);
-      SetButtonLED(BUTTON4_LED_PIN, LED_ON);
+      // do nothing
     }
   }
 
@@ -521,6 +558,9 @@ void setup()
 
   Button1FlashTimestamp = 0;
   Button2FlashTimestamp = 0;
+
+  LastFrontBladeAuto = false;
+  LastRearBladeAuto  = false;
 
   // tell everyone we are ready
   TxBootup();
