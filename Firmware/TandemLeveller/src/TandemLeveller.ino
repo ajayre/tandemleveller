@@ -321,6 +321,8 @@ static void EmergencyStop
     BladeStatus.RearBladeAuto  = false;
     BladeCommand.CutValve = 100;
     SetValvePWM(0);
+
+    TxTPDO1();
   }
 }
 
@@ -349,6 +351,9 @@ static void ProcessPendantTPDO
 {
   if (Length == 3)
   {
+    unsigned int LastButton1State = ButtonState.Fields.Button1Pressed;
+    unsigned int LastButton2State = ButtonState.Fields.Button2Pressed;
+
     ButtonState.RawValue = (pData[0] | ((uint16_t)pData[1] << 8));
     JoystickState.RawValue = pData[2];
 
@@ -366,25 +371,54 @@ static void ProcessPendantTPDO
       EmergencyStop();
     }
 
-    if (!BladeStatus.FrontBladeAuto)
+    if (State == STATE_RUN)
     {
-      // manual jogging of front blade
-      if (JoystickState.Fields.Joystick1Up)
+      // toggle auto mode for front blade
+      if (ButtonState.Fields.Button1Pressed && !LastButton1State)
       {
-        if (LastJogTime >= MIN_TIME_BETWEEN_JOGS_MS)
+        if (BladeStatus.FrontBladeAuto)
         {
-          BladeCommand.CutValve += 1;
-          if (BladeCommand.CutValve > 200) BladeCommand.CutValve = 200;
-          LastJogTime = 0;
+          BladeStatus.FrontBladeAuto = false;
+        }
+        else
+        {
+          BladeStatus.FrontBladeAuto = true;
         }
       }
-      else if (JoystickState.Fields.Joystick1Down)
+
+      // toggle auto mode for rear blade
+      if (ButtonState.Fields.Button2Pressed && !LastButton2State)
       {
-        if (LastJogTime >= MIN_TIME_BETWEEN_JOGS_MS)
+        if (BladeStatus.RearBladeAuto)
         {
-          BladeCommand.CutValve -= 1;
-          if (BladeCommand.CutValve < 0) BladeCommand.CutValve = 0;
-          LastJogTime = 0;
+          BladeStatus.RearBladeAuto = false;
+        }
+        else
+        {
+          BladeStatus.RearBladeAuto = true;
+        }
+      }
+
+      if (!BladeStatus.FrontBladeAuto)
+      {
+        // manual jogging of front blade
+        if (JoystickState.Fields.Joystick1Up)
+        {
+          if (LastJogTime >= MIN_TIME_BETWEEN_JOGS_MS)
+          {
+            BladeCommand.CutValve += 1;
+            if (BladeCommand.CutValve > 200) BladeCommand.CutValve = 200;
+            LastJogTime = 0;
+          }
+        }
+        else if (JoystickState.Fields.Joystick1Down)
+        {
+          if (LastJogTime >= MIN_TIME_BETWEEN_JOGS_MS)
+          {
+            BladeCommand.CutValve -= 1;
+            if (BladeCommand.CutValve < 0) BladeCommand.CutValve = 0;
+            LastJogTime = 0;
+          }
         }
       }
     }

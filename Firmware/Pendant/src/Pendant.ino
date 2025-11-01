@@ -6,6 +6,9 @@
 // "CANopen" node id
 #define NODE_ID 0x05
 
+// node IDs for other nodes
+#define CONTROLLER_NODE_ID 0x01
+
 #define NMT_STATE_BOOTUP      0x00
 #define NMT_STATE_OPERATIONAL 0x05
 
@@ -54,12 +57,38 @@
 // how often to transmit TPDO1
 #define TPDO1_OUTPUT_PERIOD_MS 50
 
+// time between toggling work button LED
+#define WORK_BUTTON_FLASH_PERIOD_MS 400
+
+// CANopen error code for estop
+#define ESTOP_ERROR_CODE 0x1000
+
 // supported LED states
 typedef enum _led_state_t
 {
   LED_ON,
   LED_OFF
 } led_state_t;
+
+typedef enum _blade_direction_t
+{
+  BLADE_DIR_DOWN = 0,
+  BLADE_DIR_UP   = 1
+} blade_direction_t;
+
+// current status of the blade
+typedef struct _blade_status_t
+{
+  int FrontBladePWM;
+  int FrontBladeCommand;
+  blade_direction_t FrontBladeDirection;
+  bool FrontBladeAuto;
+  int RearBladePWM;
+  int RearBladeCommand;
+  blade_direction_t RearBladeDirection;
+  bool RearBladeAuto;
+  int Offset;
+} blade_status_t;
 
 // prototypes
 static void ButtonHandler(uint8_t btnId, uint8_t btnState);
@@ -79,6 +108,9 @@ static bool POSTCompleted = false;
 static uint16_t ButtonStates = 0x0000;
 static uint8_t JoystickStates = 0x00;
 static elapsedMillis TPDO1Timestamp;
+static blade_status_t BladeStatus;
+static elapsedMillis Button1FlashTimestamp;
+static elapsedMillis Button2FlashTimestamp;
 
 // reboot the device
 static void Reboot
@@ -154,6 +186,27 @@ static void TxPDO
   TxCANMessage(0x180 + NODE_ID, 3, Data);
 }
 
+// process TPDO1 from the controller
+static void ProcessControllerTPDO1
+  (
+  uint8_t Length,                 // length of data
+  const uint8_t *pData            // data
+  )
+{
+  if (Length == 8)
+  {
+    BladeStatus.FrontBladePWM       = ((int)pData[1] << 8) | pData[0];
+    BladeStatus.FrontBladeCommand   = pData[2];
+    BladeStatus.FrontBladeDirection = (blade_direction_t)(pData[3] & 0x01);
+    BladeStatus.FrontBladeAuto      = (bool)((pData[3] >> 1) & 0x01);
+
+    BladeStatus.RearBladePWM       = ((int)pData[5] << 8) | pData[4];
+    BladeStatus.RearBladeCommand   = pData[6];
+    BladeStatus.RearBladeDirection = (blade_direction_t)(pData[7] & 0x01);
+    BladeStatus.RearBladeAuto      = (bool)((pData[7] >> 1) & 0x01);
+  }
+}
+
 // called when a CAN message is received
 static void CANReceiveHandler
   (
@@ -172,6 +225,27 @@ static void CANReceiveHandler
         Reboot();
       }
     }
+  }
+
+  // controller emergency
+  if (msg.id == 0x080 + CONTROLLER_NODE_ID)
+  {
+    uint16_t ErrorCode = ((uint16_t)msg.buf[1] << 8) | msg.buf[0];
+
+    // ESTOP, set LEDs to indicate a stop
+    if (ErrorCode == ESTOP_ERROR_CODE)
+    {
+      SetButtonLED(BUTTON1_LED_PIN, LED_ON);
+      SetButtonLED(BUTTON2_LED_PIN, LED_ON);
+      SetButtonLED(BUTTON3_LED_PIN, LED_ON);
+      SetButtonLED(BUTTON4_LED_PIN, LED_ON);
+    }
+  }
+
+  // controller TPDO1
+  if (msg.id == 0x180 + CONTROLLER_NODE_ID)
+  {
+    ProcessControllerTPDO1(msg.len, msg.buf);
   }
 }
 
@@ -437,9 +511,16 @@ void setup()
   CANBus.onReceive(FIFO, CANReceiveHandler);
   CANBus.enableFIFOInterrupt();
   CANBus.setFIFOFilter(0, 0x000, STD);
+  CANBus.setFIFOFilter(1, 0x080 + CONTROLLER_NODE_ID, STD);
+  CANBus.setFIFOFilter(2, 0x180 + CONTROLLER_NODE_ID, STD);
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
 
   TPDO1Timestamp = 0;
+
+  memset(&BladeStatus, 0, sizeof(blade_status_t));
+
+  Button1FlashTimestamp = 0;
+  Button2FlashTimestamp = 0;
 
   // tell everyone we are ready
   TxBootup();
@@ -489,5 +570,26 @@ void loop
     TPDO1Timestamp = 0;
 
     TxPDO();
+  }
+
+  // if front blade is in auto mode then flash button 1
+  if (BladeStatus.FrontBladeAuto)
+  {
+    if (Button1FlashTimestamp >= WORK_BUTTON_FLASH_PERIOD_MS)
+    {
+      Button1FlashTimestamp = 0;
+
+      digitalToggle(BUTTON1_LED_PIN);
+    }
+  }
+  // if rear blade is in auto mode then flash button 2
+  if (BladeStatus.RearBladeAuto)
+  {
+    if (Button2FlashTimestamp >= WORK_BUTTON_FLASH_PERIOD_MS)
+    {
+      Button2FlashTimestamp = 0;
+
+      digitalToggle(BUTTON2_LED_PIN);
+    }
   }
 }
