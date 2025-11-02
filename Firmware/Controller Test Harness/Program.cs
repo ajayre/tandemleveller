@@ -17,20 +17,30 @@ namespace Controller_Test_Harness
         {
             // misc
             PGN_ESTOP                    = 0x0000,
+            PGN_RESET                    = 0x0001,
+            PGN_OG3D_STARTED             = 0x0002,
 
             // blade control
             PGN_CUT_VALVE                = 0x1000,   // 0 - 200
             PGN_BLADE_OFFSET             = 0x1001,
 
             // blade configuration
-            PGN_PWM_GAIN_UP              = 0x2002,
-            PGN_PWM_GAIN_DOWN            = 0x2003,
-            PGN_PWM_MIN_UP               = 0x2004,
-            PGN_PWM_MIN_DOWN             = 0x2005,
-            PGN_PWM_MAX_UP               = 0x2006,
-            PGN_PWM_MAX_DOWN             = 0x2007,
-            PGN_INTEGRAL_MULTPLIER       = 0x2008,
-            PGN_DEADBAND                 = 0x2009,
+            PGN_FRONT_PWM_GAIN_UP        = 0x2002,
+            PGN_FRONT_PWM_GAIN_DOWN      = 0x2003,
+            PGN_FRONT_PWM_MIN_UP         = 0x2004,
+            PGN_FRONT_PWM_MIN_DOWN       = 0x2005,
+            PGN_FRONT_PWM_MAX_UP         = 0x2006,
+            PGN_FRONT_PWM_MAX_DOWN       = 0x2007,
+            PGN_FRONT_INTEGRAL_MULTPLIER = 0x2008,
+            PGN_FRONT_DEADBAND           = 0x2009,
+            PGN_REAR_PWM_GAIN_UP         = 0x200A,
+            PGN_REAR_PWM_GAIN_DOWN       = 0x200B,
+            PGN_REAR_PWM_MIN_UP          = 0x200C,
+            PGN_REAR_PWM_MIN_DOWN        = 0x200D,
+            PGN_REAR_PWM_MAX_UP          = 0x200E,
+            PGN_REAR_PWM_MAX_DOWN        = 0x200F,
+            PGN_REAR_INTEGRAL_MULTPLIER  = 0x2010,
+            PGN_REAR_DEADBAND            = 0x2011,
 
             // autosteer control
             PGN_AUTOSTEER_RELAY          = 0x3000,
@@ -49,9 +59,14 @@ namespace Controller_Test_Harness
             PGN_AUTOSTEER_COUNTS_PER_DEG = 0x4007,
 
             // controller status
-            PGN_BLADE_OFFSET_SLAVE       = 0x5000,
+            PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
             PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
             PGN_FRONT_BLADE_DIRECTION    = 0x5002,
+            PGN_FRONT_BLADE_AUTO         = 0x5003,
+            PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
+            PGN_REAR_BLADE_PWMVALUE      = 0x5005,
+            PGN_REAR_BLADE_DIRECTION     = 0x5006,
+            PGN_REAR_BLADE_AUTO          = 0x5007
         }
 
         struct ControllerCommand
@@ -83,17 +98,28 @@ namespace Controller_Test_Harness
             Controller = new SerialTransfer.SerialTransfer();
             Controller.Begin(port);
 
-            // send configuration
-            SendControllerCommand(PGNValues.PGN_PWM_GAIN_UP, 4);
-            SendControllerCommand(PGNValues.PGN_PWM_GAIN_DOWN, 3);
-            SendControllerCommand(PGNValues.PGN_PWM_MIN_UP, 50);
-            SendControllerCommand(PGNValues.PGN_PWM_MIN_DOWN, 50);
-            SendControllerCommand(PGNValues.PGN_PWM_MAX_UP, 180);
-            SendControllerCommand(PGNValues.PGN_PWM_MAX_DOWN, 180);
-            SendControllerCommand(PGNValues.PGN_INTEGRAL_MULTPLIER, 20);
-            SendControllerCommand(PGNValues.PGN_DEADBAND, 3);
+            // tell controller we are now running
+            SendControllerCommand(PGNValues.PGN_OG3D_STARTED, 0);
 
-            uint x = 0;
+            // send configuration
+            SendControllerCommand(PGNValues.PGN_FRONT_PWM_GAIN_UP, 4);
+            SendControllerCommand(PGNValues.PGN_FRONT_PWM_GAIN_DOWN, 3);
+            SendControllerCommand(PGNValues.PGN_FRONT_PWM_MIN_UP, 50);
+            SendControllerCommand(PGNValues.PGN_FRONT_PWM_MIN_DOWN, 50);
+            SendControllerCommand(PGNValues.PGN_FRONT_PWM_MAX_UP, 180);
+            SendControllerCommand(PGNValues.PGN_FRONT_PWM_MAX_DOWN, 180);
+            SendControllerCommand(PGNValues.PGN_FRONT_INTEGRAL_MULTPLIER, 20);
+            SendControllerCommand(PGNValues.PGN_FRONT_DEADBAND, 3);
+
+            SendControllerCommand(PGNValues.PGN_REAR_PWM_GAIN_UP, 4);
+            SendControllerCommand(PGNValues.PGN_REAR_PWM_GAIN_DOWN, 3);
+            SendControllerCommand(PGNValues.PGN_REAR_PWM_MIN_UP, 50);
+            SendControllerCommand(PGNValues.PGN_REAR_PWM_MIN_DOWN, 50);
+            SendControllerCommand(PGNValues.PGN_REAR_PWM_MAX_UP, 180);
+            SendControllerCommand(PGNValues.PGN_REAR_PWM_MAX_DOWN, 180);
+            SendControllerCommand(PGNValues.PGN_REAR_INTEGRAL_MULTPLIER, 20);
+            SendControllerCommand(PGNValues.PGN_REAR_DEADBAND, 3);
+
             DateTime TxTime = DateTime.Now.AddMilliseconds(500);
 
             while (true)
@@ -117,12 +143,27 @@ namespace Controller_Test_Harness
                             Console.WriteLine("EMERGENCY STOP!");
                             break;
 
-                        case PGNValues.PGN_BLADE_OFFSET_SLAVE:
-                            Console.WriteLine("Blade offset (slave): " + Stat.Value.ToString());
+                        case PGNValues.PGN_FRONT_BLADE_OFFSET_SLAVE:
+                            Console.WriteLine("Front blade offset (slave): " + ((int)(Stat.Value)).ToString());
+                            break;
+
+                        case PGNValues.PGN_REAR_BLADE_OFFSET_SLAVE:
+                            Console.WriteLine("Rear blade offset (slave): " + ((int)Stat.Value).ToString());
                             break;
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Resets the controller which in turn will reset all nodes on the network
+        /// WARNING: this will cause the COM port to disappear and then return
+        /// </summary>
+        private static void ResetController
+            (
+            )
+        {
+            SendControllerCommand(PGNValues.PGN_RESET, 0);
         }
 
         private static void SendControllerCommand

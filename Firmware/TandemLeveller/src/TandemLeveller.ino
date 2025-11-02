@@ -40,9 +40,6 @@
 // how often to toggle the LED
 #define LED_FLASH_PERIOD_MS 1000
 
-// how often to send status to OpenGrade3D
-#define STATUS_OUTPUT_PERIOD_MS 1000
-
 // how often to transmit TPDOs
 #define TPDO_OUTPUT_PERIOD_MS 50
 
@@ -93,6 +90,8 @@ typedef enum _pgn_t : uint16_t
 {
   // misc
   PGN_ESTOP                    = 0x0000,
+  PGN_RESET                    = 0x0001,
+  PGN_OG3D_STARTED             = 0x0002,
 
   // blade control
   PGN_FRONT_CUT_VALVE          = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
@@ -136,9 +135,11 @@ typedef enum _pgn_t : uint16_t
   PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
   PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
   PGN_FRONT_BLADE_DIRECTION    = 0x5002,
-  PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5000,
-  PGN_REAR_BLADE_PWMVALUE      = 0x5001,
-  PGN_REAR_BLADE_DIRECTION     = 0x5002,
+  PGN_FRONT_BLADE_AUTO         = 0x5003,
+  PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
+  PGN_REAR_BLADE_PWMVALUE      = 0x5005,
+  PGN_REAR_BLADE_DIRECTION     = 0x5006,
+  PGN_REAR_BLADE_AUTO          = 0x5007
 } pgn_t;
 
 typedef enum _blade_direction_t
@@ -237,7 +238,6 @@ static elapsedMillis PendantSearchTimestamp;
 static button_state_t ButtonState;
 static joystick_state_t JoystickState;
 static bool PendantSearch;
-static elapsedMillis StatusOutputTimestamp;
 static SerialTransfer OpenGrade3D;
 static blade_config_t BladeConfig[NUM_BLADES];
 static blade_status_t BladeStatus[NUM_BLADES];
@@ -248,6 +248,16 @@ static elapsedMillis TPDOTimestamp;
 static elapsedMillis HBTimestamp;
 static state_t State;
 static elapsedMillis LastJogTime[NUM_BLADES];
+
+// resets the controller
+static void Reset
+  (
+  void
+  )
+{
+  SCB_AIRCR = 0x05FA0004;
+  while(1);
+}
 
 // transmits a CAN message
 static void TxCANMessage
@@ -366,6 +376,9 @@ static void EmergencyStop
 
     TxTPDO1();
     TxTPDO2();
+
+    TxFrontBladeAuto();
+    TxRearBladeAuto();
   }
 }
 
@@ -383,6 +396,58 @@ static void ProcessIMUTPDO
     float Pitch = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
     float Roll  = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
   }
+}
+
+// send front blade slave offset to OpenGrade3D
+static void TxFrontBladeSlaveOffset
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
+  Status.Value = BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
+  SendStatus(&Status);
+}
+
+// send rear blade slave offset to OpenGrade3D
+static void TxRearBladeSlaveOffset
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
+  Status.Value = BladeStatus[REAR_BLADE_IDX].SlaveOffset;
+  SendStatus(&Status);
+}
+
+// send front blade auto state to OpenGrade3D
+static void TxFrontBladeAuto
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_FRONT_BLADE_AUTO;
+  Status.Value = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
+  SendStatus(&Status);
+}
+
+// send rear blade auto state to OpenGrade3D
+static void TxRearBladeAuto
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_REAR_BLADE_AUTO;
+  Status.Value = BladeStatus[REAR_BLADE_IDX].BladeAuto;
+  SendStatus(&Status);
 }
 
 // process TPDO from pendant
@@ -419,6 +484,7 @@ static void ProcessPendantTPDO
         {
           BladeStatus[FRONT_BLADE_IDX].BladeAuto = true;
         }
+        TxFrontBladeAuto();
       }
 
       // toggle auto mode for rear blade
@@ -432,18 +498,21 @@ static void ProcessPendantTPDO
         {
           BladeStatus[REAR_BLADE_IDX].BladeAuto = true;
         }
+        TxRearBladeAuto();
       }
 
       // if joystick 1 is moved up or down in auto mode then exit auto mode
       if ((JoystickState.Fields.Joystick1Up || JoystickState.Fields.Joystick1Down) && BladeStatus[FRONT_BLADE_IDX].BladeAuto)
       {
         BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
+        TxFrontBladeAuto();
       }
 
       // if joystick 2 is moved up or down in auto mode then exit auto mode
       if ((JoystickState.Fields.Joystick2Up || JoystickState.Fields.Joystick2Down) && BladeStatus[REAR_BLADE_IDX].BladeAuto)
       {
         BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
+        TxRearBladeAuto();
       }
 
       if (!BladeStatus[FRONT_BLADE_IDX].BladeAuto)
@@ -475,6 +544,7 @@ static void ProcessPendantTPDO
             BladeStatus[FRONT_BLADE_IDX].SlaveOffset += 1;
             if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
             LastJogTime[FRONT_BLADE_IDX] = 0;
+            TxFrontBladeSlaveOffset();
           }
         }
         else if (JoystickState.Fields.Joystick1Down && ButtonState.Fields.Joystick1Pressed)
@@ -484,6 +554,7 @@ static void ProcessPendantTPDO
             BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
             if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
             LastJogTime[FRONT_BLADE_IDX] = 0;
+            TxFrontBladeSlaveOffset();
           }
         }
       }
@@ -517,6 +588,7 @@ static void ProcessPendantTPDO
             BladeStatus[REAR_BLADE_IDX].SlaveOffset += 1;
             if (BladeStatus[REAR_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
             LastJogTime[REAR_BLADE_IDX] = 0;
+            TxRearBladeSlaveOffset();
           }
         }
         else if (JoystickState.Fields.Joystick2Down && ButtonState.Fields.Joystick2Pressed)
@@ -526,6 +598,7 @@ static void ProcessPendantTPDO
             BladeStatus[REAR_BLADE_IDX].SlaveOffset -= 1;
             if (BladeStatus[REAR_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
             LastJogTime[REAR_BLADE_IDX] = 0;
+            TxRearBladeSlaveOffset();
           }
         }
       }
@@ -761,19 +834,23 @@ static void SetFrontValvePWM
   uint8_t Value          // new valve PWM setting 0 - 255
   )
 {
-  // set to 0 - 255
-  BladeStatus[FRONT_BLADE_IDX].BladePWM = abs(Value);
-  analogWrite(FRONT_HEIGHT_PWM, BladeStatus[FRONT_BLADE_IDX].BladePWM);
+  // if value has changed
+  if (abs(Value) != BladeStatus[FRONT_BLADE_IDX].BladePWM)
+  {
+    // set to 0 - 255
+    BladeStatus[FRONT_BLADE_IDX].BladePWM = abs(Value);
+    analogWrite(FRONT_HEIGHT_PWM, BladeStatus[FRONT_BLADE_IDX].BladePWM);
 
-  // update OG3D
-  controllerstatus_t Status;
-  Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
-  Status.Value = BladeStatus[FRONT_BLADE_IDX].BladePWM;
-  SendStatus(&Status);
+    // update OG3D
+    controllerstatus_t Status;
+    Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
+    Status.Value = BladeStatus[FRONT_BLADE_IDX].BladePWM;
+    SendStatus(&Status);
 
-  Status.PGN = PGN_FRONT_BLADE_DIRECTION;
-  Status.Value = digitalRead(FRONT_HEIGHT_DIR);
-  SendStatus(&Status);
+    Status.PGN = PGN_FRONT_BLADE_DIRECTION;
+    Status.Value = digitalRead(FRONT_HEIGHT_DIR);
+    SendStatus(&Status);
+  }
 }
 
 // sets the PWM value for the rear valve
@@ -782,27 +859,28 @@ static void SetRearValvePWM
   uint8_t Value          // new valve PWM setting 0 - 255
   )
 {
-  // set to 0 - 255
-  BladeStatus[REAR_BLADE_IDX].BladePWM = abs(Value);
-  analogWrite(REAR_HEIGHT_PWM, BladeStatus[REAR_BLADE_IDX].BladePWM);
+  // if value has changed
+  if (abs(Value) != BladeStatus[REAR_BLADE_IDX].BladePWM)
+  {
+    // set to 0 - 255
+    BladeStatus[REAR_BLADE_IDX].BladePWM = abs(Value);
+    analogWrite(REAR_HEIGHT_PWM, BladeStatus[REAR_BLADE_IDX].BladePWM);
 
-  // update OG3D
-  controllerstatus_t Status;
-  Status.PGN = PGN_REAR_BLADE_PWMVALUE;
-  Status.Value = BladeStatus[REAR_BLADE_IDX].BladePWM;
-  SendStatus(&Status);
+    // update OG3D
+    controllerstatus_t Status;
+    Status.PGN = PGN_REAR_BLADE_PWMVALUE;
+    Status.Value = BladeStatus[REAR_BLADE_IDX].BladePWM;
+    SendStatus(&Status);
 
-  Status.PGN = PGN_REAR_BLADE_DIRECTION;
-  Status.Value = digitalRead(REAR_HEIGHT_DIR);
-  SendStatus(&Status);
+    Status.PGN = PGN_REAR_BLADE_DIRECTION;
+    Status.Value = digitalRead(REAR_HEIGHT_DIR);
+    SendStatus(&Status);
+  }
 }
 
 // initialize the hardware
 void setup()
 {
-  //debug.begin(Serial);
-  //halt_cpu(); 
-
   // fixme - change back to Serial5
   // configure connection to opengrade3d
   Serial.begin(OPENGRADE3D_BAUDRATE);
@@ -859,8 +937,6 @@ void setup()
   PendantSearchTimestamp = 0;
   PendantSearch = true;
 
-  StatusOutputTimestamp = 0;
-
   // reset buttons and joysticks
   ButtonState.RawValue = 0;
   JoystickState.RawValue = 0;
@@ -903,6 +979,12 @@ void setup()
   TxTPDO1();
   TxTPDO2();
 
+  TxFrontBladeSlaveOffset();
+  TxRearBladeSlaveOffset();
+
+  TxFrontBladeAuto();
+  TxRearBladeAuto();
+
   ResetAllNodes();
 }
 
@@ -927,6 +1009,19 @@ void loop
 
     switch (Command.PGN)
     {
+      // misc
+      case PGN_RESET:
+        Reset();
+        break;
+
+      case PGN_OG3D_STARTED:
+        // send current states
+        TxFrontBladeAuto();
+        TxRearBladeAuto();
+        TxFrontBladeSlaveOffset();
+        TxRearBladeSlaveOffset();
+        break;
+
       // front blade configuration
       case PGN_FRONT_PWM_GAIN_UP:
         BladeConfig[FRONT_BLADE_IDX].PWMGainUp = Command.Value;
@@ -1008,24 +1103,6 @@ void loop
     {
       ControlBlade(b);
     }
-  }
-
-  // periodically send status to OpenGrade3D
-  if (StatusOutputTimestamp >= STATUS_OUTPUT_PERIOD_MS)
-  {
-    StatusOutputTimestamp = 0;
-
-    controllerstatus_t Status;
-
-    // output front blade slave offset
-    Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
-    Status.Value = BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
-    SendStatus(&Status);
-
-    // output rear blade slave offset
-    Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
-    Status.Value = BladeStatus[REAR_BLADE_IDX].SlaveOffset;
-    SendStatus(&Status);
   }
 
   // periodically transmit data onto the CAN bus
