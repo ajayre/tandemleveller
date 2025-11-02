@@ -43,8 +43,8 @@
 // how often to send status to OpenGrade3D
 #define STATUS_OUTPUT_PERIOD_MS 1000
 
-// how often to transmit TPDO1
-#define TPDO1_OUTPUT_PERIOD_MS 50
+// how often to transmit TPDOs
+#define TPDO_OUTPUT_PERIOD_MS 50
 
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
@@ -84,6 +84,10 @@
 #define CUTVALVE_MIN 0
 #define CUTVALVE_MAX 200
 
+// allowed range for slave offset
+#define SLAVE_OFFSET_MIN (-128)
+#define SLAVE_OFFSET_MAX 127
+
 // supported PGNs
 typedef enum _pgn_t : uint16_t
 {
@@ -91,10 +95,8 @@ typedef enum _pgn_t : uint16_t
   PGN_ESTOP                    = 0x0000,
 
   // blade control
-  PGN_FRONT_CUT_VALVE          = 0x1000,   // 0 - 200
-  PGN_FRONT_BLADE_OFFSET       = 0x1001,
-  PGN_REAR_CUT_VALVE           = 0x1002,   // 0 - 200
-  PGN_REAR_BLADE_OFFSET        = 0x1003,
+  PGN_FRONT_CUT_VALVE          = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
+  PGN_REAR_CUT_VALVE           = 0x1001,   // CUTVALVE_MIN -> CUTVALVE_MAX
 
   // blade configuration
   PGN_FRONT_PWM_GAIN_UP        = 0x2002,
@@ -139,6 +141,18 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_BLADE_DIRECTION     = 0x5002,
 } pgn_t;
 
+typedef enum _blade_direction_t
+{
+  BLADE_DIR_DOWN = 0,
+  BLADE_DIR_UP   = 1
+} blade_direction_t;
+
+typedef enum _state_t
+{
+  STATE_RUN,
+  STATE_ESTOP
+} state_t;
+
 // status information that is transmitted to OpenGrade3D
 typedef struct _controllerstatus_t
 {
@@ -166,18 +180,6 @@ typedef struct _blade_config_t
   int Deadband;
 } blade_config_t;
 
-typedef enum _blade_direction_t
-{
-  BLADE_DIR_DOWN = 0,
-  BLADE_DIR_UP   = 1
-} blade_direction_t;
-
-typedef enum _state_t
-{
-  STATE_RUN,
-  STATE_ESTOP
-} state_t;
-
 // current status of the blade
 typedef struct _blade_status_t
 {
@@ -185,7 +187,7 @@ typedef struct _blade_status_t
   int BladeCommand;
   blade_direction_t BladeDirection;
   bool BladeAuto;
-  int Offset;
+  int16_t SlaveOffset;
 } blade_status_t;
 
 // movement command for blade
@@ -242,7 +244,7 @@ static blade_status_t BladeStatus[NUM_BLADES];
 static blade_command_t BladeCommand[NUM_BLADES];
 static elapsedMillis BladeControlTimestamp;
 static int pwm1ago[NUM_BLADES] = { 0 } , pwm2ago[NUM_BLADES] = { 0 }, pwm3ago[NUM_BLADES] = { 0 }, pwm4ago[NUM_BLADES] = { 0 }, pwm5ago[NUM_BLADES] = { 0 };
-static elapsedMillis TPDO1Timestamp;
+static elapsedMillis TPDOTimestamp;
 static elapsedMillis HBTimestamp;
 static state_t State;
 static elapsedMillis LastJogTime[NUM_BLADES];
@@ -286,7 +288,7 @@ static void TxHeartbeat
   TxCANMessage(0x700 + CONTROLLER_NODE_ID, 1, Data);
 }
 
-// transmit PDO1
+// transmit TPDO1
 static void TxTPDO1
   (
   void
@@ -305,6 +307,20 @@ static void TxTPDO1
   Data[7] = (BladeStatus[REAR_BLADE_IDX].BladeDirection & 0x01) | ((BladeStatus[REAR_BLADE_IDX].BladeAuto & 0x01) << 1);
 
   TxCANMessage(0x180 + CONTROLLER_NODE_ID, 8, Data);
+}
+
+// transmit TPDO2
+static void TxTPDO2
+  (
+  void
+  )
+{
+  uint8_t Data[2];
+
+  Data[0] = (uint8_t)BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
+  Data[1] = (uint8_t)BladeStatus[REAR_BLADE_IDX].SlaveOffset;
+
+  TxCANMessage(0x280 + CONTROLLER_NODE_ID, 2, Data);
 }
 
 // perform an emergency stop of blade control
@@ -349,6 +365,7 @@ static void EmergencyStop
     SetRearValvePWM(0);
 
     TxTPDO1();
+    TxTPDO2();
   }
 }
 
@@ -429,10 +446,10 @@ static void ProcessPendantTPDO
         BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
       }
 
-      // jog front blade
       if (!BladeStatus[FRONT_BLADE_IDX].BladeAuto)
       {
-        if (JoystickState.Fields.Joystick1Up)
+        // jog front blade (joystick button not pressed)
+        if (JoystickState.Fields.Joystick1Up && !ButtonState.Fields.Joystick1Pressed)
         {
           if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
@@ -441,7 +458,7 @@ static void ProcessPendantTPDO
             LastJogTime[FRONT_BLADE_IDX] = 0;
           }
         }
-        else if (JoystickState.Fields.Joystick1Down)
+        else if (JoystickState.Fields.Joystick1Down && !ButtonState.Fields.Joystick1Pressed)
         {
           if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
@@ -450,12 +467,31 @@ static void ProcessPendantTPDO
             LastJogTime[FRONT_BLADE_IDX] = 0;
           }
         }
+        // adjust slave offset (joystick button is pressed)
+        else if (JoystickState.Fields.Joystick1Up && ButtonState.Fields.Joystick1Pressed)
+        {
+          if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          {
+            BladeStatus[FRONT_BLADE_IDX].SlaveOffset += 1;
+            if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
+            LastJogTime[FRONT_BLADE_IDX] = 0;
+          }
+        }
+        else if (JoystickState.Fields.Joystick1Down && ButtonState.Fields.Joystick1Pressed)
+        {
+          if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          {
+            BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
+            if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
+            LastJogTime[FRONT_BLADE_IDX] = 0;
+          }
+        }
       }
 
-      // jog rear blade
       if (!BladeStatus[REAR_BLADE_IDX].BladeAuto)
       {
-        if (JoystickState.Fields.Joystick2Up)
+        // jog rear blade (joystick button not pressed)
+        if (JoystickState.Fields.Joystick2Up && !ButtonState.Fields.Joystick2Pressed)
         {
           if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
@@ -464,12 +500,31 @@ static void ProcessPendantTPDO
             LastJogTime[REAR_BLADE_IDX] = 0;
           }
         }
-        else if (JoystickState.Fields.Joystick2Down)
+        else if (JoystickState.Fields.Joystick2Down && !ButtonState.Fields.Joystick2Pressed)
         {
           if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
             BladeCommand[REAR_BLADE_IDX].CutValve -= 1;
             if (BladeCommand[REAR_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MIN;
+            LastJogTime[REAR_BLADE_IDX] = 0;
+          }
+        }
+        // adjust slave offset (joystick button is pressed)
+        else if (JoystickState.Fields.Joystick2Up && ButtonState.Fields.Joystick2Pressed)
+        {
+          if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          {
+            BladeStatus[REAR_BLADE_IDX].SlaveOffset += 1;
+            if (BladeStatus[REAR_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
+            LastJogTime[REAR_BLADE_IDX] = 0;
+          }
+        }
+        else if (JoystickState.Fields.Joystick2Down && ButtonState.Fields.Joystick2Pressed)
+        {
+          if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          {
+            BladeStatus[REAR_BLADE_IDX].SlaveOffset -= 1;
+            if (BladeStatus[REAR_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
             LastJogTime[REAR_BLADE_IDX] = 0;
           }
         }
@@ -811,7 +866,7 @@ void setup()
   JoystickState.RawValue = 0;
 
   HBTimestamp = 0;
-  TPDO1Timestamp = 0;
+  TPDOTimestamp = 0;
 
   for (int b = 0; b < NUM_BLADES; b++)
   {
@@ -846,6 +901,7 @@ void setup()
 
   TxBootup();
   TxTPDO1();
+  TxTPDO2();
 
   ResetAllNodes();
 }
@@ -931,9 +987,6 @@ void loop
           BladeCommand[FRONT_BLADE_IDX].CutValve = Command.Value;
         }
         break;
-      case PGN_FRONT_BLADE_OFFSET:
-        // not used
-        break;
 
       // rear blade commands
       case PGN_REAR_CUT_VALVE:
@@ -942,9 +995,6 @@ void loop
           // store for use on next calculation pass
           BladeCommand[REAR_BLADE_IDX].CutValve = Command.Value;
         }
-        break;
-      case PGN_REAR_BLADE_OFFSET:
-        // not used
         break;
     }
   }
@@ -967,23 +1017,24 @@ void loop
 
     controllerstatus_t Status;
 
-    // output front blade offset
+    // output front blade slave offset
     Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
-    Status.Value = BladeStatus[FRONT_BLADE_IDX].Offset;
+    Status.Value = BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
     SendStatus(&Status);
 
-    // output rear blade offset
+    // output rear blade slave offset
     Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
-    Status.Value = BladeStatus[REAR_BLADE_IDX].Offset;
+    Status.Value = BladeStatus[REAR_BLADE_IDX].SlaveOffset;
     SendStatus(&Status);
   }
 
   // periodically transmit data onto the CAN bus
-  if (TPDO1Timestamp >= TPDO1_OUTPUT_PERIOD_MS)
+  if (TPDOTimestamp >= TPDO_OUTPUT_PERIOD_MS)
   {
-    TPDO1Timestamp = 0;
+    TPDOTimestamp = 0;
 
     TxTPDO1();
+    TxTPDO2();
   }
 
   // check for pendant
