@@ -23,9 +23,11 @@ namespace Controller_Test_Harness
             // blade control
             PGN_CUT_VALVE                = 0x1000,   // 0 - 200
             PGN_BLADE_OFFSET             = 0x1001,
+            PGN_FRONT_ZERO_BLADE_HEIGHT  = 0x1002,
+            PGN_REAR_ZERO_BLADE_HEIGHT   = 0x1003,
 
             // blade configuration
-            PGN_FRONT_PWM_GAIN_UP        = 0x2002,
+            PGN_FRONT_PWM_GAIN_UP = 0x2002,
             PGN_FRONT_PWM_GAIN_DOWN      = 0x2003,
             PGN_FRONT_PWM_MIN_UP         = 0x2004,
             PGN_FRONT_PWM_MIN_DOWN       = 0x2005,
@@ -58,7 +60,7 @@ namespace Controller_Test_Harness
             PGN_AUTOSTEER_MAX_INTEGRAL   = 0x4006,
             PGN_AUTOSTEER_COUNTS_PER_DEG = 0x4007,
 
-            // controller status
+            // blade status
             PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
             PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
             PGN_FRONT_BLADE_DIRECTION    = 0x5002,
@@ -66,7 +68,20 @@ namespace Controller_Test_Harness
             PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
             PGN_REAR_BLADE_PWMVALUE      = 0x5005,
             PGN_REAR_BLADE_DIRECTION     = 0x5006,
-            PGN_REAR_BLADE_AUTO          = 0x5007
+            PGN_REAR_BLADE_AUTO          = 0x5007,
+            PGN_FRONT_BLADE_HEIGHT       = 0x5008,
+            PGN_REAR_BLADE_HEIGHT        = 0x5009,
+
+            // IMU
+            PGN_TRACTOR_PITCH            = 0x6000,
+            PGN_TRACTOR_ROLL             = 0x6001,
+            PGN_TRACTOR_YAW              = 0x6002,
+            PGN_FRONT_PITCH              = 0x6003,
+            PGN_FRONT_ROLL               = 0x6004,
+            PGN_FRONT_YAW                = 0x6005,
+            PGN_REAR_PITCH               = 0x6006,
+            PGN_REAR_ROLL                = 0x6007,
+            PGN_REAR_YAW                 = 0x6008,
         }
 
         struct ControllerCommand
@@ -81,7 +96,17 @@ namespace Controller_Test_Harness
             public UInt32 Value;
         }
 
+        struct IMUValue
+        {
+            public double Pitch;
+            public double Yaw;
+            public double Roll;
+        }
+
         private static SerialTransfer.SerialTransfer Controller;
+        private static IMUValue TractorIMU = new IMUValue();
+        private static IMUValue FrontScraperIMU = new IMUValue();
+        private static IMUValue RearScraperIMU = new IMUValue();
 
         static void Main(string[] args)
         {
@@ -120,6 +145,12 @@ namespace Controller_Test_Harness
             SendControllerCommand(PGNValues.PGN_REAR_INTEGRAL_MULTPLIER, 20);
             SendControllerCommand(PGNValues.PGN_REAR_DEADBAND, 3);
 
+            // set blade heights to zero
+            // note - this should only be sent after blade has been lowered to ground and confirmed
+            // by GNSS heights
+            SendControllerCommand(PGNValues.PGN_FRONT_ZERO_BLADE_HEIGHT, 0);
+            SendControllerCommand(PGNValues.PGN_REAR_ZERO_BLADE_HEIGHT, 0);
+
             DateTime TxTime = DateTime.Now.AddMilliseconds(500);
 
             while (true)
@@ -139,16 +170,80 @@ namespace Controller_Test_Harness
                     ControllerStatus Stat = GetControllerStatus();
                     switch (Stat.PGN)
                     {
+                        // misc
                         case PGNValues.PGN_ESTOP:
                             Console.WriteLine("EMERGENCY STOP!");
                             break;
 
+                        // slave offsets
                         case PGNValues.PGN_FRONT_BLADE_OFFSET_SLAVE:
                             Console.WriteLine("Front blade offset (slave): " + ((int)(Stat.Value)).ToString());
                             break;
 
                         case PGNValues.PGN_REAR_BLADE_OFFSET_SLAVE:
                             Console.WriteLine("Rear blade offset (slave): " + ((int)Stat.Value).ToString());
+                            break;
+
+                        /*// IMU
+                        case PGNValues.PGN_TRACTOR_PITCH:
+                            TractorIMU.Pitch = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor pitch: {0:0.00} deg", TractorIMU.Pitch);
+                            break;
+                        case PGNValues.PGN_TRACTOR_ROLL:
+                            TractorIMU.Roll = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor roll: {0:0.00} deg", TractorIMU.Roll);
+                            break;
+                        case PGNValues.PGN_TRACTOR_YAW:
+                            TractorIMU.Yaw = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor yaw: {0:0.00} deg", TractorIMU.Yaw);
+                            break;
+
+                        case PGNValues.PGN_FRONT_PITCH:
+                            FrontScraperIMU.Pitch = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor pitch: {0:0.00} deg", FrontScraperIMU.Pitch);
+                            break;
+                        case PGNValues.PGN_FRONT_ROLL:
+                            FrontScraperIMU.Roll = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor roll: {0:0.00} deg", FrontScraperIMU.Roll);
+                            break;
+                        case PGNValues.PGN_FRONT_YAW:
+                            FrontScraperIMU.Yaw = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor yaw: {0:0.00} deg", FrontScraperIMU.Yaw);
+                            break;
+
+                        case PGNValues.PGN_REAR_PITCH:
+                            RearScraperIMU.Pitch = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor pitch: {0:0.00} deg", RearScraperIMU.Pitch);
+                            break;
+                        case PGNValues.PGN_REAR_ROLL:
+                            RearScraperIMU.Roll = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor roll: {0:0.00} deg", RearScraperIMU.Roll);
+                            break;
+                        case PGNValues.PGN_REAR_YAW:
+                            RearScraperIMU.Yaw = ((Int32)Stat.Value) / 100.0;
+                            Console.WriteLine("Tractor yaw: {0:0.00} deg", RearScraperIMU.Yaw);
+                            break;*/
+
+                        // blade auto flags
+                        case PGNValues.PGN_FRONT_BLADE_AUTO:
+                            bool Auto = Stat.Value == 1 ? true : false;
+                            Console.WriteLine("Front blade auto: {0}", Auto);
+                            break;
+
+                        case PGNValues.PGN_REAR_BLADE_AUTO:
+                            Auto = Stat.Value == 1 ? true : false;
+                            Console.WriteLine("Rear blade auto: {0}", Auto);
+                            break;
+
+                        // blade direction
+                        case PGNValues.PGN_FRONT_BLADE_DIRECTION:
+                            bool Up = Stat.Value == 1 ? true : false;
+                            Console.WriteLine("Front blade moving up: {0}", Up);
+                            break;
+
+                        case PGNValues.PGN_REAR_BLADE_DIRECTION:
+                            Up = Stat.Value == 1 ? true : false;
+                            Console.WriteLine("Rear blade moving up: {0}", Up);
                             break;
                     }
                 }
