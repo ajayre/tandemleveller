@@ -26,6 +26,8 @@
 #define FRONTSCRAPER_IMU_NODE_ID 0x03
 #define REARSCRAPER_IMU_NODE_ID  0x04
 #define PENDANT_NODE_ID          0x05
+#define FRONT_ANGLE_NODE_ID      0x06
+#define REAR_ANGLE_NODE_ID       0x07
 
 // from EHPR98-G35 specs
 #define PWM_FREQUENCY_HZ 120
@@ -33,9 +35,10 @@
 // number of blades we support
 #define NUM_BLADES 2
 
-// blade indices into arrays
+// indices into arrays
 #define FRONT_BLADE_IDX 0
 #define REAR_BLADE_IDX  1
+#define TRACTOR_IDX     2
 
 // how often to toggle the LED
 #define LED_FLASH_PERIOD_MS 1000
@@ -51,7 +54,7 @@
 #define NMT_STATE_OPERATIONAL 0x05
 
 // number of nodes to monitor
-#define NUM_NODES 5
+#define NUM_NODES 8
 
 // maximum time to wait for a heartbeat before declaring a node as missing
 #define MAX_HEARTBEAT_TIME 300
@@ -96,6 +99,8 @@ typedef enum _pgn_t : uint16_t
   // blade control
   PGN_FRONT_CUT_VALVE          = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
   PGN_REAR_CUT_VALVE           = 0x1001,   // CUTVALVE_MIN -> CUTVALVE_MAX
+  PGN_FRONT_ZERO_BLADE_HEIGHT  = 0x1002,
+  PGN_REAR_ZERO_BLADE_HEIGHT   = 0x1003,
 
   // blade configuration
   PGN_FRONT_PWM_GAIN_UP        = 0x2002,
@@ -131,7 +136,7 @@ typedef enum _pgn_t : uint16_t
   PGN_AUTOSTEER_MAX_INTEGRAL   = 0x4006,
   PGN_AUTOSTEER_COUNTS_PER_DEG = 0x4007,
 
-  // controller status
+  // blade status
   PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
   PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
   PGN_FRONT_BLADE_DIRECTION    = 0x5002,
@@ -139,7 +144,20 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
   PGN_REAR_BLADE_PWMVALUE      = 0x5005,
   PGN_REAR_BLADE_DIRECTION     = 0x5006,
-  PGN_REAR_BLADE_AUTO          = 0x5007
+  PGN_REAR_BLADE_AUTO          = 0x5007,
+  PGN_FRONT_BLADE_HEIGHT       = 0x5008,
+  PGN_REAR_BLADE_HEIGHT        = 0x5009,
+
+  // IMU
+  PGN_TRACTOR_PITCH            = 0x6000,
+  PGN_TRACTOR_ROLL             = 0x6001,
+  PGN_TRACTOR_YAW              = 0x6002,
+  PGN_FRONT_PITCH              = 0x6003,
+  PGN_FRONT_ROLL               = 0x6004,
+  PGN_FRONT_YAW                = 0x6005,
+  PGN_REAR_PITCH               = 0x6006,
+  PGN_REAR_ROLL                = 0x6007,
+  PGN_REAR_YAW                 = 0x6008,
 } pgn_t;
 
 typedef enum _blade_direction_t
@@ -230,6 +248,13 @@ typedef union _joystick_state_t
   } Fields;
 } joystick_state_t;
 
+typedef struct _imu_t
+{
+  float Roll;
+  float Pitch;
+  float Yaw;
+} imu_t;
+
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 static elapsedMillis LEDFlashTimestamp;
 static elapsedMillis HBTime[NUM_NODES];
@@ -248,6 +273,8 @@ static elapsedMillis TPDOTimestamp;
 static elapsedMillis HBTimestamp;
 static state_t State;
 static elapsedMillis LastJogTime[NUM_BLADES];
+static imu_t IMUValues[NUM_BLADES + 1];
+static int BladeHeight[NUM_BLADES];  // in mm
 
 // resets the controller
 static void Reset
@@ -336,7 +363,7 @@ static void TxTPDO2
 // perform an emergency stop of blade control
 static void EmergencyStop
   (
-  void
+  int LineNumber
   )
 {
   if (State == STATE_RUN)
@@ -356,10 +383,10 @@ static void EmergencyStop
     txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
     txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
     txmsg.buf[2] = 0x80;  // manufacturer-specific error
-    txmsg.buf[3] = 0x00;
-    txmsg.buf[4] = 0x00;
-    txmsg.buf[5] = 0x00;
-    txmsg.buf[6] = 0x00;
+    txmsg.buf[3] =  LineNumber        & 0xFF;
+    txmsg.buf[4] = (LineNumber >> 8)  & 0xFF;
+    txmsg.buf[5] = (LineNumber >> 16) & 0xFF;
+    txmsg.buf[6] = (LineNumber >> 24) & 0xFF;
     txmsg.buf[7] = 0x00;
     CANBus.write(txmsg);
 
@@ -382,6 +409,21 @@ static void EmergencyStop
   }
 }
 
+// process TPDO from angle sensors
+static void ProcessAngleTPDO
+  (
+  uint8_t NodeId,
+  uint8_t Length,
+  const uint8_t *pData
+  )
+{
+  // fixme - to do
+
+  // send updated blade heights
+  TxFrontBladeHeight();
+  TxRearBladeHeight();
+}
+
 // process TPDO from IMU
 static void ProcessIMUTPDO
   (
@@ -395,7 +437,114 @@ static void ProcessIMUTPDO
     float Yaw   = ((int16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
     float Pitch = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
     float Roll  = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
+
+    switch (NodeId)
+    {
+      case TRACTOR_IMU_NODE_ID:
+        IMUValues[TRACTOR_IDX].Yaw   = Yaw;
+        IMUValues[TRACTOR_IDX].Pitch = Pitch;
+        IMUValues[TRACTOR_IDX].Roll  = Roll;
+        TxTractorIMU();
+        break;
+
+      case FRONTSCRAPER_IMU_NODE_ID:
+        IMUValues[FRONT_BLADE_IDX].Yaw   = Yaw;
+        IMUValues[FRONT_BLADE_IDX].Pitch = Pitch;
+        IMUValues[FRONT_BLADE_IDX].Roll  = Roll;
+        TxFrontScraperIMU();
+        break;
+
+      case REARSCRAPER_IMU_NODE_ID:
+        IMUValues[REAR_BLADE_IDX].Yaw   = Yaw;
+        IMUValues[REAR_BLADE_IDX].Pitch = Pitch;
+        IMUValues[REAR_BLADE_IDX].Roll  = Roll;
+        TxRearScraperIMU();
+        break;
+    }
   }
+}
+
+// sends the front blade height to OpenGrade3D
+static void TxFrontBladeHeight
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_FRONT_BLADE_HEIGHT;
+  Status.Value = BladeHeight[FRONT_BLADE_IDX];
+  SendStatus(&Status);
+}
+
+// sends the rear blade height to OpenGrade3D
+static void TxRearBladeHeight
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_REAR_BLADE_HEIGHT;
+  Status.Value = BladeHeight[REAR_BLADE_IDX];
+  SendStatus(&Status);
+}
+
+// send tractor IMU values to OpenGrade3D
+static void TxTractorIMU
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_TRACTOR_ROLL;
+  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Roll * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_TRACTOR_PITCH;
+  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Pitch * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_TRACTOR_YAW;
+  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Yaw * 100);
+  SendStatus(&Status);
+}
+
+// send front scraper IMU values to OpenGrade3D
+static void TxFrontScraperIMU
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_FRONT_ROLL;
+  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_FRONT_PITCH;
+  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_FRONT_YAW;
+  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Yaw * 100);
+  SendStatus(&Status);
+}
+
+// send rear scraper IMU values to OpenGrade3D
+static void TxRearScraperIMU
+  (
+  void
+  )
+{
+  controllerstatus_t Status;
+
+  Status.PGN = PGN_REAR_ROLL;
+  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_REAR_PITCH;
+  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_REAR_YAW;
+  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Yaw * 100);
+  SendStatus(&Status);
 }
 
 // send front blade slave offset to OpenGrade3D
@@ -468,7 +617,7 @@ static void ProcessPendantTPDO
     // ESTOP PRESSED
     if (!ButtonState.Fields.EStopArmed)
     {
-      EmergencyStop();
+      EmergencyStop(__LINE__);
     }
 
     if (State == STATE_RUN)
@@ -659,7 +808,7 @@ static void CheckForMissingNodes
         // as we can't see the ESTOP button
         if ((n + 1) == PENDANT_NODE_ID)
         {
-          EmergencyStop();
+          EmergencyStop(__LINE__);
         }
       }
     }
@@ -686,6 +835,12 @@ static void CANReceiveHandler
       break;
     case 0x180 + REARSCRAPER_IMU_NODE_ID:
       ProcessIMUTPDO(REARSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
+      break;
+    case 0x180 + FRONT_ANGLE_NODE_ID:
+      ProcessAngleTPDO(FRONT_ANGLE_NODE_ID, msg.len, msg.buf);
+      break;
+    case 0x180 + REAR_ANGLE_NODE_ID:
+      ProcessAngleTPDO(REAR_ANGLE_NODE_ID, msg.len, msg.buf);
       break;
 
     // heartbeats
@@ -893,14 +1048,14 @@ void setup()
   CANBus.enableFIFO();
   CANBus.onReceive(FIFO, CANReceiveHandler);
   CANBus.enableFIFOInterrupt();
-  CANBus.setFIFOFilter(0, 0x180 + TRACTOR_IMU_NODE_ID,      STD);
-  CANBus.setFIFOFilter(1, 0x180 + FRONTSCRAPER_IMU_NODE_ID, STD);
-  CANBus.setFIFOFilter(2, 0x180 + REARSCRAPER_IMU_NODE_ID,  STD);
-  CANBus.setFIFOFilter(3, 0x180 + PENDANT_NODE_ID,          STD);
-  CANBus.setFIFOFilter(4, 0x700 + TRACTOR_IMU_NODE_ID,      STD);
-  CANBus.setFIFOFilter(5, 0x700 + FRONTSCRAPER_IMU_NODE_ID, STD);
-  CANBus.setFIFOFilter(6, 0x700 + REARSCRAPER_IMU_NODE_ID,  STD);
-  CANBus.setFIFOFilter(7, 0x700 + PENDANT_NODE_ID,          STD);
+  
+  // TPDO1s
+  CANBus.setFIFOFilterRange(0, 0x181, 0x1FF, STD);
+  // TPDO2s
+  CANBus.setFIFOFilterRange(1, 0x281, 0x2FF, STD);
+  // Heartbeats
+  CANBus.setFIFOFilterRange(2, 0x701, 0x77F, STD);
+
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
 
   // set PWM frequency to 120Hz (from EHPR98-G35 specs)
@@ -949,6 +1104,18 @@ void setup()
     LastJogTime[b] = 0;
   }
 
+  // clear all IMU values
+  for (int i = 0; i < NUM_BLADES + 1; i++)
+  {
+    memset(&IMUValues[i], 0, sizeof(imu_t));
+  }
+
+  // reset blade heights
+  for (int b = 0; b < NUM_BLADES; b++)
+  {
+    BladeHeight[b] = 0;
+  }
+
   // initial blade status
   memset(&BladeStatus, 0, sizeof(blade_status_t));
   BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
@@ -984,6 +1151,9 @@ void setup()
 
   TxFrontBladeAuto();
   TxRearBladeAuto();
+
+  TxFrontBladeHeight();
+  TxRearBladeHeight();
 
   ResetAllNodes();
 }
@@ -1022,7 +1192,15 @@ void loop
         TxRearBladeSlaveOffset();
         break;
 
-      // front blade configuration
+      // reset blade height
+      case PGN_FRONT_ZERO_BLADE_HEIGHT:
+        BladeHeight[FRONT_BLADE_IDX] = 0;
+        break;
+      case PGN_REAR_ZERO_BLADE_HEIGHT:
+        BladeHeight[REAR_BLADE_IDX] = 0;
+        break;
+
+        // front blade configuration
       case PGN_FRONT_PWM_GAIN_UP:
         BladeConfig[FRONT_BLADE_IDX].PWMGainUp = Command.Value;
         break;
@@ -1123,12 +1301,12 @@ void loop
     // not found
     if (!NodeFound[PENDANT_NODE_ID - 1])
     {
-      EmergencyStop();
+      EmergencyStop(__LINE__);
     }
     // found pendant but emergency stop is not armed
     else if (!ButtonState.Fields.EStopArmed)
     {
-      EmergencyStop();
+      EmergencyStop(__LINE__);
     }
   }
 
