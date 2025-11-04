@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace SerialTransfer
+namespace Controller
 {
-
-    public class PacketCRC
+    internal class PacketCRC
     {
         public byte Poly { get; private set; }
         private ushort TableLen { get; set; }
@@ -63,5 +62,4 @@ namespace SerialTransfer
             return crc;
         }
     }
-
 }

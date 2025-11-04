@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
 
-namespace SerialTransfer
+namespace Controller
 {
-
-    public enum PacketStatus
+    internal enum PacketStatus
     {
         Continue = 3,
         NewData = 2,
@@ -15,7 +14,7 @@ namespace SerialTransfer
         StalePacketError = -3
     }
 
-    public struct ConfigST
+    internal struct ConfigST
     {
         public Stream DebugPort { get; set; }
         public bool Debug { get; set; }
@@ -38,7 +37,7 @@ namespace SerialTransfer
         }
     }
 
-    public class Packet
+    internal class Packet
     {
         // Constants
         private const byte StartByte = 0x7E;
@@ -165,8 +164,6 @@ namespace SerialTransfer
                 System.Runtime.InteropServices.Marshal.FreeHGlobal(ptr);
             }
         }
-
-
 
         // Implementation of ConstructPacket method
         public byte ConstructPacket(ushort messageLen, byte packetId = 0)
@@ -309,8 +306,7 @@ namespace SerialTransfer
                             {
                                 if (_idByte < _callbacksLen)
                                     _callbacks[_idByte]?.Invoke();
-                                else if (_debug)
-                                    ;
+                                //else if (_debug)
                                     // Console.WriteLine($"ERROR: No callback available for packet ID {_idByte}");
                             }
                             _packetStart = 0;
