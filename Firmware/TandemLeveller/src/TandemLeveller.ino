@@ -88,6 +88,12 @@
 #define SLAVE_OFFSET_MIN (-128)
 #define SLAVE_OFFSET_MAX 127
 
+// how often to send ping to OpenGrade3D
+#define PING_PERIOD_MS 1000
+
+// time to wait before deciding that OG3D has disconnected
+#define PING_TIMEOUT_PERIOD_MS 3000
+
 // supported PGNs
 typedef enum _pgn_t : uint16_t
 {
@@ -95,6 +101,7 @@ typedef enum _pgn_t : uint16_t
   PGN_ESTOP                    = 0x0000,
   PGN_RESET                    = 0x0001,
   PGN_OG3D_STARTED             = 0x0002,
+  PGN_PING                     = 0x0003,
 
   // blade control
   PGN_FRONT_CUT_VALVE          = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
@@ -275,6 +282,9 @@ static state_t State;
 static elapsedMillis LastJogTime[NUM_BLADES];
 static imu_t IMUValues[NUM_BLADES + 1];
 static int BladeHeight[NUM_BLADES];  // in mm
+static elapsedMillis PingTimestamp;
+static elapsedMillis LastPingRxTimestamp;
+static bool OG3DFound = false;
 
 // resets the controller
 static void Reset
@@ -1140,6 +1150,9 @@ void setup()
     BladeConfig[b].Deadband           = 3;
   }
 
+  PingTimestamp = 0;
+  LastPingRxTimestamp = 0;
+
   State = STATE_RUN;
 
   TxBootup();
@@ -1175,6 +1188,8 @@ void loop
   {
     opengrade3dcommand_t Command;
 
+    OG3DFound = true;
+
     Command = GetCommand();
 
     switch (Command.PGN)
@@ -1190,6 +1205,10 @@ void loop
         TxRearBladeAuto();
         TxFrontBladeSlaveOffset();
         TxRearBladeSlaveOffset();
+        break;
+
+      case PGN_PING:
+        LastPingRxTimestamp = 0;
         break;
 
       // reset blade height
@@ -1292,6 +1311,12 @@ void loop
     TxTPDO2();
   }
 
+  // check to see if OpenGrade3D has disappeared
+  if ((LastPingRxTimestamp >= PING_TIMEOUT_PERIOD_MS) && OG3DFound)
+  {
+    OG3DFound = false;
+  }
+
   // check for pendant
   if (PendantSearch && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
   {
@@ -1324,5 +1349,16 @@ void loop
     LEDFlashTimestamp -= LED_FLASH_PERIOD_MS;
     
     digitalToggle(LED);
+  }
+
+  // tell OG3D we are alive
+  if (PingTimestamp >= PING_PERIOD_MS)
+  {
+    PingTimestamp = 0;
+
+    controllerstatus_t Status;
+    Status.PGN   = PGN_PING;
+    Status.Value = 0;
+    SendStatus(&Status);
   }
 }
