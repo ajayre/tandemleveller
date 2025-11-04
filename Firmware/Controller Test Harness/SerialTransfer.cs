@@ -2,7 +2,7 @@
 using System.IO.Ports;
 using System.Threading;
 
-namespace SerialTransfer
+namespace Controller
 {
 
     /// <summary>
@@ -13,7 +13,7 @@ namespace SerialTransfer
     /// C# port of SerialTransfer class for packet-based serial communication
     /// using the standard System.IO.Ports.SerialPort class
     /// </summary>
-    public class SerialTransfer
+    internal class SerialTransfer
     {
         // Public members
         public Packet Packet { get; } = new Packet();
