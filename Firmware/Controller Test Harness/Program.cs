@@ -19,9 +19,10 @@ namespace Controller_Test_Harness
             PGN_ESTOP                    = 0x0000,
             PGN_RESET                    = 0x0001,
             PGN_OG3D_STARTED             = 0x0002,
+            PGN_PING                     = 0x0003,
 
             // blade control
-            PGN_CUT_VALVE                = 0x1000,   // 0 - 200
+            PGN_CUT_VALVE = 0x1000,   // 0 - 200
             PGN_BLADE_OFFSET             = 0x1001,
             PGN_FRONT_ZERO_BLADE_HEIGHT  = 0x1002,
             PGN_REAR_ZERO_BLADE_HEIGHT   = 0x1003,
@@ -103,10 +104,19 @@ namespace Controller_Test_Harness
             public double Roll;
         }
 
+        // time between transmit of pings in milliseconds
+        private const int PING_PERIOD_MS = 1000;
+
+        // maximum time to wait for a ping before determining controller has stopped working
+        private const int PING_TIMEOUT_PERIOD_MS = 3000;
+
         private static SerialTransfer.SerialTransfer Controller;
         private static IMUValue TractorIMU = new IMUValue();
         private static IMUValue FrontScraperIMU = new IMUValue();
         private static IMUValue RearScraperIMU = new IMUValue();
+
+        private static DateTime LastRxPingTime;
+        private static bool ControllerFound;
 
         static void Main(string[] args)
         {
@@ -153,8 +163,21 @@ namespace Controller_Test_Harness
 
             DateTime TxTime = DateTime.Now.AddMilliseconds(500);
 
+            DateTime PingTime = DateTime.Now.AddMilliseconds(PING_PERIOD_MS);
+
+            LastRxPingTime = DateTime.Now;
+            ControllerFound = true;
+
             while (true)
             {
+                // send ping to controller to tell it we are alive
+                if (PingTime < DateTime.Now)
+                {
+                    PingTime = DateTime.Now.AddMilliseconds(PING_PERIOD_MS);
+
+                    SendControllerCommand(PGNValues.PGN_PING, 0);
+                }
+
                 if (TxTime < DateTime.Now)
                 {
                     TxTime = DateTime.Now.AddMilliseconds(500);
@@ -165,6 +188,14 @@ namespace Controller_Test_Harness
                     SendControllerCommand(TxCmd);
                 }
 
+                // controller has disappeared
+                if ((DateTime.Now >= LastRxPingTime.AddMilliseconds(PING_TIMEOUT_PERIOD_MS)) && ControllerFound)
+                {
+                    ControllerFound = false;
+
+                    Console.WriteLine("CONTROLLER NOT FOUND");
+                }
+
                 if (Controller.Available() > 0)
                 {
                     ControllerStatus Stat = GetControllerStatus();
@@ -173,6 +204,11 @@ namespace Controller_Test_Harness
                         // misc
                         case PGNValues.PGN_ESTOP:
                             Console.WriteLine("EMERGENCY STOP!");
+                            break;
+
+                        case PGNValues.PGN_PING:
+                            LastRxPingTime = DateTime.Now;
+                            Console.WriteLine("RX PING");
                             break;
 
                         // slave offsets
