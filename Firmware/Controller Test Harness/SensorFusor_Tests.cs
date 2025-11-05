@@ -12,6 +12,22 @@ namespace Controller_Test_Harness
         private const double HEADING_TOLERANCE = 0.1; // degrees
 
         /// <summary>
+        /// Creates a GNSSFix from degrees (latitude/longitude) and meters (altitude)
+        /// </summary>
+        private GNSSFix CreateGNSSFix(double longitudeDeg, double latitudeDeg, double altitudeM, 
+                                       double heading, double speedKph, bool hasRTK)
+        {
+            return new GNSSFix(
+                longitudeDeg,
+                latitudeDeg,
+                altitudeM,
+                heading,
+                speedKph,
+                hasRTK
+            );
+        }
+
+        /// <summary>
         /// Runs all tests and returns true if all pass, false if any fail
         /// </summary>
         public bool Run()
@@ -59,13 +75,13 @@ namespace Controller_Test_Harness
             Console.Write("Test 1: No Correction (No RTK)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0,
-                5.0,
-                false // No RTK
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading
+                5.0,     // speed kph
+                false    // No RTK
             );
 
             IMUValue imu = new IMUValue
@@ -89,12 +105,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 2: No Correction (No Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                -301.0, // Invalid heading
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                -301.0,  // Invalid heading
+                5.0,     // speed kph
                 true
             );
 
@@ -119,12 +135,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 3: No Correction (Zero Roll)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0,
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading
+                5.0,     // speed kph
                 true
             );
 
@@ -149,12 +165,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 4: Roll 15° Right (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -175,10 +191,10 @@ namespace Controller_Test_Harness
 
             // When heading north (0°), roll moves antenna east, so we shift west (longitude increases)
             // The actual shift direction depends on Haversine calculation, so we check altitude primarily
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
-                          Math.Abs(result.Latitude - input.Latitude) < POSITION_TOLERANCE * 10000000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
+                          Math.Abs(result.Latitude - input.Latitude) < POSITION_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -192,12 +208,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 5: Roll 15° Left (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -213,9 +229,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * ANTENNA_HEIGHT; // Same as positive
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -229,12 +245,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 6: Roll 30° Right (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0,
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading
+                5.0,     // speed kph
                 true
             );
 
@@ -250,9 +266,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             double expectedAltOffset = Math.Cos(30.0 * Math.PI / 180.0) * ANTENNA_HEIGHT; // 3.6955m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -266,12 +282,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 7: Roll 45° Right (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0,
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading
+                5.0,     // speed kph
                 true
             );
 
@@ -287,9 +303,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             double expectedAltOffset = Math.Cos(45.0 * Math.PI / 180.0) * ANTENNA_HEIGHT; // 3.0174m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -303,12 +319,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 8: Roll 90° Right (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0,
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading
+                5.0,     // speed kph
                 true
             );
 
@@ -324,9 +340,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             // At 90° roll, AltOffset1 should be 0 (antenna at ground level)
-            double expectedAltitude = 100.0 * 1000.0; // No altitude correction
+            double expectedAltitude = 100.0; // No altitude correction
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -340,12 +356,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 9: Roll 1° Right (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0,
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading
+                5.0,     // speed kph
                 true
             );
 
@@ -361,9 +377,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             double expectedAltOffset = Math.Cos(1.0 * Math.PI / 180.0) * ANTENNA_HEIGHT; // ~4.2660m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -377,12 +393,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 10: Roll 15° Right (East Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                90.0, // East
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                90.0,    // heading (East)
+                5.0,     // speed kph
                 true
             );
 
@@ -398,9 +414,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * ANTENNA_HEIGHT;
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -414,12 +430,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 11: Roll 15° Right (Northeast Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                45.0, // Northeast
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                45.0,    // heading (Northeast)
+                5.0,     // speed kph
                 true
             );
 
@@ -435,9 +451,9 @@ namespace Controller_Test_Harness
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
 
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * ANTENNA_HEIGHT;
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -451,12 +467,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 12: Roll 15° Right (Heading 350°)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                350.0, // Almost north (10° west of north)
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                350.0,   // heading (Almost north - 10° west of north)
+                5.0,     // speed kph
                 true
             );
 
@@ -473,9 +489,9 @@ namespace Controller_Test_Harness
 
             // Heading90 = 350 + 90 = 440 → should wrap to 80°
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * ANTENNA_HEIGHT;
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -489,12 +505,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 13: Pitch 15° Forward (North Heading)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -513,9 +529,9 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(0.0 * Math.PI / 180.0) * 
                                        Math.Cos(15.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT;
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -529,12 +545,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 14: Roll 15° + Pitch 15° Combined... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -553,9 +569,9 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * 
                                        Math.Cos(15.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT; // ~3.9799m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -569,12 +585,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 15: Roll 20° + Pitch 20° Combined... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -593,9 +609,9 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(20.0 * Math.PI / 180.0) * 
                                        Math.Cos(20.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT; // ~3.7686m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -609,12 +625,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 16: Roll 10° + Pitch 30° (Large Pitch)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -633,12 +649,12 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(10.0 * Math.PI / 180.0) * 
                                        Math.Cos(30.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT; // ~3.5726m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
             // Pitch displacement: sin(30°) × 4.2672 = 2.1336m forward
             // Roll displacement: sin(10°) × 4.2672 = 0.7409m to the right
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -652,12 +668,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 17: Roll 30° + Pitch 10° (Large Roll)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -676,12 +692,12 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(30.0 * Math.PI / 180.0) * 
                                        Math.Cos(10.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT; // ~3.5726m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
             // Roll displacement: sin(30°) × 4.2672 = 2.1336m to the right
             // Pitch displacement: sin(10°) × 4.2672 = 0.7409m forward
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -695,12 +711,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 18: Roll 15° Right + Pitch -15° (Nose Down)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -720,12 +736,12 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * 
                                        Math.Cos(15.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT; // ~3.9799m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
             // Roll displacement: sin(15°) × 4.2672 = 1.1044m to the right (east)
             // Pitch displacement: sin(-15°) × 4.2672 = -1.1044m (backward/south)
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -739,12 +755,12 @@ namespace Controller_Test_Harness
             Console.Write("Test 19: Roll -15° Left + Pitch 15° (Nose Up)... ");
 
             SensorFusor fusor = new SensorFusor();
-            GNSSFix input = new GNSSFix(
-                -100.0 * 10000000.0,
-                40.0 * 10000000.0,
-                100.0 * 1000.0,
-                0.0, // North
-                5.0,
+            GNSSFix input = CreateGNSSFix(
+                -100.0,  // longitude degrees
+                40.0,    // latitude degrees
+                100.0,   // altitude meters
+                0.0,     // heading (North)
+                5.0,     // speed kph
                 true
             );
 
@@ -764,12 +780,12 @@ namespace Controller_Test_Harness
             double expectedAltOffset = Math.Cos(15.0 * Math.PI / 180.0) * 
                                        Math.Cos(15.0 * Math.PI / 180.0) * 
                                        ANTENNA_HEIGHT; // ~3.9799m
-            double expectedAltitude = (100.0 - expectedAltOffset) * 1000.0;
+            double expectedAltitude = (100.0 - expectedAltOffset);
 
             // Roll displacement: sin(-15°) × 4.2672 = -1.1044m (left/west)
             // Pitch displacement: sin(15°) × 4.2672 = 1.1044m forward (north)
 
-            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            bool passed = Math.Abs(result.Altitude - expectedAltitude) < ALTITUDE_TOLERANCE &&
                           result.HasRTK == input.HasRTK &&
                           result.Heading == input.Heading &&
                           result.Speed == input.Speed;
@@ -783,9 +799,9 @@ namespace Controller_Test_Harness
         /// </summary>
         private bool AreEqual(GNSSFix a, GNSSFix b)
         {
-            return Math.Abs(a.Latitude - b.Latitude) < POSITION_TOLERANCE * 10000000.0 &&
-                   Math.Abs(a.Longitude - b.Longitude) < POSITION_TOLERANCE * 10000000.0 &&
-                   Math.Abs(a.Altitude - b.Altitude) < ALTITUDE_TOLERANCE * 1000.0 &&
+            return Math.Abs(a.Latitude - b.Latitude) < POSITION_TOLERANCE &&
+                   Math.Abs(a.Longitude - b.Longitude) < POSITION_TOLERANCE &&
+                   Math.Abs(a.Altitude - b.Altitude) < ALTITUDE_TOLERANCE &&
                    Math.Abs(a.Heading - b.Heading) < HEADING_TOLERANCE &&
                    Math.Abs(a.Speed - b.Speed) < 0.1 &&
                    a.HasRTK == b.HasRTK;
