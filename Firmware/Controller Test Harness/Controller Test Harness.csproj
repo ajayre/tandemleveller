@@ -44,10 +44,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controller.cs" />
+    <Compile Include="GNSSFix.cs" />
+    <Compile Include="Haversine.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketCRC.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SensorFusor.cs" />
+    <Compile Include="SensorFusor_Tests.cs" />
     <Compile Include="SerialTransfer.cs" />
   </ItemGroup>
   <ItemGroup>

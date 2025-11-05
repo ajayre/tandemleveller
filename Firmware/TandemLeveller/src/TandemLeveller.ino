@@ -1315,6 +1315,8 @@ void loop
   if ((LastPingRxTimestamp >= PING_TIMEOUT_PERIOD_MS) && OG3DFound)
   {
     OG3DFound = false;
+
+    EmergencyStop(__LINE__);
   }
 
   // check for pendant
