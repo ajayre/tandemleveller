@@ -8,10 +8,10 @@ namespace Controller_Test_Harness
 {
     public class GNSSFix
     {
-        public double Longitude;
-        public double Latitude;
+        public double Longitude; // deg
+        public double Latitude;  // deg
         public double Altitude;  // meters
-        public double Heading;
+        public double Heading;   // deg
         public double Speed;     // kph
         public bool HasRTK;      // true for fix and float
 

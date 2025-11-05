@@ -42,10 +42,10 @@ namespace Controller
             // get heading from IMU
             double IMUHeading = IMUReading.Heading;
 
-            double Latitude = Fix.Latitude / 10000000.0;
-            double Longitude = Fix.Longitude / 10000000.0;
+            double Latitude = Fix.Latitude;
+            double Longitude = Fix.Longitude;
 
-            double Altitude = Fix.Altitude / 1000.0;
+            double Altitude = Fix.Altitude;
 
             // no gyro offset is known
             if (IMUGyroOffset < -400)
@@ -124,10 +124,6 @@ namespace Controller
                                     Math.Cos(IMUReading.Pitch * Math.PI / 180.0) *
                                     AntennaHeight;
 
-
-                //double TiltOffset = Math.Sin(IMUReading.Roll * Math.PI / 180.0) * AntennaHeight;
-                //double AltOffset1 = Math.Cos(IMUReading.Roll * Math.PI / 180.0) * AntennaHeight;
-
                 GNSSFix CorrectedFix = new GNSSFix();
                 CorrectedFix.Latitude = Latitude;
                 CorrectedFix.Longitude = Longitude;
@@ -144,16 +140,11 @@ namespace Controller
                     Haversine.MoveDistanceBearing(ref CorrectedFix.Latitude, ref CorrectedFix.Longitude, Heading, PitchTiltOffset);
                 }
 
-                // correct the position
-                //Haversine.MoveDistanceBearing(ref CorrectedFix.Latitude, ref CorrectedFix.Longitude, Heading90, TiltOffset);
-
                 // we subtract the new antenna height above ground from the antenna height to get the corrected ground height
                 // note: when roll = 0, AltOffset1 will be the vehicle height, which means no correction and the full vehicle height is subtracted
                 Altitude -= AltOffset1;
 
-                CorrectedFix.Latitude *= 10000000.0;
-                CorrectedFix.Longitude *= 10000000.0;
-                CorrectedFix.Altitude = Altitude * 1000.0;
+                CorrectedFix.Altitude = Altitude;
 
                 CorrectedFix.HasRTK = Fix.HasRTK;
                 CorrectedFix.Heading = Fix.Heading;
@@ -167,8 +158,8 @@ namespace Controller
             // no change
             else
             {
-                LastLatitude = Fix.Latitude / 10000000.0;
-                LastLongitude = Fix.Longitude / 10000000.0;
+                LastLatitude = Fix.Latitude;
+                LastLongitude = Fix.Longitude;
 
                 return Fix;
             }
