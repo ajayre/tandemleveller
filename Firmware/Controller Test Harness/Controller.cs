@@ -27,6 +27,8 @@ namespace Controller
         public double Pitch;
         public double Yaw;
         public double Roll;
+        public double YawRate;  // deg/s
+        public double Heading;
     }
 
     public class OGController
