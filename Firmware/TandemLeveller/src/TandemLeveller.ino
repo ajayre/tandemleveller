@@ -160,14 +160,17 @@ typedef enum _pgn_t : uint16_t
   PGN_TRACTOR_ROLL             = 0x6001,
   PGN_TRACTOR_HEADING          = 0x6002,
   PGN_TRACTOR_YAWRATE          = 0x6003,
-  PGN_FRONT_PITCH              = 0x6004,
-  PGN_FRONT_ROLL               = 0x6005,
-  PGN_FRONT_HEADING            = 0x6006,
-  PGN_FRONT_YAWRATE            = 0x6007,
-  PGN_REAR_PITCH               = 0x6008,
-  PGN_REAR_ROLL                = 0x6009,
-  PGN_REAR_HEADING             = 0x600A,
-  PGN_REAR_YAWRATE             = 0x600B,
+  PGN_TRACTOR_IMUCALIBRATION   = 0x6004,
+  PGN_FRONT_PITCH              = 0x6005,
+  PGN_FRONT_ROLL               = 0x6006,
+  PGN_FRONT_HEADING            = 0x6007,
+  PGN_FRONT_YAWRATE            = 0x6008,
+  PGN_FRONT_IMUCALIBRATION     = 0x6009,
+  PGN_REAR_PITCH               = 0x600A,
+  PGN_REAR_ROLL                = 0x600B,
+  PGN_REAR_HEADING             = 0x600C,
+  PGN_REAR_YAWRATE             = 0x600D,
+  PGN_REAR_IMUCALIBRATION      = 0x600E,
 } pgn_t;
 
 typedef enum _blade_direction_t
@@ -264,6 +267,7 @@ typedef struct _imu_t
   float Pitch;
   float Heading;
   float YawRate;
+  uint8_t CalibrationStatus;
 } imu_t;
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
@@ -438,8 +442,8 @@ static void ProcessAngleTPDO
   TxRearBladeHeight();
 }
 
-// process TPDO from IMU
-static void ProcessIMUTPDO
+// process TPDO1 from IMU
+static void ProcessIMUTPDO1
   (
   uint8_t NodeId,
   uint8_t Length,
@@ -476,6 +480,34 @@ static void ProcessIMUTPDO
         IMUValues[REAR_BLADE_IDX].Pitch   = Pitch;
         IMUValues[REAR_BLADE_IDX].Roll    = Roll;
         IMUValues[REAR_BLADE_IDX].YawRate = YawRate;
+        TxRearScraperIMU();
+        break;
+    }
+  }
+}
+
+// process TPDO2 from IMU
+static void ProcessIMUTPDO2
+  (
+  uint8_t NodeId,
+  uint8_t Length,
+  const uint8_t *pData
+  )
+{
+  if (Length == 1)
+  {
+    switch (NodeId)
+    {
+      case TRACTOR_IMU_NODE_ID:
+        IMUValues[TRACTOR_IDX].CalibrationStatus = pData[0];
+        TxTractorIMU();
+        break;
+      case FRONTSCRAPER_IMU_NODE_ID:
+        IMUValues[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
+        TxFrontScraperIMU();
+        break;
+      case REARSCRAPER_IMU_NODE_ID:
+        IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
         TxRearScraperIMU();
         break;
     }
@@ -528,6 +560,9 @@ static void TxTractorIMU
   Status.PGN = PGN_TRACTOR_YAWRATE;
   Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].YawRate * 100);
   SendStatus(&Status);
+  Status.PGN = PGN_TRACTOR_IMUCALIBRATION;
+  Status.Value = IMUValues[TRACTOR_IDX].CalibrationStatus;
+  SendStatus(&Status);
 }
 
 // send front scraper IMU values to OpenGrade3D
@@ -550,6 +585,9 @@ static void TxFrontScraperIMU
   Status.PGN = PGN_FRONT_YAWRATE;
   Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100);
   SendStatus(&Status);
+  Status.PGN = PGN_FRONT_IMUCALIBRATION;
+  Status.Value = IMUValues[FRONT_BLADE_IDX].CalibrationStatus;
+  SendStatus(&Status);
 }
 
 // send rear scraper IMU values to OpenGrade3D
@@ -571,6 +609,9 @@ static void TxRearScraperIMU
   SendStatus(&Status);
   Status.PGN = PGN_REAR_YAWRATE;
   Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_REAR_IMUCALIBRATION;
+  Status.Value = IMUValues[REAR_BLADE_IDX].CalibrationStatus;
   SendStatus(&Status);
 }
 
@@ -855,13 +896,13 @@ static void CANReceiveHandler
       ProcessPendantTPDO(msg.len, msg.buf);
       break;
     case 0x180 + TRACTOR_IMU_NODE_ID:
-      ProcessIMUTPDO(TRACTOR_IMU_NODE_ID, msg.len, msg.buf);
+      ProcessIMUTPDO1(TRACTOR_IMU_NODE_ID, msg.len, msg.buf);
       break;
     case 0x180 + FRONTSCRAPER_IMU_NODE_ID:
-      ProcessIMUTPDO(FRONTSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
+      ProcessIMUTPDO1(FRONTSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
       break;
     case 0x180 + REARSCRAPER_IMU_NODE_ID:
-      ProcessIMUTPDO(REARSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
+      ProcessIMUTPDO1(REARSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
       break;
     case 0x180 + FRONT_ANGLE_NODE_ID:
       ProcessAngleTPDO(FRONT_ANGLE_NODE_ID, msg.len, msg.buf);

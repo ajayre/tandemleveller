@@ -6,7 +6,6 @@
 // roll left = negative, roll right = positive
 // pitch forwards = positive, pitch backwards = negative
 // yaw clockwise (viewed from above) = increases angle, anti-clockwise = decreases angle
-//   angle wraps around, e.g clockwise rotation = 0...-10...-180.180...10...0
 
 // "CANopen" node id
 #if TRACTOR == 1
@@ -215,8 +214,8 @@ static void TxHeartbeat
   TxCANMessage(0x700 + NODE_ID, 1, Data);
 }
 
-// transmits a PDO containing the measurements
-static void TxPDO
+// transmits PDO containing the measurements and status information
+static void TxPDOs
   (
   euler_t *pMeasurements
   )
@@ -246,6 +245,9 @@ static void TxPDO
   Serial.println();
 
   TxCANMessage(0x180 + NODE_ID, 8, Data);
+
+  Data[0] = CalibrationStatus;
+  TxCANMessage(0x280 + NODE_ID, 1, Data);
 }
 
 // called when a CAN message is received
@@ -360,7 +362,7 @@ void loop
         // perform corrections so that downhill travel is a positive pitch
         ypr.pitch = -ypr.pitch;
 
-        TxPDO(&ypr);
+        TxPDOs(&ypr);
 
         /*static long last = 0;
         long now = micros();
