@@ -27,7 +27,8 @@ namespace Controller
         public double Pitch;
         public double Heading;
         public double Roll;
-        public double YawRate;  // deg/s
+        public double YawRate;           // deg/s
+        public byte CalibrationStatus;   // 0 - 4, 4 = best
     }
 
     public class OGController
@@ -127,14 +128,17 @@ namespace Controller
             PGN_TRACTOR_ROLL             = 0x6001,
             PGN_TRACTOR_HEADING          = 0x6002,
             PGN_TRACTOR_YAWRATE          = 0x6003,
-            PGN_FRONT_PITCH              = 0x6004,
-            PGN_FRONT_ROLL               = 0x6005,
-            PGN_FRONT_HEADING            = 0x6006,
-            PGN_FRONT_YAWRATE            = 0x6007,
-            PGN_REAR_PITCH               = 0x6008,
-            PGN_REAR_ROLL                = 0x6009,
-            PGN_REAR_HEADING             = 0x600A,
-            PGN_REAR_YAWRATE             = 0x600B,
+            PGN_TRACTOR_IMUCALIBRATION   = 0x6004,
+            PGN_FRONT_PITCH              = 0x6005,
+            PGN_FRONT_ROLL               = 0x6006,
+            PGN_FRONT_HEADING            = 0x6007,
+            PGN_FRONT_YAWRATE            = 0x6008,
+            PGN_FRONT_IMUCALIBRATION     = 0x6009,
+            PGN_REAR_PITCH               = 0x600A,
+            PGN_REAR_ROLL                = 0x600B,
+            PGN_REAR_HEADING             = 0x600C,
+            PGN_REAR_YAWRATE             = 0x600D,
+            PGN_REAR_IMUCALIBRATION      = 0x600E,
         }
 
         private struct ControllerCommand
@@ -353,6 +357,10 @@ namespace Controller
                             TractorIMU.YawRate = ((Int32)Stat.Value) / 100.0;
                             OnTractorIMUChanged?.Invoke(TractorIMU);
                             break;
+                        case PGNValues.PGN_TRACTOR_IMUCALIBRATION:
+                            TractorIMU.CalibrationStatus = (byte)Stat.Value;
+                            OnTractorIMUChanged?.Invoke(TractorIMU);
+                            break;
 
                         case PGNValues.PGN_FRONT_PITCH:
                             FrontScraperIMU.Pitch = ((Int32)Stat.Value) / 100.0;
@@ -368,6 +376,10 @@ namespace Controller
                             break;
                         case PGNValues.PGN_FRONT_YAWRATE:
                             FrontScraperIMU.YawRate = ((Int32)Stat.Value) / 100.0;
+                            OnFrontIMUChanged?.Invoke(FrontScraperIMU);
+                            break;
+                        case PGNValues.PGN_FRONT_IMUCALIBRATION:
+                            FrontScraperIMU.CalibrationStatus = (byte)Stat.Value;
                             OnFrontIMUChanged?.Invoke(FrontScraperIMU);
                             break;
 
@@ -386,6 +398,10 @@ namespace Controller
                         case PGNValues.PGN_REAR_YAWRATE:
                             RearScraperIMU.YawRate = ((Int32)Stat.Value) / 100.0;
                             OnRearIMUChanged?.Invoke(RearScraperIMU);
+                            break;
+                        case PGNValues.PGN_REAR_IMUCALIBRATION:
+                            RearScraperIMU.CalibrationStatus = (byte)Stat.Value;
+                            OnRearIMUChanged?.Invoke(FrontScraperIMU);
                             break;
 
                         // blade auto flags
