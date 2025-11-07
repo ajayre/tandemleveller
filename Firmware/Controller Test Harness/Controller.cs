@@ -25,10 +25,9 @@ namespace Controller
     public struct IMUValue
     {
         public double Pitch;
-        public double Yaw;
+        public double Heading;
         public double Roll;
         public double YawRate;  // deg/s
-        public double Heading;
     }
 
     public class OGController
@@ -126,13 +125,16 @@ namespace Controller
             // IMU
             PGN_TRACTOR_PITCH            = 0x6000,
             PGN_TRACTOR_ROLL             = 0x6001,
-            PGN_TRACTOR_YAW              = 0x6002,
-            PGN_FRONT_PITCH              = 0x6003,
-            PGN_FRONT_ROLL               = 0x6004,
-            PGN_FRONT_YAW                = 0x6005,
-            PGN_REAR_PITCH               = 0x6006,
-            PGN_REAR_ROLL                = 0x6007,
-            PGN_REAR_YAW                 = 0x6008,
+            PGN_TRACTOR_HEADING          = 0x6002,
+            PGN_TRACTOR_YAWRATE          = 0x6003,
+            PGN_FRONT_PITCH              = 0x6004,
+            PGN_FRONT_ROLL               = 0x6005,
+            PGN_FRONT_HEADING            = 0x6006,
+            PGN_FRONT_YAWRATE            = 0x6007,
+            PGN_REAR_PITCH               = 0x6008,
+            PGN_REAR_ROLL                = 0x6009,
+            PGN_REAR_HEADING             = 0x600A,
+            PGN_REAR_YAWRATE             = 0x600B,
         }
 
         private struct ControllerCommand
@@ -343,8 +345,12 @@ namespace Controller
                             TractorIMU.Roll = ((Int32)Stat.Value) / 100.0;
                             OnTractorIMUChanged?.Invoke(TractorIMU);
                             break;
-                        case PGNValues.PGN_TRACTOR_YAW:
-                            TractorIMU.Yaw = ((Int32)Stat.Value) / 100.0;
+                        case PGNValues.PGN_TRACTOR_HEADING:
+                            TractorIMU.Heading = ((Int32)Stat.Value) / 100.0;
+                            OnTractorIMUChanged?.Invoke(TractorIMU);
+                            break;
+                        case PGNValues.PGN_TRACTOR_YAWRATE:
+                            TractorIMU.YawRate = ((Int32)Stat.Value) / 100.0;
                             OnTractorIMUChanged?.Invoke(TractorIMU);
                             break;
 
@@ -356,8 +362,12 @@ namespace Controller
                             FrontScraperIMU.Roll = ((Int32)Stat.Value) / 100.0;
                             OnFrontIMUChanged?.Invoke(FrontScraperIMU);
                             break;
-                        case PGNValues.PGN_FRONT_YAW:
-                            FrontScraperIMU.Yaw = ((Int32)Stat.Value) / 100.0;
+                        case PGNValues.PGN_FRONT_HEADING:
+                            FrontScraperIMU.Heading = ((Int32)Stat.Value) / 100.0;
+                            OnFrontIMUChanged?.Invoke(FrontScraperIMU);
+                            break;
+                        case PGNValues.PGN_FRONT_YAWRATE:
+                            FrontScraperIMU.YawRate = ((Int32)Stat.Value) / 100.0;
                             OnFrontIMUChanged?.Invoke(FrontScraperIMU);
                             break;
 
@@ -369,8 +379,12 @@ namespace Controller
                             RearScraperIMU.Roll = ((Int32)Stat.Value) / 100.0;
                             OnRearIMUChanged?.Invoke(RearScraperIMU);
                             break;
-                        case PGNValues.PGN_REAR_YAW:
-                            RearScraperIMU.Yaw = ((Int32)Stat.Value) / 100.0;
+                        case PGNValues.PGN_REAR_HEADING:
+                            RearScraperIMU.Heading = ((Int32)Stat.Value) / 100.0;
+                            OnRearIMUChanged?.Invoke(RearScraperIMU);
+                            break;
+                        case PGNValues.PGN_REAR_YAWRATE:
+                            RearScraperIMU.YawRate = ((Int32)Stat.Value) / 100.0;
                             OnRearIMUChanged?.Invoke(RearScraperIMU);
                             break;
 
