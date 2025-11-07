@@ -106,7 +106,7 @@ namespace Controller_Test_Harness
             IMUValue Value
             )
         {
-            //Console.WriteLine("Rear scraper pitch: {0:0.00} deg, roll: {1:0.00} deg, yaw: {2:0.00} deg", Value.Pitch, Value.Roll, Value.Yaw);
+            //Console.WriteLine("Rear scraper pitch: {0:0.00} deg, roll: {1:0.00} deg, hdng: {2:0.00} deg", Value.Pitch, Value.Roll, Value.Heading);
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Controller_Test_Harness
             IMUValue Value
             )
         {
-            //Console.WriteLine("Front scraper pitch: {0:0.00} deg, roll: {1:0.00} deg, yaw: {2:0.00} deg", Value.Pitch, Value.Roll, Value.Yaw);
+            //Console.WriteLine("Front scraper pitch: {0:0.00} deg, roll: {1:0.00} deg, hdng: {2:0.00} deg", Value.Pitch, Value.Roll, Value.Heading);
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace Controller_Test_Harness
             IMUValue Value
             )
         {
-            //Console.WriteLine("Tractor pitch: {0:0.00} deg, roll: {1:0.00} deg, yaw: {2:0.00} deg", Value.Pitch, Value.Roll, Value.Yaw);
+            //Console.WriteLine("Tractor pitch: {0:0.00} deg, roll: {1:0.00} deg, hdng: {2:0.00} deg, yaw rate: {3:0.00} deg/s", Value.Pitch, Value.Roll, Value.Heading, Value.YawRate);
         }
 
         /// <summary>

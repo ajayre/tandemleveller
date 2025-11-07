@@ -88,9 +88,8 @@ namespace Controller_Test_Harness
             {
                 Pitch = 5.0,
                 Roll = 10.0,
-                Yaw = 0.0,
-                YawRate = 0.0,
-                Heading = 0.0
+                Heading = 0.0,
+                YawRate = 0.0
             };
 
             GNSSFix result = fusor.Fuse(input, imu, ANTENNA_HEIGHT);
@@ -118,7 +117,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 10.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -148,7 +146,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 0.0, // No roll
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -178,7 +175,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 15.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -221,7 +217,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = -15.0, // Negative roll (left)
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -258,7 +253,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 30.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -295,7 +289,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 45.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -332,7 +325,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 90.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -369,7 +361,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 1.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -406,7 +397,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 15.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 90.0
             };
@@ -443,7 +433,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 15.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 45.0
             };
@@ -480,7 +469,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 0.0,
                 Roll = 15.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 350.0
             };
@@ -518,7 +506,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 15.0, // Nose up (antenna moves forward)
                 Roll = 0.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -558,7 +545,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 15.0,
                 Roll = 15.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -598,7 +584,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 20.0,
                 Roll = 20.0,
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -638,7 +623,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 30.0, // Large pitch (nose up)
                 Roll = 10.0,  // Small roll
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -681,7 +665,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 10.0,  // Small pitch
                 Roll = 30.0,   // Large roll
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -724,7 +707,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = -15.0, // Negative pitch (nose down, antenna moves backward)
                 Roll = 15.0,    // Positive roll (rolling right, antenna moves right)
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };
@@ -768,7 +750,6 @@ namespace Controller_Test_Harness
             {
                 Pitch = 15.0,   // Positive pitch (nose up, antenna moves forward)
                 Roll = -15.0,   // Negative roll (rolling left, antenna moves left)
-                Yaw = 0.0,
                 YawRate = 0.0,
                 Heading = 0.0
             };

@@ -158,13 +158,16 @@ typedef enum _pgn_t : uint16_t
   // IMU
   PGN_TRACTOR_PITCH            = 0x6000,
   PGN_TRACTOR_ROLL             = 0x6001,
-  PGN_TRACTOR_YAW              = 0x6002,
-  PGN_FRONT_PITCH              = 0x6003,
-  PGN_FRONT_ROLL               = 0x6004,
-  PGN_FRONT_YAW                = 0x6005,
-  PGN_REAR_PITCH               = 0x6006,
-  PGN_REAR_ROLL                = 0x6007,
-  PGN_REAR_YAW                 = 0x6008,
+  PGN_TRACTOR_HEADING          = 0x6002,
+  PGN_TRACTOR_YAWRATE          = 0x6003,
+  PGN_FRONT_PITCH              = 0x6004,
+  PGN_FRONT_ROLL               = 0x6005,
+  PGN_FRONT_HEADING            = 0x6006,
+  PGN_FRONT_YAWRATE            = 0x6007,
+  PGN_REAR_PITCH               = 0x6008,
+  PGN_REAR_ROLL                = 0x6009,
+  PGN_REAR_HEADING             = 0x600A,
+  PGN_REAR_YAWRATE             = 0x600B,
 } pgn_t;
 
 typedef enum _blade_direction_t
@@ -259,7 +262,8 @@ typedef struct _imu_t
 {
   float Roll;
   float Pitch;
-  float Yaw;
+  float Heading;
+  float YawRate;
 } imu_t;
 
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
@@ -442,32 +446,36 @@ static void ProcessIMUTPDO
   const uint8_t *pData
   )
 {
-  if (Length == 6)
+  if (Length == 8)
   {
-    float Yaw   = ((int16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
-    float Pitch = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
-    float Roll  = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
+    float Heading = ((uint16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
+    float Pitch   = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
+    float Roll    = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
+    float YawRate = ((int16_t)(pData[6] | ((uint16_t)pData[7] << 8))) / 100.0;
 
     switch (NodeId)
     {
       case TRACTOR_IMU_NODE_ID:
-        IMUValues[TRACTOR_IDX].Yaw   = Yaw;
-        IMUValues[TRACTOR_IDX].Pitch = Pitch;
-        IMUValues[TRACTOR_IDX].Roll  = Roll;
+        IMUValues[TRACTOR_IDX].Heading = Heading;
+        IMUValues[TRACTOR_IDX].Pitch   = Pitch;
+        IMUValues[TRACTOR_IDX].Roll    = Roll;
+        IMUValues[TRACTOR_IDX].YawRate = YawRate;
         TxTractorIMU();
         break;
 
       case FRONTSCRAPER_IMU_NODE_ID:
-        IMUValues[FRONT_BLADE_IDX].Yaw   = Yaw;
-        IMUValues[FRONT_BLADE_IDX].Pitch = Pitch;
-        IMUValues[FRONT_BLADE_IDX].Roll  = Roll;
+        IMUValues[FRONT_BLADE_IDX].Heading = Heading;
+        IMUValues[FRONT_BLADE_IDX].Pitch   = Pitch;
+        IMUValues[FRONT_BLADE_IDX].Roll    = Roll;
+        IMUValues[FRONT_BLADE_IDX].YawRate = YawRate;
         TxFrontScraperIMU();
         break;
 
       case REARSCRAPER_IMU_NODE_ID:
-        IMUValues[REAR_BLADE_IDX].Yaw   = Yaw;
-        IMUValues[REAR_BLADE_IDX].Pitch = Pitch;
-        IMUValues[REAR_BLADE_IDX].Roll  = Roll;
+        IMUValues[REAR_BLADE_IDX].Heading = Heading;
+        IMUValues[REAR_BLADE_IDX].Pitch   = Pitch;
+        IMUValues[REAR_BLADE_IDX].Roll    = Roll;
+        IMUValues[REAR_BLADE_IDX].YawRate = YawRate;
         TxRearScraperIMU();
         break;
     }
@@ -514,8 +522,11 @@ static void TxTractorIMU
   Status.PGN = PGN_TRACTOR_PITCH;
   Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Pitch * 100);
   SendStatus(&Status);
-  Status.PGN = PGN_TRACTOR_YAW;
-  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Yaw * 100);
+  Status.PGN = PGN_TRACTOR_HEADING;
+  Status.Value = (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_TRACTOR_YAWRATE;
+  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].YawRate * 100);
   SendStatus(&Status);
 }
 
@@ -533,8 +544,11 @@ static void TxFrontScraperIMU
   Status.PGN = PGN_FRONT_PITCH;
   Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100);
   SendStatus(&Status);
-  Status.PGN = PGN_FRONT_YAW;
-  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Yaw * 100);
+  Status.PGN = PGN_FRONT_HEADING;
+  Status.Value = (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_FRONT_YAWRATE;
+  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100);
   SendStatus(&Status);
 }
 
@@ -552,8 +566,11 @@ static void TxRearScraperIMU
   Status.PGN = PGN_REAR_PITCH;
   Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100);
   SendStatus(&Status);
-  Status.PGN = PGN_REAR_YAW;
-  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Yaw * 100);
+  Status.PGN = PGN_REAR_HEADING;
+  Status.Value = (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100);
+  SendStatus(&Status);
+  Status.PGN = PGN_REAR_YAWRATE;
+  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100);
   SendStatus(&Status);
 }
 

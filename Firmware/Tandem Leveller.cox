@@ -65,9 +65,9 @@
             <Ext>false</Ext>
           </MessageId>
         </PDOMessageId>
-        <Name>Tctr Yaw</Name>
+        <Name>Tctr Heading</Name>
         <StartBit>0</StartBit>
-        <TypeId>Integer16</TypeId>
+        <TypeId>Unsigned16</TypeId>
         <BitSize>16</BitSize>
         <PreOffset>0</PreOffset>
         <ScaleFactor>0.01</ScaleFactor>
@@ -137,9 +137,9 @@
             <Ext>false</Ext>
           </MessageId>
         </PDOMessageId>
-        <Name>FS Yaw</Name>
+        <Name>FS Heading</Name>
         <StartBit>0</StartBit>
-        <TypeId>Integer16</TypeId>
+        <TypeId>Unsigned16</TypeId>
         <BitSize>16</BitSize>
         <PreOffset>0</PreOffset>
         <ScaleFactor>0.01</ScaleFactor>
@@ -209,9 +209,9 @@
             <Ext>false</Ext>
           </MessageId>
         </PDOMessageId>
-        <Name>RS Yaw</Name>
+        <Name>RS Heading</Name>
         <StartBit>0</StartBit>
-        <TypeId>Integer16</TypeId>
+        <TypeId>Unsigned16</TypeId>
         <BitSize>16</BitSize>
         <PreOffset>0</PreOffset>
         <ScaleFactor>0.01</ScaleFactor>
@@ -363,7 +363,8 @@
         <PostOffset>0</PostOffset>
         <Units>mm</Units>
         <Guid>d93ff739-bd1d-4ac8-a782-1809f6e50e0e</Guid>
-        <Enums />
+        <Enums>
+        </Enums>
         <SimpleView>false</SimpleView>
         <ReadOnly>false</ReadOnly>
         <BufferSize>5000</BufferSize>
@@ -460,7 +461,8 @@
         <PostOffset>0</PostOffset>
         <Units>mm</Units>
         <Guid>4be20d7a-5ab3-4d02-bb91-7940383ac04b</Guid>
-        <Enums />
+        <Enums>
+        </Enums>
         <SimpleView>false</SimpleView>
         <ReadOnly>false</ReadOnly>
         <BufferSize>5000</BufferSize>
@@ -757,7 +759,8 @@
         <PostOffset>0</PostOffset>
         <Units>mm</Units>
         <Guid>9bb5692a-63a2-4047-826b-0cd8e543dd86</Guid>
-        <Enums />
+        <Enums>
+        </Enums>
         <SimpleView>false</SimpleView>
         <ReadOnly>false</ReadOnly>
         <BufferSize>5000</BufferSize>
@@ -780,6 +783,78 @@
         <PostOffset>0</PostOffset>
         <Units>mm</Units>
         <Guid>0593e610-9a5f-4377-b259-0f29f5e62e2b</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>386</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>Tctr Yaw Rate</Name>
+        <StartBit>48</StartBit>
+        <TypeId>Integer16</TypeId>
+        <BitSize>16</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>0.01</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>deg/s</Units>
+        <Guid>cf682641-5f09-4870-a390-39529bfa0259</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>387</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>FS Yaw Rate</Name>
+        <StartBit>48</StartBit>
+        <TypeId>Integer16</TypeId>
+        <BitSize>16</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>0.01</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>deg/s</Units>
+        <Guid>de13b21c-490b-4c08-b2ce-a653b224344a</Guid>
+        <Enums>
+        </Enums>
+        <SimpleView>false</SimpleView>
+        <ReadOnly>false</ReadOnly>
+        <BufferSize>5000</BufferSize>
+        <Inverted>false</Inverted>
+      </ProcessData>
+      <ProcessData>
+        <SourceType>CANMessage</SourceType>
+        <PDOMessageId>
+          <MessageId>
+            <Id>388</Id>
+            <Ext>false</Ext>
+          </MessageId>
+        </PDOMessageId>
+        <Name>RS Yaw Rate</Name>
+        <StartBit>48</StartBit>
+        <TypeId>Integer16</TypeId>
+        <BitSize>16</BitSize>
+        <PreOffset>0</PreOffset>
+        <ScaleFactor>0.01</ScaleFactor>
+        <PostOffset>0</PostOffset>
+        <Units>deg/s</Units>
+        <Guid>e18e0ce7-62c6-4434-8e83-9812b6996dad</Guid>
         <Enums>
         </Enums>
         <SimpleView>false</SimpleView>
@@ -1147,8 +1222,8 @@
       <ScrollWindowSize>100</ScrollWindowSize>
       <MaxPreTriggerPoints>10</MaxPreTriggerPoints>
       <AutoY>true</AutoY>
-      <MinY>-5</MinY>
-      <MaxY>182</MaxY>
+      <MinY>-323.59000000000003</MinY>
+      <MaxY>283.75</MaxY>
       <Series>
         <RealTimeChartSeries>
           <Enabled>false</Enabled>
@@ -1211,7 +1286,7 @@
           <UseEndTrigger>false</UseEndTrigger>
         </RealTimeChartSeries>
         <RealTimeChartSeries>
-          <Enabled>true</Enabled>
+          <Enabled>false</Enabled>
           <PointSize>0.1</PointSize>
           <PointLineThickness>1.5</PointLineThickness>
           <LineThickness>1.5</LineThickness>
@@ -1226,7 +1301,7 @@
           <UseEndTrigger>false</UseEndTrigger>
         </RealTimeChartSeries>
         <RealTimeChartSeries>
-          <Enabled>true</Enabled>
+          <Enabled>false</Enabled>
           <PointSize>0.1</PointSize>
           <PointLineThickness>1.5</PointLineThickness>
           <LineThickness>1.5</LineThickness>
@@ -1240,6 +1315,21 @@
           <UseStartTrigger>false</UseStartTrigger>
           <UseEndTrigger>false</UseEndTrigger>
         </RealTimeChartSeries>
+        <RealTimeChartSeries>
+          <Enabled>true</Enabled>
+          <PointSize>0.1</PointSize>
+          <PointLineThickness>1.5</PointLineThickness>
+          <LineThickness>1.5</LineThickness>
+          <PointColor>-9441516</PointColor>
+          <LineColor>-9441516</LineColor>
+          <LineSmoothness>0</LineSmoothness>
+          <Fill>false</Fill>
+          <FillColor>-9441516</FillColor>
+          <FillOpacity>0</FillOpacity>
+          <ProcessDataGuid>cf682641-5f09-4870-a390-39529bfa0259</ProcessDataGuid>
+          <UseStartTrigger>false</UseStartTrigger>
+          <UseEndTrigger>false</UseEndTrigger>
+        </RealTimeChartSeries>
       </Series>
     </RealTimeChart>
   </RealTimeChartDocument>
@@ -1250,11 +1340,11 @@
     <Layout>&lt;?xml version="1.0" encoding="utf-16"?&gt;
 &lt;Layout&gt;
   &lt;Window Guid="505abfa9-96d6-4750-a743-ac5a87b85fce" LastFocused="134065243996133889" DockedSize="291" PopupSize="300" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Left" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="15825ba0-b5b3-48c4-a3d6-7e6564b2ba78" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Window Guid="073e9d8c-7e52-4040-81e9-8e66063af3ea" LastFocused="134065182397197527" DockedSize="200" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="550, 400" LastOpenDockSituation="Document" LastFixedDockSituation="Document" LastFixedDockLocation="Right" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="0" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="00000000-0000-0000-0000-000000000000" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="74765791-eb36-4375-a19f-8341d2f9e704" DocumentIndexInWindowGroup="1" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Window Guid="ad90c367-b696-44e8-9661-160abe5e78ce" LastFocused="134065272049288385" DockedSize="307" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Bottom" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="36d80b79-2898-4e1a-8f01-5f9c62378481" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Window Guid="073e9d8c-7e52-4040-81e9-8e66063af3ea" LastFocused="134069582370902780" DockedSize="200" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="550, 400" LastOpenDockSituation="Document" LastFixedDockSituation="Document" LastFixedDockLocation="Right" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="0" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="00000000-0000-0000-0000-000000000000" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="74765791-eb36-4375-a19f-8341d2f9e704" DocumentIndexInWindowGroup="1" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Window Guid="4653a478-5c40-4c76-88c0-88047093507f" LastFocused="134069582351220127" DockedSize="459" PopupSize="0" FloatingLocation="421, 72" FloatingSize="1193, 821" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Right" LastFloatingWindowGuid="1a0de558-e71a-46e6-8bf9-970e05921b51" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" DockedIndexInWindowGroup="0" DockedSplitPath="0|0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
   &lt;Window Guid="f38bf915-d069-4891-bd3a-3a839bde84e5" LastFocused="134042729230009129" DockedSize="200" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="550, 400" LastOpenDockSituation="Document" LastFixedDockSituation="Document" LastFixedDockLocation="Right" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="0" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="00000000-0000-0000-0000-000000000000" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="74765791-eb36-4375-a19f-8341d2f9e704" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Window Guid="4653a478-5c40-4c76-88c0-88047093507f" LastFocused="134065184747368904" DockedSize="800" PopupSize="0" FloatingLocation="421, 72" FloatingSize="1193, 821" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Right" LastFloatingWindowGuid="1a0de558-e71a-46e6-8bf9-970e05921b51" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" DockedIndexInWindowGroup="0" DockedSplitPath="0|0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
-  &lt;Container Dock="4" ContentSize="800"&gt;
+  &lt;Window Guid="ad90c367-b696-44e8-9661-160abe5e78ce" LastFocused="134065272049288385" DockedSize="307" PopupSize="0" FloatingLocation="-1, -1" FloatingSize="250, 400" LastOpenDockSituation="Docked" LastFixedDockSituation="Docked" LastFixedDockLocation="Bottom" LastFloatingWindowGuid="00000000-0000-0000-0000-000000000000" LastDockContainerCount="1" LastDockContainerIndex="0" DockedWorkingSize="250, 400" DockedWindowGroupGuid="36d80b79-2898-4e1a-8f01-5f9c62378481" DockedIndexInWindowGroup="0" DockedSplitPath="0" DocumentWorkingSize="250, 400" DocumentWindowGroupGuid="00000000-0000-0000-0000-000000000000" DocumentIndexInWindowGroup="0" DocumentSplitPath="0" FloatingWorkingSize="250, 400" FloatingWindowGroupGuid="00000000-0000-0000-0000-000000000000" FloatingIndexInWindowGroup="0" FloatingSplitPath="0" /&gt;
+  &lt;Container Dock="4" ContentSize="459"&gt;
     &lt;SplitLayoutSystem WorkingSize="250, 400" SplitMode="0"&gt;
       &lt;SplitLayoutSystem WorkingSize="250, 400" SplitMode="0"&gt;
         &lt;ControlLayoutSystem WorkingSize="250, 400" Guid="92ccffa5-d4ab-4f89-b8c9-ab3e2f4fdf59" Collapsed="0" SelectedControl="4653a478-5c40-4c76-88c0-88047093507f"&gt;

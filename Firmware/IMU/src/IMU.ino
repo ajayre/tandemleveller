@@ -34,10 +34,12 @@
 // time between heartbeats in millseconds
 #define HB_PRODUCER_TIME_MS 100
 
-struct euler_t {
+struct euler_t
+{
   float yaw;
   float pitch;
   float roll;
+  float yawrate;  // deg/s
 } ypr;
 
 static Adafruit_BNO08x bno08x(BNO08X_RESET);
@@ -49,6 +51,7 @@ static bool SensorFound = false;
 static bool SensorEnabled = false;
 elapsedMillis HBTime;
 static WDT_T4<WDT1> wdt;
+static uint8_t CalibrationStatus;
 
 // reboot the device
 void Reboot
@@ -119,6 +122,50 @@ static void quaternionToEulerGI
   quaternionToEuler(rotational_vector->real, rotational_vector->i, rotational_vector->j, rotational_vector->k, ypr, degrees);
 }
 
+static void quarternionToEulerGRV
+  (
+  sh2_RotationVectorWAcc_t *rotational_vector,
+  euler_t *ypr,
+  bool degrees = false
+  )
+{
+  quaternionToEuler(rotational_vector->real, rotational_vector->i, rotational_vector->j, rotational_vector->k, ypr, degrees);
+}
+
+static float FindHeading
+  (
+  sh2_RotationVectorWAcc_t *rotational_vector
+  )
+{
+  float dqw = rotational_vector->real;
+  float dqx = rotational_vector->i;
+  float dqy = rotational_vector->j;
+  float dqz = rotational_vector->k;
+
+  float norm = sqrt(dqw * dqw + dqx * dqx + dqy * dqy + dqz * dqz);
+  dqw = dqw / norm;
+  dqx = dqx / norm;
+  dqy = dqy / norm;
+  dqz = dqz / norm;
+
+  float ysqr = dqy * dqy;
+
+  float t3 = +2.0 * (dqw * dqz + dqx * dqy);
+  float t4 = +1.0 - 2.0 * (ysqr + dqz * dqz);
+  float yaw_raw = atan2(t3, t4);
+  float yaw = yaw_raw * 180.0 / PI;
+  if (yaw > 0)
+  {
+    yaw = 360 - yaw;
+  }
+  else
+  {
+    yaw = abs(yaw);
+  }
+    
+  return yaw;
+}
+
 // transmits a CAN message
 static void TxCANMessage
   (
@@ -133,7 +180,7 @@ static void TxCANMessage
   for (uint8_t i = 0; i < Length; i++ ) txmsg.buf[i] = Data[i];
   CANBus.write(txmsg);
 
-  char txt[50];
+  /*char txt[50];
   sprintf(txt, "Tx: %3.3X %d ", Id, Length);
   Serial.print(txt);
   for (uint8_t i = 0; i < Length; i++)
@@ -141,7 +188,7 @@ static void TxCANMessage
     sprintf(txt, "%2.2X ", Data[i]);
     Serial.print(txt);
   }
-  Serial.println();
+  Serial.println();*/
 }
 
 // transmits a bootup message
@@ -174,7 +221,7 @@ static void TxPDO
   euler_t *pMeasurements
   )
 {
-  uint8_t Data[6];
+  uint8_t Data[8];
   int16_t Value;
 
   Value = (int16_t)(pMeasurements->yaw * 100);
@@ -189,7 +236,16 @@ static void TxPDO
   Data[4] = ((uint16_t)Value) & 0xFF;
   Data[5] = (((uint16_t)Value) >> 8) & 0xFF;
 
-  TxCANMessage(0x180 + NODE_ID, 6, Data);
+  Value = (int16_t)(pMeasurements->yawrate * 100);
+  Data[6] = ((uint16_t)Value) & 0xFF;
+  Data[7] = (((uint16_t)Value) >> 8) & 0xFF;
+
+  char txt[50];
+  sprintf(txt, "%.2f %.2f %.2f %.2f %d", pMeasurements->pitch, pMeasurements->roll, pMeasurements->yaw, pMeasurements->yawrate, CalibrationStatus);
+  Serial.print(txt);
+  Serial.println();
+
+  TxCANMessage(0x180 + NODE_ID, 8, Data);
 }
 
 // called when a CAN message is received
@@ -236,11 +292,15 @@ void setup()
 
   TxBootup();
 
+  CalibrationStatus = 0;
+
   // find sensor
   if (bno08x.begin_SPI(BNO08X_CS, BNO08X_INT))
   {
     SensorFound = true;
     setReports(reportType, reportIntervalUs);
+    setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
+    setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
   }
 }
 
@@ -260,7 +320,11 @@ void loop
     {
       Serial.println("Sensor was reset");
       setReports(reportType, reportIntervalUs);
+      setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
+      setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
     }
+
+    char msg[30];
 
     if (SensorEnabled)
     {
@@ -268,14 +332,26 @@ void loop
       {
         switch (sensorValue.sensorId)
         {
+          case SH2_GYROSCOPE_CALIBRATED:
+            ypr.yawrate = sensorValue.un.gyroscope.z * 180.0 / PI;
+            break;
+
+          case SH2_GEOMAGNETIC_ROTATION_VECTOR:
+            //quarternionToEulerGRV(&sensorValue.un.geoMagRotationVector, &ypr, true);
+            //ypr.yaw = FindHeading(&sensorValue.un.geoMagRotationVector);
+            break;
+
           case SH2_ARVR_STABILIZED_RV:     
             quaternionToEulerRV(&sensorValue.un.arvrStabilizedRV, &ypr, true);
+            CalibrationStatus = sensorValue.status & 0x03;
             break;
           
           case SH2_GYRO_INTEGRATED_RV:
             quaternionToEulerGI(&sensorValue.un.gyroIntegratedRV, &ypr, true);
             break;
         }
+
+        if (ypr.yaw < 0) ypr.yaw += 360;
 
         TxPDO(&ypr);
 
