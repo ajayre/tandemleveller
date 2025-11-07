@@ -324,8 +324,6 @@ void loop
       setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
     }
 
-    char msg[30];
-
     if (SensorEnabled)
     {
       if (bno08x.getSensorEvent(&sensorValue))
@@ -344,14 +342,23 @@ void loop
           case SH2_ARVR_STABILIZED_RV:     
             quaternionToEulerRV(&sensorValue.un.arvrStabilizedRV, &ypr, true);
             CalibrationStatus = sensorValue.status & 0x03;
+            // Y axis points to magnetic north but we need to change so X axis points to north to match silkscreen
+            ypr.yaw -= 90;
             break;
           
           case SH2_GYRO_INTEGRATED_RV:
             quaternionToEulerGI(&sensorValue.un.gyroIntegratedRV, &ypr, true);
+            // Y axis points to magnetic north but we need to change so X axis points to north to match silkscreen
+            ypr.yaw -= 90;
             break;
         }
 
+        // perform corrections so that heading increases clockwise when viewed from above
         if (ypr.yaw < 0) ypr.yaw += 360;
+        ypr.yaw = 360.0 - ypr.yaw;
+
+        // perform corrections so that downhill travel is a positive pitch
+        ypr.pitch = -ypr.pitch;
 
         TxPDO(&ypr);
 
