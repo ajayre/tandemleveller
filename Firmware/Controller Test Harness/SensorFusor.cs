@@ -176,7 +176,7 @@ namespace Controller
 
                 CorrectedFix.Altitude = Altitude;
 
-                CorrectedFix.HasRTK = Fix.HasRTK;
+                CorrectedFix.RTKType = Fix.RTKType;
                 CorrectedFix.Heading = Fix.Heading;
                 CorrectedFix.Speed = Fix.Speed;
 
@@ -218,7 +218,7 @@ namespace Controller
                 }
 
                 CorrectedFix.Altitude = Altitude;
-                CorrectedFix.HasRTK = Fix.HasRTK;
+                CorrectedFix.RTKType = Fix.RTKType;
                 CorrectedFix.Heading = Fix.Heading;
                 CorrectedFix.Speed = Fix.Speed;
 
@@ -235,7 +235,7 @@ namespace Controller
                 CorrectedFix.Longitude = Fix.Longitude;
 
                 CorrectedFix.Altitude = Altitude;
-                CorrectedFix.HasRTK = Fix.HasRTK;
+                CorrectedFix.RTKType = Fix.RTKType;
                 CorrectedFix.Heading = Fix.Heading;
                 CorrectedFix.Speed = Fix.Speed;
 

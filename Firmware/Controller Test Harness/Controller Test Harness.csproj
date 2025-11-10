@@ -47,6 +47,7 @@
     <Compile Include="DataLogger.cs" />
     <Compile Include="GNSSFix.cs" />
     <Compile Include="Haversine.cs" />
+    <Compile Include="NMEAParsing_Tests.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketCRC.cs" />
     <Compile Include="Program.cs" />
