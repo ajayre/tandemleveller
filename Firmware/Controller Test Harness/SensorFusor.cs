@@ -1,6 +1,7 @@
 ﻿using Controller_Test_Harness;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,15 +23,23 @@ namespace Controller
         /// </summary>
         /// <param name="Fix">GNSS location and height</param>
         /// <param name="IMUReading">IMU reading</param>
-        /// <param name="AntennaHeight">Height of antenna in meters</param>
+        /// <param name="AntennaHeight">Height of antenna in centimeters</param>
+        /// <param name="AntennaLeft">Distance antenna is left of target point (e.g. vehicle center) in centimeters</param>
+        /// <param name="AntennaForward">Distance antenna is foward of target point (e.g. axle) in centimeters</param>
         /// <returns>Corrected GNSS location and height</returns>
         public GNSSFix Fuse
             (
             GNSSFix Fix,
             IMUValue IMUReading,
-            double AntennaHeight
+            int AntennaHeightCM,
+            int AntennaLeftCM,
+            int AntennaForwardCM
             )
         {
+            double AntennaHeight = AntennaHeightCM / 100.0;
+            double AntennaLeft = AntennaLeftCM / 100.0;
+            double AntennaForward = AntennaForwardCM / 100.0;
+
             double GyroHeading = 0;
             double IMUYawRate = IMUReading.YawRate;
 
@@ -112,6 +121,15 @@ namespace Controller
                 double Heading90 = Heading + 90;
                 if (Heading90 >= 360) Heading90 -= 360;
 
+                double CenterOffset = 0;
+                double AltOffset2 = 0;
+
+                if (AntennaLeft != 0)
+                {
+                    CenterOffset = Math.Cos(IMUReading.Roll * Math.PI / 180.0) * AntennaLeft;
+                    AltOffset2 = Math.Sin(IMUReading.Roll * Math.PI / 180.0) * CenterOffset;
+                }
+
                 // Calculate horizontal displacements for roll (perpendicular to heading)
                 double RollTiltOffset = Math.Sin(IMUReading.Roll * Math.PI / 180.0) * AntennaHeight;
 
@@ -131,7 +149,7 @@ namespace Controller
                 // Correct position for roll displacement (perpendicular to heading)
                 if (IMUReading.Roll != 0)
                 {
-                    Haversine.MoveDistanceBearing(ref CorrectedFix.Latitude, ref CorrectedFix.Longitude, Heading90, RollTiltOffset);
+                    Haversine.MoveDistanceBearing(ref CorrectedFix.Latitude, ref CorrectedFix.Longitude, Heading90, RollTiltOffset + CenterOffset);
                 }
 
                 // Correct position for pitch displacement (along heading)
@@ -142,7 +160,13 @@ namespace Controller
 
                 // we subtract the new antenna height above ground from the antenna height to get the corrected ground height
                 // note: when roll = 0, AltOffset1 will be the vehicle height, which means no correction and the full vehicle height is subtracted
-                Altitude -= AltOffset1;
+                Altitude -= (AltOffset1 - AltOffset2);
+
+                if (AntennaForward != 0)
+                {
+                    // translate from GPS back to target point (e.g. axle)
+                    Haversine.MoveDistanceBearing(ref CorrectedFix.Latitude, ref CorrectedFix.Longitude, Heading, -AntennaForward);
+                }
 
                 CorrectedFix.Altitude = Altitude;
 
@@ -155,13 +179,64 @@ namespace Controller
 
                 return CorrectedFix;
             }
+            // have heading and RTK but no roll or tilt, correct for antenna location front/left
+            else if ((Heading > -300) && Fix.HasRTK)
+            {
+                // rotate the heading 90 degrees to give the direction of roll
+                double Heading90 = Heading + 90;
+                if (Heading90 >= 360) Heading90 -= 360;
+
+                double CenterOffset = 0;
+                double AltOffset2 = 0;
+
+                if (AntennaLeft != 0)
+                {
+                    CenterOffset = Math.Cos(IMUReading.Roll * Math.PI / 180.0) * AntennaLeft;
+                    AltOffset2 = Math.Sin(IMUReading.Roll * Math.PI / 180.0) * CenterOffset;
+                }
+
+                double AltOffset1 = AntennaHeight;
+
+                GNSSFix CorrectedFix = new GNSSFix();
+                CorrectedFix.Latitude = Latitude;
+                CorrectedFix.Longitude = Longitude;
+
+                // we subtract the new antenna height above ground from the antenna height to get the corrected ground height
+                // note: when roll = 0, AltOffset1 will be the vehicle height, which means no correction and the full vehicle height is subtracted
+                Altitude -= (AltOffset1 - AltOffset2);
+
+                if (AntennaForward != 0)
+                {
+                    // translate from GPS back to target point (e.g. axle)
+                    Haversine.MoveDistanceBearing(ref CorrectedFix.Latitude, ref CorrectedFix.Longitude, Heading, -AntennaForward);
+                }
+
+                CorrectedFix.Altitude = Altitude;
+                CorrectedFix.HasRTK = Fix.HasRTK;
+                CorrectedFix.Heading = Fix.Heading;
+                CorrectedFix.Speed = Fix.Speed;
+
+                LastLatitude = Latitude;
+                LastLongitude = Longitude;
+
+                return CorrectedFix;
+            }
             // no change
             else
             {
+                GNSSFix CorrectedFix = new GNSSFix();
+                CorrectedFix.Latitude = Fix.Latitude;
+                CorrectedFix.Longitude = Fix.Longitude;
+
+                CorrectedFix.Altitude = Altitude;
+                CorrectedFix.HasRTK = Fix.HasRTK;
+                CorrectedFix.Heading = Fix.Heading;
+                CorrectedFix.Speed = Fix.Speed;
+
                 LastLatitude = Fix.Latitude;
                 LastLongitude = Fix.Longitude;
 
-                return Fix;
+                return CorrectedFix;
             }
         }
     }

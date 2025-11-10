@@ -16,8 +16,8 @@ namespace Controller_Test_Harness
     {
         static void Main(string[] args)
         {
-            //SensorFusor_Tests tests = new SensorFusor_Tests();
-            //bool allPassed = tests.Run();
+            SensorFusor_Tests tests = new SensorFusor_Tests();
+            bool allPassed = tests.Run();
 
             OGController Controller = new OGController();
             Controller.OnControllerLost += Controller_OnControllerLost;
