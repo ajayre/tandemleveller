@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,8 +16,13 @@ namespace Controller
         private const int FIX_HEADING_MIN    = 1;  // meters
         private const int YAW_RATE_THRESHOLD = 6;  // deg/sec
 
-        private double LastLatitude = -301;
-        private double LastLongitude = -301;
+        private const int INVALID_LATITUDE = -301;
+        private const int INVALID_LONGITUDE = -301;
+        private const int INVALID_HEADING = -301;
+        private const int INVALID_GYRO = -401;
+
+        private double LastLatitude = INVALID_LATITUDE;
+        private double LastLongitude = INVALID_LONGITUDE;
 
         /// <summary>
         /// Fuses the GNSS and IMU sensor readings
@@ -43,7 +49,7 @@ namespace Controller
             double GyroHeading = 0;
             double IMUYawRate = IMUReading.YawRate;
 
-            double Heading = -301;
+            double Heading = INVALID_HEADING;
 
             // assume started pointing straight north
             double IMUGyroOffset = -401;
@@ -57,10 +63,10 @@ namespace Controller
             double Altitude = Fix.Altitude;
 
             // no gyro offset is known
-            if (IMUGyroOffset < -400)
+            if (IMUGyroOffset == INVALID_GYRO)
             {
                 // we are going fast enough to use GNSS heading
-                if (Fix.Speed > SPEED_THRESHOLD && Fix.HasRTK)
+                if ((Fix.Speed > SPEED_THRESHOLD) && Fix.HasRTK)
                 {
                     Heading = Fix.Heading;
                 }
@@ -68,7 +74,7 @@ namespace Controller
                 else
                 {
                     // we don't have a previous fix so get the current location
-                    if (LastLatitude < -300)
+                    if (LastLatitude == INVALID_LATITUDE)
                     {
                         LastLatitude = Latitude;
                         LastLongitude = Longitude;
@@ -81,7 +87,7 @@ namespace Controller
                     }
 
                     // we have a heading
-                    if (Heading > -300)
+                    if (Heading != INVALID_HEADING)
                     {
                         IMUGyroOffset = Heading - IMUHeading;
                     }
@@ -113,7 +119,7 @@ namespace Controller
             }
 
             // if we have a heading and we are rolling and/or pitching and have RTK then compute
-            if ((Heading > -300) && ((IMUReading.Roll != 0) || (IMUReading.Pitch != 0)) && Fix.HasRTK)
+            if ((Heading != INVALID_HEADING) && ((IMUReading.Roll != 0) || (IMUReading.Pitch != 0)) && Fix.HasRTK)
             {
                 // use the imu roll to do terrain compensation: adjust lat, lon and altitude
 
@@ -180,7 +186,7 @@ namespace Controller
                 return CorrectedFix;
             }
             // have heading and RTK but no roll or tilt, correct for antenna location front/left
-            else if ((Heading > -300) && Fix.HasRTK)
+            else if ((Heading != INVALID_HEADING) && Fix.HasRTK)
             {
                 // rotate the heading 90 degrees to give the direction of roll
                 double Heading90 = Heading + 90;
