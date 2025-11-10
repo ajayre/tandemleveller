@@ -19,6 +19,9 @@ namespace Controller_Test_Harness
             SensorFusor_Tests tests = new SensorFusor_Tests();
             bool allPassed = tests.Run();
 
+            NMEAParsing_Tests tests2 = new NMEAParsing_Tests();
+            allPassed = tests2.Run();
+
             OGController Controller = new OGController();
             Controller.OnControllerLost += Controller_OnControllerLost;
             Controller.OnEmergencyStop += Controller_OnEmergencyStop;

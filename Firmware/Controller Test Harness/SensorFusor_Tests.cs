@@ -15,7 +15,7 @@ namespace Controller_Test_Harness
         /// Creates a GNSSFix from degrees (latitude/longitude) and meters (altitude)
         /// </summary>
         private GNSSFix CreateGNSSFix(double longitudeDeg, double latitudeDeg, double altitudeM, 
-                                       double heading, double speedKph, bool hasRTK)
+                                       double heading, double speedKph, RTKTypes rtkType = RTKTypes.None)
         {
             return new GNSSFix(
                 longitudeDeg,
@@ -23,7 +23,7 @@ namespace Controller_Test_Harness
                 altitudeM,
                 heading,
                 speedKph,
-                hasRTK
+                rtkType
             );
         }
 
@@ -100,7 +100,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading
                 5.0,     // speed kph
-                false    // No RTK
+                RTKTypes.None    // No RTK
             );
 
             IMUValue imu = new IMUValue
@@ -129,7 +129,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 -301.0,  // Invalid heading
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -158,7 +158,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -196,7 +196,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -239,7 +239,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -275,7 +275,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -311,7 +311,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -347,7 +347,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -383,7 +383,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -419,7 +419,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 90.0,    // heading (East)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -455,7 +455,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 45.0,    // heading (Northeast)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -491,7 +491,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 350.0,   // heading (Almost north - 10° west of north)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -528,7 +528,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -567,7 +567,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -606,7 +606,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -645,7 +645,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -687,7 +687,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -729,7 +729,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -772,7 +772,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -815,7 +815,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -860,7 +860,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -903,7 +903,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -943,7 +943,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -983,7 +983,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1024,7 +1024,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1065,7 +1065,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1105,7 +1105,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1145,7 +1145,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1188,7 +1188,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1230,7 +1230,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1273,7 +1273,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1312,7 +1312,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1351,7 +1351,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1393,7 +1393,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1434,7 +1434,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1477,7 +1477,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1520,7 +1520,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
@@ -1563,7 +1563,7 @@ namespace Controller_Test_Harness
                 100.0,   // altitude meters
                 0.0,     // heading (North)
                 5.0,     // speed kph
-                true
+                RTKTypes.Fix    // RTK
             );
 
             IMUValue imu = new IMUValue
