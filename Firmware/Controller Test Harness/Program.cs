@@ -14,13 +14,20 @@ namespace Controller_Test_Harness
 {
     internal class Program
     {
+        static IMUValue CurrentTractorIMU;
+        static int TRACTOR_ANTENNA_HEIGHT_CM = 427;
+        static int TRACTOR_ANTENNA_LEFT_CM = 0;
+        static int TRACTOR_ANTENNA_FORWARD_CM = 0;
+
+        static GNSSFix LastTractorPosition = null;
+
         static void Main(string[] args)
         {
-            SensorFusor_Tests tests = new SensorFusor_Tests();
-            bool allPassed = tests.Run();
+            //SensorFusor_Tests tests = new SensorFusor_Tests();
+            //bool allPassed = tests.Run();
 
-            NMEAParsing_Tests tests2 = new NMEAParsing_Tests();
-            allPassed = tests2.Run();
+            //NMEAParsing_Tests tests2 = new NMEAParsing_Tests();
+            //allPassed = tests2.Run();
 
             OGController Controller = new OGController();
             Controller.OnControllerLost += Controller_OnControllerLost;
@@ -37,7 +44,7 @@ namespace Controller_Test_Harness
             Controller.OnFrontBladeHeightChanged += Controller_OnFrontBladeHeightChanged;
             Controller.OnRearBladeHeightChanged += Controller_OnRearBladeHeightChanged;
 
-            Controller.Connect("COM12");
+            Controller.Connect("COM200");
 
             BladeConfiguration FrontBladeConfig = new BladeConfiguration();
             FrontBladeConfig.PWMGainUp          = 4;
@@ -64,8 +71,13 @@ namespace Controller_Test_Harness
             Controller.FrontBladeAtZero();
             Controller.RearBladeAtZero();
 
-            DateTime TxTime = DateTime.Now.AddMilliseconds(500);
+            GNSSReader TractorGNSS = new GNSSReader();
+            TractorGNSS.Connect("COM203");
+            TractorGNSS.OnFixReceived += TractorGNSS_OnFixReceived;
+            TractorGNSS.Start();
 
+            // keep setting front blade height
+            DateTime TxTime = DateTime.Now.AddMilliseconds(500);
             while (true)
             {
                 if (TxTime < DateTime.Now)
@@ -80,12 +92,37 @@ namespace Controller_Test_Harness
         }
 
         /// <summary>
+        /// Got a new position fix for the tractor, fuse with latest IMU reading
+        /// </summary>
+        /// <param name="Position">Current tractor position</param>
+        private static void TractorGNSS_OnFixReceived
+            (
+            GNSSFix Position
+            )
+        {
+            SensorFusor Fusor = new SensorFusor();
+            GNSSFix TractorPosition = Fusor.Fuse(Position, CurrentTractorIMU, TRACTOR_ANTENNA_HEIGHT_CM, TRACTOR_ANTENNA_LEFT_CM, TRACTOR_ANTENNA_FORWARD_CM);
+
+            double MovementDistance = 0;
+            if (LastTractorPosition != null)
+            {
+                MovementDistance = TractorPosition.DistanceTo(LastTractorPosition);
+            }
+
+            Console.WriteLine(string.Format("Tractor: {0} {1} {2}m ({3:0.00}cm) {4}",
+                TractorPosition.Latitude, TractorPosition.Longitude, TractorPosition.Altitude,
+                MovementDistance * 100.0, TractorPosition.HasRTK ? "RTK" : "No RTK"));
+
+            LastTractorPosition = TractorPosition;
+        }
+
+        /// <summary>
         /// Raised when the rear blade height changes
         /// </summary>
         /// <param name="Height">New blade height</param>
         private static void Controller_OnRearBladeHeightChanged(int Height)
         {
-            Console.WriteLine(string.Format("Rear blade height: {0} mm", Height));
+            //Console.WriteLine(string.Format("Rear blade height: {0} mm", Height));
         }
 
         /// <summary>
@@ -97,7 +134,7 @@ namespace Controller_Test_Harness
             int Height
             )
         {
-            Console.WriteLine(string.Format("Front blade height: {0} mm", Height));
+            //Console.WriteLine(string.Format("Front blade height: {0} mm", Height));
         }
 
         /// <summary>
@@ -133,6 +170,7 @@ namespace Controller_Test_Harness
             IMUValue Value
             )
         {
+            CurrentTractorIMU = Value;
             //Console.WriteLine("Tractor pitch: {0:0.00} deg, roll: {1:0.00} deg, hdng: {2:0.00} deg, yaw rate: {3:0.00} deg/s", Value.Pitch, Value.Roll, Value.Heading, Value.YawRate);
         }
 
@@ -145,7 +183,7 @@ namespace Controller_Test_Harness
             bool IsMovingUp
             )
         {
-            Console.WriteLine("Rear blade moving: {0}", IsMovingUp? "Up" : "Down");
+            //Console.WriteLine("Rear blade moving: {0}", IsMovingUp? "Up" : "Down");
         }
 
         /// <summary>
@@ -157,7 +195,7 @@ namespace Controller_Test_Harness
             bool IsMovingUp
             )
         {
-            Console.WriteLine("Front blade moving: {0}", IsMovingUp ? "Up" : "Down");
+            //Console.WriteLine("Front blade moving: {0}", IsMovingUp ? "Up" : "Down");
         }
 
         /// <summary>
@@ -169,7 +207,7 @@ namespace Controller_Test_Harness
             bool IsAuto
             )
         {
-            Console.WriteLine("Rear blade auto: {0}", IsAuto);
+            //Console.WriteLine("Rear blade auto: {0}", IsAuto);
         }
 
         /// <summary>
@@ -181,7 +219,7 @@ namespace Controller_Test_Harness
             bool IsAuto
             )
         {
-            Console.WriteLine("Front blade auto: {0}", IsAuto);
+            //Console.WriteLine("Front blade auto: {0}", IsAuto);
         }
 
         /// <summary>
@@ -193,7 +231,7 @@ namespace Controller_Test_Harness
             int Offset
             )
         {
-            Console.WriteLine("Rear blade offset (slave): " + Offset.ToString());
+            //Console.WriteLine("Rear blade offset (slave): " + Offset.ToString());
         }
 
         /// <summary>
@@ -205,7 +243,7 @@ namespace Controller_Test_Harness
             int Offset
             )
         {
-            Console.WriteLine("Front blade offset (slave): " + Offset.ToString());
+            //Console.WriteLine("Front blade offset (slave): " + Offset.ToString());
         }
 
         /// <summary>

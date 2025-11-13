@@ -408,7 +408,7 @@ static void EmergencyStop
     txmsg.buf[7] = 0x00;
     CANBus.write(txmsg);
 
-    Serial.println("ESTOP!");
+    //Serial.println("ESTOP!");
 
     // switch to manual control, stop movement
     for (int b = 0; b < NUM_BLADES; b++)
@@ -500,15 +500,12 @@ static void ProcessIMUTPDO2
     {
       case TRACTOR_IMU_NODE_ID:
         IMUValues[TRACTOR_IDX].CalibrationStatus = pData[0];
-        TxTractorIMU();
         break;
       case FRONTSCRAPER_IMU_NODE_ID:
         IMUValues[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
-        TxFrontScraperIMU();
         break;
       case REARSCRAPER_IMU_NODE_ID:
         IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
-        TxRearScraperIMU();
         break;
     }
   }
@@ -820,6 +817,18 @@ static void ProcessPendantTPDO
         }
       }
     }
+    // if in emergency stop
+    else if (State == STATE_ESTOP)
+    {
+      // if all four buttons pressed then reboot to exit ESTOP
+      if (ButtonState.Fields.Button1Pressed && ButtonState.Fields.Button2Pressed &&
+          ButtonState.Fields.Button3Pressed && ButtonState.Fields.Button4Pressed)
+      {
+        elapsedMillis Delay = 0;
+        while (Delay < 2000);
+        Reset();
+      }
+    }
   }
 }
 
@@ -840,7 +849,7 @@ static void ProcessHeartbeat
     {
       NodeFound[NodeId - 1] = true;
       HBTime[NodeId - 1] = 0;
-      Serial.println("Found node");
+      //Serial.println("Found node");
     }
 
     // on every heartbeat reset the timer
@@ -869,12 +878,12 @@ static void CheckForMissingNodes
     {
       if (HBTime[n] >= MAX_HEARTBEAT_TIME)
       {
-        Serial.println("NODE MISSING");
+        //Serial.println("NODE MISSING");
         NodeFound[n] = false;
 
         // if the pendant has dissappeared then perform emergency stop
         // as we can't see the ESTOP button
-        if ((n + 1) == PENDANT_NODE_ID)
+        if (((n + 1) == PENDANT_NODE_ID) && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
         {
           EmergencyStop(__LINE__);
         }
@@ -910,11 +919,34 @@ static void CANReceiveHandler
     case 0x180 + REAR_ANGLE_NODE_ID:
       ProcessAngleTPDO(REAR_ANGLE_NODE_ID, msg.len, msg.buf);
       break;
+    case 0x280 + TRACTOR_IMU_NODE_ID:
+      ProcessIMUTPDO2(TRACTOR_IMU_NODE_ID, msg.len, msg.buf);
+      break;
+    case 0x280 + FRONTSCRAPER_IMU_NODE_ID:
+      ProcessIMUTPDO2(FRONTSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
+      break;
+    case 0x280 + REARSCRAPER_IMU_NODE_ID:
+      ProcessIMUTPDO2(REARSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
+      break;
 
     // heartbeats
     case 0x700 + PENDANT_NODE_ID:
       ProcessHeartbeat(PENDANT_NODE_ID, msg.len, msg.buf);
       break;
+  }
+
+  // process NMT message
+  if ((msg.id == 0x000) && !msg.flags.extended && (msg.len == 2))
+  {
+    // reset
+    if (msg.buf[0] == NMT_RESET_CMD)
+    {
+      // this node
+      if ((msg.buf[1] == CONTROLLER_NODE_ID) || (msg.buf[1] == NMT_RESET_ALL))
+      {
+        Reset();
+      }
+    }
   }
 }
 
@@ -1104,10 +1136,9 @@ static void SetRearValvePWM
 // initialize the hardware
 void setup()
 {
-  // fixme - change back to Serial5
   // configure connection to opengrade3d
-  Serial.begin(OPENGRADE3D_BAUDRATE);
-  OpenGrade3D.begin(Serial);
+  Serial5.begin(OPENGRADE3D_BAUDRATE);
+  OpenGrade3D.begin(Serial5);
 
   // configure CAN bus
   CANBus.begin();

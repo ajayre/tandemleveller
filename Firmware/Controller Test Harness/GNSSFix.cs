@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Controller;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -323,6 +324,19 @@ namespace Controller_Test_Harness
             }
 
             return decimalDegrees;
+        }
+
+        /// <summary>
+        /// Gets the distance from this fix to another fix
+        /// </summary>
+        /// <param name="Fix">Fix to measure to</param>
+        /// <returns>Distance in meters</returns>
+        public double DistanceTo
+            (
+            GNSSFix Fix
+            )
+        {
+            return Haversine.Distance(this.Latitude, this.Longitude, Fix.Latitude, Fix.Longitude);
         }
     }
 }
