@@ -33,6 +33,9 @@
 // time between heartbeats in millseconds
 #define HB_PRODUCER_TIME_MS 100
 
+// time between transmission of TPDOs in milliseconds
+#define TPDO_TX_PERIOD_MS 50
+
 struct euler_t
 {
   float yaw;
@@ -49,6 +52,7 @@ static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 static bool SensorFound = false;
 static bool SensorEnabled = false;
 elapsedMillis HBTime;
+elapsedMillis TPDOTxTime;
 static WDT_T4<WDT1> wdt;
 static uint8_t CalibrationStatus;
 
@@ -293,6 +297,9 @@ void setup()
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
 
   TxBootup();
+  HBTime = 0;
+
+  TPDOTxTime = 0;
 
   CalibrationStatus = 0;
 
@@ -362,8 +369,6 @@ void loop
         // perform corrections so that downhill travel is a positive pitch
         ypr.pitch = -ypr.pitch;
 
-        TxPDOs(&ypr);
-
         /*static long last = 0;
         long now = micros();
         Serial.print(now - last);             Serial.print("\t");
@@ -376,10 +381,18 @@ void loop
     }
   }
 
+  // transmit TPDOs
+  if (TPDOTxTime >= TPDO_TX_PERIOD_MS)
+  {
+    TPDOTxTime = 0;
+
+    TxPDOs(&ypr);
+  }
+
   // transmit heartbeats
   if (HBTime >= HB_PRODUCER_TIME_MS)
   {
-    HBTime -= HB_PRODUCER_TIME_MS;
+    HBTime = 0;
 
     TxHeartbeat();
     wdt.feed();

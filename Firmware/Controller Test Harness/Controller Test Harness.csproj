@@ -46,6 +46,7 @@
     <Compile Include="Controller.cs" />
     <Compile Include="DataLogger.cs" />
     <Compile Include="GNSSFix.cs" />
+    <Compile Include="GNSSReader.cs" />
     <Compile Include="Haversine.cs" />
     <Compile Include="NMEAParsing_Tests.cs" />
     <Compile Include="Packet.cs" />
