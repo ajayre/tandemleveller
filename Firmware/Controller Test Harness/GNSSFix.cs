@@ -5,17 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Controller_Test_Harness
+namespace Controller
 {
-    /// <summary>
-    /// Exception thrown when an NMEA sentence is malformed, corrupted, or incomplete.
-    /// </summary>
-    public class NMEAParseException : Exception
-    {
-        public NMEAParseException(string message) : base(message) { }
-        public NMEAParseException(string message, Exception innerException) : base(message, innerException) { }
-    }
-
     public enum RTKTypes
     {
         None,

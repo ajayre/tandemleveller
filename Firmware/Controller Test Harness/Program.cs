@@ -74,6 +74,7 @@ namespace Controller_Test_Harness
             GNSSReader TractorGNSS = new GNSSReader();
             TractorGNSS.Connect("COM203");
             TractorGNSS.OnFixReceived += TractorGNSS_OnFixReceived;
+            TractorGNSS.OnVectorReceived += TractorGNSS_OnVectorReceived;
             TractorGNSS.Start();
 
             // keep setting front blade height
@@ -89,6 +90,18 @@ namespace Controller_Test_Harness
 
                 Thread.Sleep(10);
             }
+        }
+
+        /// <summary>
+        /// Got a new vector for the tractor
+        /// </summary>
+        /// <param name="Vector">Current tractor vector</param>
+        private static void TractorGNSS_OnVectorReceived
+            (
+            GNSSVector Vector
+            )
+        {
+            Console.WriteLine(string.Format("Tractor: {0} deg, {1} MPH", Vector.TrackTrueDeg, Vector.SpeedMph));
         }
 
         /// <summary>

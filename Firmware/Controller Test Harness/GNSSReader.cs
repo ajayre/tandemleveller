@@ -2,7 +2,7 @@ using System;
 using System.IO.Ports;
 using System.Threading;
 
-namespace Controller_Test_Harness
+namespace Controller
 {
     /// <summary>
     /// Reads GNSS data from a COM port and parses $GNGGA NMEA sentences.
@@ -28,6 +28,11 @@ namespace Controller_Test_Harness
         /// Event raised when a GNSS fix is successfully parsed from a $GNGGA sentence.
         /// </summary>
         public event Action<GNSSFix> OnFixReceived;
+
+        /// <summary>
+        /// Event raised when a GNSS vector is successfully parsed from a $GPVTG or $GNVTG sentence.
+        /// </summary>
+        public event Action<GNSSVector> OnVectorReceived;
 
         /// <summary>
         /// Event raised when (GNSSFixPeriod - GNSS_IMMINENT_WINDOW_MS) milliseconds have passed since the last $GNGGA line.
@@ -245,6 +250,22 @@ namespace Controller_Test_Harness
                             {
                                 // Failed to parse, but we still update timing
                                 // Don't raise event for invalid sentences
+                            }
+                        }
+                        // Check if this is a VTG line ($GPVTG or $GNVTG)
+                        else if (line.StartsWith("$GPVTG") || line.StartsWith("$GNVTG"))
+                        {
+                            // Try to parse the VTG NMEA sentence
+                            try
+                            {
+                                GNSSVector vector = GNSSVector.ParseNMEA(line);
+                                
+                                // Raise OnVectorReceived event
+                                OnVectorReceived?.Invoke(vector);
+                            }
+                            catch (NMEAParseException)
+                            {
+                                // Failed to parse - don't raise event for invalid sentences
                             }
                         }
 
