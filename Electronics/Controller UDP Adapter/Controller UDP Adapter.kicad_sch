@@ -3615,7 +3615,7 @@
     (property "manf#" "APTD1608SECK" (at 132.08 161.925 90)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "LCSC" "C5879220" (at 132.08 161.925 0)
+    (property "LCSC" "C5122084" (at 132.08 161.925 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid 44f8121d-26bb-4c5d-8164-360c50a1a6c5))
