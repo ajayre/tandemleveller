@@ -1,0 +1,10 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+"C1, C2",0805,2,100n,C1711
+D1,0603,1,APTD1608SECK,C5122084
+"FID1, FID2, FID3",Fiducial_0.5mm_Mask1mm,3,Fiducial,
+J1,JST_PH_B8B-PH-K_1x08_P2.00mm_Vertical,1,GNSS,C157974
+"J2, J3",Pulse_J0011D01BNL,2,Pulse_J0011D01BNL,C581368
+R1,0805,1,330,C17630
+"R10, R11, R2, R3, R4, R5, R6, R7, R8, R9",0805,10,1k,C17513
+U1,Teensy_4.0,1,~,
+"U2, U3",Teensy_4.1,2,~,

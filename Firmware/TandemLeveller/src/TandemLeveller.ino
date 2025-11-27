@@ -68,8 +68,8 @@
 // max time to find the pendant before we assume emergency stop
 #define MAX_PENDANT_SEARCH_TIME 4000
 
-// serial connection speed expected by opengrade3d
-#define OPENGRADE3D_BAUDRATE 38400
+// serial connection speed expected by AgGrade
+#define AGGRADE_BAUDRATE 38400
 
 // CAN bus speed
 #define CAN_BITRATE_BPS 125000
@@ -88,11 +88,23 @@
 #define SLAVE_OFFSET_MIN (-128)
 #define SLAVE_OFFSET_MAX 127
 
-// how often to send ping to OpenGrade3D
+// how often to send ping to AgGrade
 #define PING_PERIOD_MS 1000
 
-// time to wait before deciding that OG3D has disconnected
+// time to wait before deciding that AgGrade has disconnected
 #define PING_TIMEOUT_PERIOD_MS 3000
+
+// fixme - add
+/*PGN_CLEAR_ESTOP
+            PGN_FRONT_IMU_FOUND          = 0x0007,
+            PGN_FRONT_IMU_LOST           = 0x0008,
+            PGN_REAR_IMU_FOUND           = 0x0009,
+            PGN_REAR_IMU_LOST            = 0x000A,
+            PGN_FRONT_HEIGHT_FOUND       = 0x000B,
+            PGN_FRONT_HEIGHT_LOST        = 0x000C,
+            PGN_REAR_HEIGHT_FOUND        = 0x000D,
+            PGN_REAR_HEIGHT_LOST         = 0x000E,
+*/
 
 // supported PGNs
 typedef enum _pgn_t : uint16_t
@@ -100,7 +112,7 @@ typedef enum _pgn_t : uint16_t
   // misc
   PGN_ESTOP                    = 0x0000,
   PGN_RESET                    = 0x0001,
-  PGN_OG3D_STARTED             = 0x0002,
+  PGN_AGGRADE_STARTED          = 0x0002,
   PGN_PING                     = 0x0003,
 
   // blade control
@@ -185,19 +197,12 @@ typedef enum _state_t
   STATE_ESTOP
 } state_t;
 
-// status information that is transmitted to OpenGrade3D
-typedef struct _controllerstatus_t
+// information that is transmitted to/from AgGrade
+typedef struct _pgnpacket_t
 {
   pgn_t PGN;
-  uint32_t Value;
-} controllerstatus_t;
-
-// commands that are received from OpenGrade3D
-typedef struct _opengrade3dcommand_t
-{
-  pgn_t PGN;
-  uint32_t Value;
-} opengrade3dcommand_t;
+  uint64_t Value;
+} pgnpacket_t;
 
 // configuration of blade control
 typedef struct _blade_config_t
@@ -278,7 +283,7 @@ static elapsedMillis PendantSearchTimestamp;
 static button_state_t ButtonState;
 static joystick_state_t JoystickState;
 static bool PendantSearch;
-static SerialTransfer OpenGrade3D;
+static SerialTransfer AgGrade;
 static blade_config_t BladeConfig[NUM_BLADES];
 static blade_status_t BladeStatus[NUM_BLADES];
 static blade_command_t BladeCommand[NUM_BLADES];
@@ -292,7 +297,7 @@ static imu_t IMUValues[NUM_BLADES + 1];
 static int BladeHeight[NUM_BLADES];  // in mm
 static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
-static bool OG3DFound = false;
+static bool AgGradeFound = false;
 
 // resets the controller
 static void Reset
@@ -388,8 +393,8 @@ static void EmergencyStop
   {
     State = STATE_ESTOP;
 
-    // tell OpenGrade3D
-    controllerstatus_t Status;
+    // tell AgGrade
+    pgnpacket_t Status;
     Status.PGN = PGN_ESTOP;
     Status.Value = 0;
     SendStatus(&Status);
@@ -511,39 +516,39 @@ static void ProcessIMUTPDO2
   }
 }
 
-// sends the front blade height to OpenGrade3D
+// sends the front blade height to AgGrade
 static void TxFrontBladeHeight
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_HEIGHT;
   Status.Value = BladeHeight[FRONT_BLADE_IDX];
   SendStatus(&Status);
 }
 
-// sends the rear blade height to OpenGrade3D
+// sends the rear blade height to AgGrade
 static void TxRearBladeHeight
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_HEIGHT;
   Status.Value = BladeHeight[REAR_BLADE_IDX];
   SendStatus(&Status);
 }
 
-// send tractor IMU values to OpenGrade3D
+// send tractor IMU values to AgGrade
 static void TxTractorIMU
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_TRACTOR_ROLL;
   Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Roll * 100);
@@ -562,13 +567,13 @@ static void TxTractorIMU
   SendStatus(&Status);
 }
 
-// send front scraper IMU values to OpenGrade3D
+// send front scraper IMU values to AgGrade
 static void TxFrontScraperIMU
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_ROLL;
   Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100);
@@ -587,13 +592,13 @@ static void TxFrontScraperIMU
   SendStatus(&Status);
 }
 
-// send rear scraper IMU values to OpenGrade3D
+// send rear scraper IMU values to AgGrade
 static void TxRearScraperIMU
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_ROLL;
   Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100);
@@ -612,52 +617,52 @@ static void TxRearScraperIMU
   SendStatus(&Status);
 }
 
-// send front blade slave offset to OpenGrade3D
+// send front blade slave offset to AgGrade
 static void TxFrontBladeSlaveOffset
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
   Status.Value = BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
   SendStatus(&Status);
 }
 
-// send rear blade slave offset to OpenGrade3D
+// send rear blade slave offset to AgGrade
 static void TxRearBladeSlaveOffset
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
   Status.Value = BladeStatus[REAR_BLADE_IDX].SlaveOffset;
   SendStatus(&Status);
 }
 
-// send front blade auto state to OpenGrade3D
+// send front blade auto state to AgGrade
 static void TxFrontBladeAuto
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_AUTO;
   Status.Value = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
   SendStatus(&Status);
 }
 
-// send rear blade auto state to OpenGrade3D
+// send rear blade auto state to AgGrade
 static void TxRearBladeAuto
   (
   void
   )
 {
-  controllerstatus_t Status;
+  pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_AUTO;
   Status.Value = BladeStatus[REAR_BLADE_IDX].BladeAuto;
@@ -966,34 +971,34 @@ static void ResetAllNodes
   CANBus.write(txmsg);
 }
 
-// sends status value to OpenGrade3D
+// sends status value to AgGrade
 static void SendStatus
   (
-  controllerstatus_t *pStatus
+  pgnpacket_t *pStatus
   )
 {
-  OpenGrade3D.packet.txBuff[0] = (byte)(pStatus->PGN & 0xFF);
-  OpenGrade3D.packet.txBuff[1] = (byte)((pStatus->PGN >> 8) & 0xFF);
-  OpenGrade3D.packet.txBuff[2] = (byte)(pStatus->Value & 0xFF);
-  OpenGrade3D.packet.txBuff[3] = (byte)((pStatus->Value >> 8) & 0xFF);
-  OpenGrade3D.packet.txBuff[4] = (byte)((pStatus->Value >> 16) & 0xFF);
-  OpenGrade3D.packet.txBuff[5] = (byte)((pStatus->Value >> 24) & 0xFF);
-  OpenGrade3D.sendData(6);
+  AgGrade.packet.txBuff[0] = (byte)(pStatus->PGN & 0xFF);
+  AgGrade.packet.txBuff[1] = (byte)((pStatus->PGN >> 8) & 0xFF);
+  AgGrade.packet.txBuff[2] = (byte)(pStatus->Value & 0xFF);
+  AgGrade.packet.txBuff[3] = (byte)((pStatus->Value >> 8) & 0xFF);
+  AgGrade.packet.txBuff[4] = (byte)((pStatus->Value >> 16) & 0xFF);
+  AgGrade.packet.txBuff[5] = (byte)((pStatus->Value >> 24) & 0xFF);
+  AgGrade.sendData(6);
 }
 
-// gets a command from OpenGrade3D
-static opengrade3dcommand_t GetCommand
+// gets a command from AgGrade
+static pgnpacket_t GetCommand
   (
   void
   )
 {
-  opengrade3dcommand_t Command;
+  pgnpacket_t Command;
 
-  Command.PGN = (pgn_t)(((uint16_t)OpenGrade3D.packet.rxBuff[1] << 8) | OpenGrade3D.packet.rxBuff[0]);
-  Command.Value = ((uint32_t)OpenGrade3D.packet.rxBuff[5] << 24) |
-                  ((uint32_t)OpenGrade3D.packet.rxBuff[4] << 16) |
-                  ((uint32_t)OpenGrade3D.packet.rxBuff[3] << 8)  |
-                   (uint32_t)OpenGrade3D.packet.rxBuff[2];
+  Command.PGN = (pgn_t)(((uint16_t)AgGrade.packet.rxBuff[1] << 8) | AgGrade.packet.rxBuff[0]);
+  Command.Value = ((uint32_t)AgGrade.packet.rxBuff[5] << 24) |
+                  ((uint32_t)AgGrade.packet.rxBuff[4] << 16) |
+                  ((uint32_t)AgGrade.packet.rxBuff[3] << 8)  |
+                   (uint32_t)AgGrade.packet.rxBuff[2];
 
   return Command;
 }
@@ -1096,8 +1101,8 @@ static void SetFrontValvePWM
     BladeStatus[FRONT_BLADE_IDX].BladePWM = abs(Value);
     analogWrite(FRONT_HEIGHT_PWM, BladeStatus[FRONT_BLADE_IDX].BladePWM);
 
-    // update OG3D
-    controllerstatus_t Status;
+    // update AgGrade
+    pgnpacket_t Status;
     Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
     Status.Value = BladeStatus[FRONT_BLADE_IDX].BladePWM;
     SendStatus(&Status);
@@ -1121,8 +1126,8 @@ static void SetRearValvePWM
     BladeStatus[REAR_BLADE_IDX].BladePWM = abs(Value);
     analogWrite(REAR_HEIGHT_PWM, BladeStatus[REAR_BLADE_IDX].BladePWM);
 
-    // update OG3D
-    controllerstatus_t Status;
+    // update AgGrade
+    pgnpacket_t Status;
     Status.PGN = PGN_REAR_BLADE_PWMVALUE;
     Status.Value = BladeStatus[REAR_BLADE_IDX].BladePWM;
     SendStatus(&Status);
@@ -1136,9 +1141,9 @@ static void SetRearValvePWM
 // initialize the hardware
 void setup()
 {
-  // configure connection to opengrade3d
-  Serial5.begin(OPENGRADE3D_BAUDRATE);
-  OpenGrade3D.begin(Serial5);
+  // configure connection to AgGrade
+  Serial5.begin(AGGRADE_BAUDRATE);
+  AgGrade.begin(Serial5);
 
   // configure CAN bus
   CANBus.begin();
@@ -1272,12 +1277,12 @@ void loop
 
   CheckForMissingNodes();
 
-  // get data from OpenGrade3D
-  if (OpenGrade3D.available())
+  // get data from AgGrade
+  if (AgGrade.available())
   {
-    opengrade3dcommand_t Command;
+    pgnpacket_t Command;
 
-    OG3DFound = true;
+    AgGradeFound = true;
 
     Command = GetCommand();
 
@@ -1288,7 +1293,7 @@ void loop
         Reset();
         break;
 
-      case PGN_OG3D_STARTED:
+      case PGN_AGGRADE_STARTED:
         // send current states
         TxFrontBladeAuto();
         TxRearBladeAuto();
@@ -1400,10 +1405,10 @@ void loop
     TxTPDO2();
   }
 
-  // check to see if OpenGrade3D has disappeared
-  if ((LastPingRxTimestamp >= PING_TIMEOUT_PERIOD_MS) && OG3DFound)
+  // check to see if AgGrade has disappeared
+  if ((LastPingRxTimestamp >= PING_TIMEOUT_PERIOD_MS) && AgGradeFound)
   {
-    OG3DFound = false;
+    AgGradeFound = false;
 
     EmergencyStop(__LINE__);
   }
@@ -1442,12 +1447,12 @@ void loop
     digitalToggle(LED);
   }
 
-  // tell OG3D we are alive
+  // tell AgGrade we are alive
   if (PingTimestamp >= PING_PERIOD_MS)
   {
     PingTimestamp = 0;
 
-    controllerstatus_t Status;
+    pgnpacket_t Status;
     Status.PGN   = PGN_PING;
     Status.Value = 0;
     SendStatus(&Status);
