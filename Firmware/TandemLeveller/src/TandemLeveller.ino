@@ -94,6 +94,9 @@
 // time to wait before deciding that AgGrade has disconnected
 #define PING_TIMEOUT_PERIOD_MS 3000
 
+// maximum number of bytes in a PGN packet
+#define MAX_PGN_LEN 16
+
 // fixme - add
 /*PGN_CLEAR_ESTOP
             PGN_FRONT_IMU_FOUND          = 0x0007,
@@ -104,6 +107,17 @@
             PGN_FRONT_HEIGHT_LOST        = 0x000C,
             PGN_REAR_HEIGHT_FOUND        = 0x000D,
             PGN_REAR_HEIGHT_LOST         = 0x000E,
+
+        // IMU
+        PGN_TRACTOR_IMU = 0x6000,
+        PGN_FRONT_IMU = 0x6001,
+        PGN_REAR_IMU = 0x6002,
+
+        // GNSS
+        PGN_TRACTOR_NMEA = 0x7000,
+        PGN_FRONT_NMEA = 0x7001,
+        PGN_REAR_NMEA = 0x70002
+
 */
 
 // supported PGNs
@@ -201,7 +215,7 @@ typedef enum _state_t
 typedef struct _pgnpacket_t
 {
   pgn_t PGN;
-  uint64_t Value;
+  uint8_t Data[MAX_PGN_LEN] = { 0 };
 } pgnpacket_t;
 
 // configuration of blade control
@@ -396,7 +410,6 @@ static void EmergencyStop
     // tell AgGrade
     pgnpacket_t Status;
     Status.PGN = PGN_ESTOP;
-    Status.Value = 0;
     SendStatus(&Status);
 
     // send emergency message so all CAN nodes are aware of the stop
@@ -445,6 +458,39 @@ static void ProcessAngleTPDO
   // send updated blade heights
   TxFrontBladeHeight();
   TxRearBladeHeight();
+}
+
+// Stores a 16-bit value into a pgn packet
+static void SetPGNPacketUInt16
+  (
+  pgnpacket_t *Packet,
+  uint16_t Value
+  )
+{
+  Packet->Data[0] = Value & 0xFF;
+  Packet->Data[1] = (Value >> 8) & 0xFF;
+}
+
+// Stores a 32-bit value into a pgn packet
+static void SetPGNPacketUInt32
+  (
+  pgnpacket_t *Packet,
+  uint32_t Value
+  )
+{
+  Packet->Data[0] = Value & 0xFF;
+  Packet->Data[1] = (Value >> 8) & 0xFF;
+  Packet->Data[2] = (Value >> 16) & 0xFF;
+  Packet->Data[3] = (Value >> 24) & 0xFF;
+}
+
+// gets a 32-bit value from a pgn packet
+static uint32_t GetPGNPacketUInt32
+  (
+  pgnpacket_t *Packet
+  )
+{
+  return ((uint32_t)(Packet->Data[3]) << 24) | ((uint32_t)(Packet->Data[2]) << 16) | ((uint32_t)(Packet->Data[1]) << 8) | Packet->Data[0];
 }
 
 // process TPDO1 from IMU
@@ -525,7 +571,7 @@ static void TxFrontBladeHeight
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_HEIGHT;
-  Status.Value = BladeHeight[FRONT_BLADE_IDX];
+  SetPGNPacketUInt32(&Status, BladeHeight[FRONT_BLADE_IDX]);
   SendStatus(&Status);
 }
 
@@ -538,7 +584,7 @@ static void TxRearBladeHeight
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_HEIGHT;
-  Status.Value = BladeHeight[REAR_BLADE_IDX];
+  SetPGNPacketUInt32(&Status, BladeHeight[REAR_BLADE_IDX]);
   SendStatus(&Status);
 }
 
@@ -551,19 +597,19 @@ static void TxTractorIMU
   pgnpacket_t Status;
 
   Status.PGN = PGN_TRACTOR_ROLL;
-  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Roll * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[TRACTOR_IDX].Roll * 100));
   SendStatus(&Status);
   Status.PGN = PGN_TRACTOR_PITCH;
-  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].Pitch * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[TRACTOR_IDX].Pitch * 100));
   SendStatus(&Status);
   Status.PGN = PGN_TRACTOR_HEADING;
-  Status.Value = (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100);
+  SetPGNPacketUInt32(&Status, (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100));
   SendStatus(&Status);
   Status.PGN = PGN_TRACTOR_YAWRATE;
-  Status.Value = (int32_t)(IMUValues[TRACTOR_IDX].YawRate * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[TRACTOR_IDX].YawRate * 100));
   SendStatus(&Status);
   Status.PGN = PGN_TRACTOR_IMUCALIBRATION;
-  Status.Value = IMUValues[TRACTOR_IDX].CalibrationStatus;
+  Status.Data[0] = IMUValues[TRACTOR_IDX].CalibrationStatus;
   SendStatus(&Status);
 }
 
@@ -576,19 +622,19 @@ static void TxFrontScraperIMU
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_ROLL;
-  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100));
   SendStatus(&Status);
   Status.PGN = PGN_FRONT_PITCH;
-  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100));
   SendStatus(&Status);
   Status.PGN = PGN_FRONT_HEADING;
-  Status.Value = (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100);
+  SetPGNPacketUInt32(&Status, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100));
   SendStatus(&Status);
   Status.PGN = PGN_FRONT_YAWRATE;
-  Status.Value = (int32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100));
   SendStatus(&Status);
   Status.PGN = PGN_FRONT_IMUCALIBRATION;
-  Status.Value = IMUValues[FRONT_BLADE_IDX].CalibrationStatus;
+  SetPGNPacketUInt32(&Status, IMUValues[FRONT_BLADE_IDX].CalibrationStatus);
   SendStatus(&Status);
 }
 
@@ -601,19 +647,19 @@ static void TxRearScraperIMU
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_ROLL;
-  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100));
   SendStatus(&Status);
   Status.PGN = PGN_REAR_PITCH;
-  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100));
   SendStatus(&Status);
   Status.PGN = PGN_REAR_HEADING;
-  Status.Value = (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100);
+  SetPGNPacketUInt32(&Status, (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100));
   SendStatus(&Status);
   Status.PGN = PGN_REAR_YAWRATE;
-  Status.Value = (int32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100);
+  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100));
   SendStatus(&Status);
   Status.PGN = PGN_REAR_IMUCALIBRATION;
-  Status.Value = IMUValues[REAR_BLADE_IDX].CalibrationStatus;
+  SetPGNPacketUInt32(&Status, IMUValues[REAR_BLADE_IDX].CalibrationStatus);
   SendStatus(&Status);
 }
 
@@ -626,7 +672,7 @@ static void TxFrontBladeSlaveOffset
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
-  Status.Value = BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
+  SetPGNPacketUInt16(&Status, BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
   SendStatus(&Status);
 }
 
@@ -639,7 +685,7 @@ static void TxRearBladeSlaveOffset
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
-  Status.Value = BladeStatus[REAR_BLADE_IDX].SlaveOffset;
+  SetPGNPacketUInt16(&Status, BladeStatus[REAR_BLADE_IDX].SlaveOffset);
   SendStatus(&Status);
 }
 
@@ -652,7 +698,7 @@ static void TxFrontBladeAuto
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_AUTO;
-  Status.Value = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
+  Status.Data[0] = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
   SendStatus(&Status);
 }
 
@@ -665,7 +711,7 @@ static void TxRearBladeAuto
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_AUTO;
-  Status.Value = BladeStatus[REAR_BLADE_IDX].BladeAuto;
+  Status.Data[0] = BladeStatus[REAR_BLADE_IDX].BladeAuto;
   SendStatus(&Status);
 }
 
@@ -979,11 +1025,13 @@ static void SendStatus
 {
   AgGrade.packet.txBuff[0] = (byte)(pStatus->PGN & 0xFF);
   AgGrade.packet.txBuff[1] = (byte)((pStatus->PGN >> 8) & 0xFF);
-  AgGrade.packet.txBuff[2] = (byte)(pStatus->Value & 0xFF);
-  AgGrade.packet.txBuff[3] = (byte)((pStatus->Value >> 8) & 0xFF);
-  AgGrade.packet.txBuff[4] = (byte)((pStatus->Value >> 16) & 0xFF);
-  AgGrade.packet.txBuff[5] = (byte)((pStatus->Value >> 24) & 0xFF);
-  AgGrade.sendData(6);
+
+  for (int b = 0; b < MAX_PGN_LEN; b++)
+  {
+    AgGrade.packet.txBuff[2 + b] = pStatus->Data[b];
+  }
+
+  AgGrade.sendData(MAX_PGN_LEN + 2);
 }
 
 // gets a command from AgGrade
@@ -993,12 +1041,13 @@ static pgnpacket_t GetCommand
   )
 {
   pgnpacket_t Command;
+  int b;
 
   Command.PGN = (pgn_t)(((uint16_t)AgGrade.packet.rxBuff[1] << 8) | AgGrade.packet.rxBuff[0]);
-  Command.Value = ((uint32_t)AgGrade.packet.rxBuff[5] << 24) |
-                  ((uint32_t)AgGrade.packet.rxBuff[4] << 16) |
-                  ((uint32_t)AgGrade.packet.rxBuff[3] << 8)  |
-                   (uint32_t)AgGrade.packet.rxBuff[2];
+  for (b = 0; b < MAX_PGN_LEN; b++)
+  {
+    Command.Data[b] = AgGrade.packet.rxBuff[2 + b];
+  }
 
   return Command;
 }
@@ -1104,11 +1153,11 @@ static void SetFrontValvePWM
     // update AgGrade
     pgnpacket_t Status;
     Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
-    Status.Value = BladeStatus[FRONT_BLADE_IDX].BladePWM;
+    SetPGNPacketUInt32(&Status, BladeStatus[FRONT_BLADE_IDX].BladePWM);
     SendStatus(&Status);
 
     Status.PGN = PGN_FRONT_BLADE_DIRECTION;
-    Status.Value = digitalRead(FRONT_HEIGHT_DIR);
+    Status.Data[0] = digitalRead(FRONT_HEIGHT_DIR);
     SendStatus(&Status);
   }
 }
@@ -1129,11 +1178,11 @@ static void SetRearValvePWM
     // update AgGrade
     pgnpacket_t Status;
     Status.PGN = PGN_REAR_BLADE_PWMVALUE;
-    Status.Value = BladeStatus[REAR_BLADE_IDX].BladePWM;
+    SetPGNPacketUInt32(&Status, BladeStatus[REAR_BLADE_IDX].BladePWM);
     SendStatus(&Status);
 
     Status.PGN = PGN_REAR_BLADE_DIRECTION;
-    Status.Value = digitalRead(REAR_HEIGHT_DIR);
+    Status.Data[0] = digitalRead(REAR_HEIGHT_DIR);
     SendStatus(&Status);
   }
 }
@@ -1315,54 +1364,54 @@ void loop
 
         // front blade configuration
       case PGN_FRONT_PWM_GAIN_UP:
-        BladeConfig[FRONT_BLADE_IDX].PWMGainUp = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].PWMGainUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_GAIN_DOWN:
-        BladeConfig[FRONT_BLADE_IDX].PWMGainDown = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].PWMGainDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MIN_UP:
-        BladeConfig[FRONT_BLADE_IDX].PWMMinUp = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].PWMMinUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MIN_DOWN:
-        BladeConfig[FRONT_BLADE_IDX].PWMMinDown = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].PWMMinDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MAX_UP:
-        BladeConfig[FRONT_BLADE_IDX].PWMMaxUp = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].PWMMaxUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MAX_DOWN:
-        BladeConfig[FRONT_BLADE_IDX].PWMMaxDown = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].PWMMaxDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_INTEGRAL_MULTPLIER:
-        BladeConfig[FRONT_BLADE_IDX].IntegralMultiplier = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].IntegralMultiplier = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_DEADBAND:
-        BladeConfig[FRONT_BLADE_IDX].Deadband = Command.Value;
+        BladeConfig[FRONT_BLADE_IDX].Deadband = GetPGNPacketUInt32(&Command);
         break;
 
       // rear blade configuration
       case PGN_REAR_PWM_GAIN_UP:
-        BladeConfig[REAR_BLADE_IDX].PWMGainUp = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].PWMGainUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_GAIN_DOWN:
-        BladeConfig[REAR_BLADE_IDX].PWMGainDown = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].PWMGainDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MIN_UP:
-        BladeConfig[REAR_BLADE_IDX].PWMMinUp = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].PWMMinUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MIN_DOWN:
-        BladeConfig[REAR_BLADE_IDX].PWMMinDown = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].PWMMinDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MAX_UP:
-        BladeConfig[REAR_BLADE_IDX].PWMMaxUp = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].PWMMaxUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MAX_DOWN:
-        BladeConfig[REAR_BLADE_IDX].PWMMaxDown = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].PWMMaxDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_INTEGRAL_MULTPLIER:
-        BladeConfig[REAR_BLADE_IDX].IntegralMultiplier = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].IntegralMultiplier = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_DEADBAND:
-        BladeConfig[REAR_BLADE_IDX].Deadband = Command.Value;
+        BladeConfig[REAR_BLADE_IDX].Deadband = GetPGNPacketUInt32(&Command);
         break;
         
       // front blade commands
@@ -1370,7 +1419,7 @@ void loop
         if (BladeStatus[FRONT_BLADE_IDX].BladeAuto)
         {
           // store for use on next calculation pass
-          BladeCommand[FRONT_BLADE_IDX].CutValve = Command.Value;
+          BladeCommand[FRONT_BLADE_IDX].CutValve = GetPGNPacketUInt32(&Command);
         }
         break;
 
@@ -1379,7 +1428,7 @@ void loop
         if (BladeStatus[REAR_BLADE_IDX].BladeAuto)
         {
           // store for use on next calculation pass
-          BladeCommand[REAR_BLADE_IDX].CutValve = Command.Value;
+          BladeCommand[REAR_BLADE_IDX].CutValve = GetPGNPacketUInt32(&Command);
         }
         break;
     }
@@ -1454,7 +1503,6 @@ void loop
 
     pgnpacket_t Status;
     Status.PGN   = PGN_PING;
-    Status.Value = 0;
     SendStatus(&Status);
   }
 }
