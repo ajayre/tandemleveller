@@ -1,0 +1,23 @@
+CONTROLLER V2 IDEAS
+
+1. Eliminate on-off switch or put inline into power cable
+
+2. Combine valve and CAN bus connectors into a single large connector with an external wiring harness. Make sure to have spare pins so future boards can do more stuff but wiring can be backwards compatible
+
+3. Integrate IMU
+
+4. Add GPIO for microswitches to single large connector.
+
+5. Add 10 ground connections via screw terminal blocks.
+
+6. Eliminate USB.
+
+7. Integrate UDP adapter into board
+
+8. Make modular so small carrier boards for RTK that plug together?
+  - https://www.hirose.com/en/product/p/CL0583-0226-1-52
+  - https://www.digikey.com/en/products/filter/backplane-connectors/din-41612/307
+
+9. Modular carrier board for Cytron?
+
+10. Put BNC connectors on modular carrier boards with short, impedance matched traces to board-mounted SMA connectors
