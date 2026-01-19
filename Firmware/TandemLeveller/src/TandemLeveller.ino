@@ -74,6 +74,10 @@
 // CAN bus speed
 #define CAN_BITRATE_BPS 125000
 
+// the height of the blade that represents ground level
+// when communicating with AgGrade
+#define BLADE_HEIGHT_GROUND_LEVEL 200
+
 // perform blade control periodically
 #define BLADE_CONTROL_PERIOD_MS 50
 
@@ -173,11 +177,11 @@ typedef enum _pgn_t : uint16_t
   PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
   PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
   PGN_FRONT_BLADE_DIRECTION    = 0x5002,
-  PGN_FRONT_BLADE_AUTO         = 0x5003,
+  PGN_FRONT_CUTTING            = 0x5003,
   PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
   PGN_REAR_BLADE_PWMVALUE      = 0x5005,
   PGN_REAR_BLADE_DIRECTION     = 0x5006,
-  PGN_REAR_BLADE_AUTO          = 0x5007,
+  PGN_REAR_CUTTING             = 0x5007,
   PGN_FRONT_BLADE_HEIGHT       = 0x5008,
   PGN_REAR_BLADE_HEIGHT        = 0x5009,
 
@@ -244,7 +248,7 @@ typedef struct _blade_status_t
 // movement command for blade
 typedef struct _blade_command_t
 {
-  int CutValve;       // target blade height in mm. 100 = on target, < 100 below target, > 100 above target. Range is 0 - 200
+  int CutValve;       // target blade height in mm. BLADE_HEIGHT_GROUND_LEVEL = on target, < BLADE_HEIGHT_GROUND_LEVEL below target, > BLADE_HEIGHT_GROUND_LEVEL above target. Range is 0 - 400
 } blade_command_t;
 
 typedef union _button_state_t
@@ -432,7 +436,7 @@ static void EmergencyStop
     for (int b = 0; b < NUM_BLADES; b++)
     {
       BladeStatus[b].BladeAuto = false;
-      BladeCommand[b].CutValve = 100;
+      BladeCommand[b].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
     }
     SetFrontValvePWM(0);
     SetRearValvePWM(0);
@@ -697,7 +701,7 @@ static void TxFrontBladeAuto
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_FRONT_BLADE_AUTO;
+  Status.PGN = PGN_FRONT_CUTTING;
   Status.Data[0] = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
   SendStatus(&Status);
 }
@@ -710,7 +714,7 @@ static void TxRearBladeAuto
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_REAR_BLADE_AUTO;
+  Status.PGN = PGN_REAR_CUTTING;
   Status.Data[0] = BladeStatus[REAR_BLADE_IDX].BladeAuto;
   SendStatus(&Status);
 }
@@ -1071,16 +1075,16 @@ static void ControlBlade
   BladeStatus[BladeIndex].BladeCommand = BladeCommand[BladeIndex].CutValve;
 
   // lower the blade
-  if (BladeCommand[BladeIndex].CutValve >= (100 + BladeConfig[BladeIndex].Deadband))
+  if (BladeCommand[BladeIndex].CutValve >= (BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband))
   {
     // PWM value is negative
-    PWMValue = -((BladeCommand[BladeIndex].CutValve - 100 - BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainDown + BladeConfig[BladeIndex].PWMMinDown);
+    PWMValue = -((BladeCommand[BladeIndex].CutValve - BLADE_HEIGHT_GROUND_LEVEL - BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainDown + BladeConfig[BladeIndex].PWMMinDown);
   }
   // lift the blade
-  else if (BladeCommand[BladeIndex].CutValve <= (100 - BladeConfig[BladeIndex].Deadband))
+  else if (BladeCommand[BladeIndex].CutValve <= (BLADE_HEIGHT_GROUND_LEVEL - BladeConfig[BladeIndex].Deadband))
   {
     // PWM value is positive
-    PWMValue = -((BladeCommand[BladeIndex].CutValve - 100 + BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainUp - BladeConfig[BladeIndex].PWMMinUp);
+    PWMValue = -((BladeCommand[BladeIndex].CutValve - BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainUp - BladeConfig[BladeIndex].PWMMinUp);
   }
   else
   {
@@ -1088,13 +1092,13 @@ static void ControlBlade
   }
 
   // calculate a derivative
-  if (BladeCommand[BladeIndex].CutValve != 100 && PWMValue != 0)
+  if (BladeCommand[BladeIndex].CutValve != BLADE_HEIGHT_GROUND_LEVEL && PWMValue != 0)
   {
-    PWMHist = ((((pwm1ago[BladeIndex]) + pwm2ago[BladeIndex] + (pwm3ago[BladeIndex]) + (pwm4ago[BladeIndex]) + (pwm5ago[BladeIndex] / 2.000)) * (sq(BladeConfig[BladeIndex].IntegralMultiplier) / 100.0000)) / sq(BladeCommand[BladeIndex].CutValve - 100.0000));
+    PWMHist = ((((pwm1ago[BladeIndex]) + pwm2ago[BladeIndex] + (pwm3ago[BladeIndex]) + (pwm4ago[BladeIndex]) + (pwm5ago[BladeIndex] / 2.000)) * (sq(BladeConfig[BladeIndex].IntegralMultiplier) / 100.0000)) / sq(BladeCommand[BladeIndex].CutValve - (float)BLADE_HEIGHT_GROUND_LEVEL));
 
     //put pwmHist to 0 when the blade cross the line.
-    if (BladeCommand[BladeIndex].CutValve > 100 && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) > 0) PWMHist = 0;
-    if (BladeCommand[BladeIndex].CutValve < 100 && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) < 0) PWMHist = 0;
+    if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) > 0) PWMHist = 0;
+    if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) < 0) PWMHist = 0;
 
     PWMValue = (PWMValue - PWMHist);
   }
@@ -1107,10 +1111,10 @@ static void ControlBlade
   pwm1ago[BladeIndex] = PWMValue;
   
   // enforce limits
-  if (BladeCommand[BladeIndex].CutValve > 100 && PWMValue > 0) PWMValue = 0;
-  if (BladeCommand[BladeIndex].CutValve > 100 && PWMValue < -(BladeConfig[BladeIndex].PWMMaxDown)) PWMValue = -(BladeConfig[BladeIndex].PWMMaxDown);
-  if (BladeCommand[BladeIndex].CutValve < 100 && PWMValue < 0) PWMValue = 0;
-  if (BladeCommand[BladeIndex].CutValve < 100 && PWMValue > BladeConfig[BladeIndex].PWMMaxUp) PWMValue = BladeConfig[BladeIndex].PWMMaxUp;
+  if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && PWMValue > 0) PWMValue = 0;
+  if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && PWMValue < -(BladeConfig[BladeIndex].PWMMaxDown)) PWMValue = -(BladeConfig[BladeIndex].PWMMaxDown);
+  if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && PWMValue < 0) PWMValue = 0;
+  if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && PWMValue > BladeConfig[BladeIndex].PWMMaxUp) PWMValue = BladeConfig[BladeIndex].PWMMaxUp;
   if (PWMValue > 0 && PWMValue < BladeConfig[BladeIndex].PWMMinUp) PWMValue = 0;
   if (PWMValue < 0 && PWMValue > -(BladeConfig[BladeIndex].PWMMinDown)) PWMValue = 0;
 
@@ -1275,8 +1279,8 @@ void setup()
   BladeStatus[REAR_BLADE_IDX].BladeAuto  = false;
 
   // initial state is no movement
-  BladeCommand[FRONT_BLADE_IDX].CutValve = 100;
-  BladeCommand[REAR_BLADE_IDX].CutValve  = 100;
+  BladeCommand[FRONT_BLADE_IDX].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
+  BladeCommand[REAR_BLADE_IDX].CutValve  = BLADE_HEIGHT_GROUND_LEVEL;
 
   BladeControlTimestamp = 0;
 
