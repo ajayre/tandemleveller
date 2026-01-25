@@ -2,8 +2,8 @@
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
 #include "WDT_T4-master/Watchdog_t4.h"
 
-// "CANopen" node id
-#define NODE_ID 0x06
+// "CANopen" node id base
+#define BASE_NODE_ID 0x10
 
 #define NMT_STATE_BOOTUP      0x00
 #define NMT_STATE_OPERATIONAL 0x05
@@ -21,6 +21,8 @@
 #define TPDO_EVENT_TIME_MS 10
 
 #define SENSOR_PIN A2
+#define NODE_ID_PIN1 0
+#define NODE_ID_PIN2 1
 
 // range of measurement of sensor
 #define ANGLE_RANGE_DEG 65
@@ -34,6 +36,7 @@ elapsedMillis HBTime;
 static WDT_T4<WDT1> wdt;
 static uint16_t Angle = 0;
 elapsedMillis TPDOTime;
+static uint8_t NodeId = BASE_NODE_ID;
 
 // reboot the device
 static void Reboot
@@ -79,7 +82,7 @@ static void TxBootup
   uint8_t Data[1];
 
   Data[0] = NMT_STATE_BOOTUP;
-  TxCANMessage(0x700 + NODE_ID, 1, Data);
+  TxCANMessage(0x700 + NodeId, 1, Data);
 }
 
 // transmits a heartbeat message
@@ -91,7 +94,7 @@ static void TxHeartbeat
   uint8_t Data[1];
 
   Data[0] = NMT_STATE_OPERATIONAL;
-  TxCANMessage(0x700 + NODE_ID, 1, Data);
+  TxCANMessage(0x700 + NodeId, 1, Data);
 }
 
 // transmits a PDO containing the button states
@@ -104,7 +107,7 @@ static void TxPDO
 
   Data[0] =  Angle       & 0xFF;
   Data[1] = (Angle >> 8) & 0xFF;
-  TxCANMessage(0x180 + NODE_ID, 2, Data);
+  TxCANMessage(0x180 + NodeId, 2, Data);
 }
 
 // called when a CAN message is received
@@ -120,7 +123,7 @@ static void CANReceiveHandler
     if (msg.buf[0] == NMT_CMD_RESET)
     {
       // this node
-      if ((msg.buf[1] == NODE_ID) || (msg.buf[1] == NMT_RESET_ALL))
+      if ((msg.buf[1] == NodeId) || (msg.buf[1] == NMT_RESET_ALL))
       {
         Reboot();
       }
@@ -163,6 +166,13 @@ void setup()
 
   // set up I/O
   pinMode(SENSOR_PIN, INPUT);
+  pinMode(NODE_ID_PIN1, INPUT);
+  pinMode(NODE_ID_PIN2, INPUT);
+
+  // get node id based on jumpers
+  NodeId = BASE_NODE_ID;
+  if (digitalRead(NODE_ID_PIN1)) NodeId += 1;
+  if (digitalRead(NODE_ID_PIN2)) NodeId += 2;
 
   analogReadAveraging(16);
 
