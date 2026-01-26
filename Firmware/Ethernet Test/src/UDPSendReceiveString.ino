@@ -1,5 +1,6 @@
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
+#include "UDPTransfer.h"
 
 // NMEA 0183 special characters
 #define LF 0x0A
@@ -7,6 +8,66 @@
 
 // maximum length of an NMEA 0183 sentence
 #define MAX_NMEA_LENGTH 83
+
+// maximum number of bytes in a PGN packet payload
+#define MAX_PGN_LEN (MAX_NMEA_LENGTH + 2)
+
+// supported PGNs (subset from TandemLeveller)
+typedef enum _pgn_t : uint16_t
+{
+  // misc
+  PGN_ESTOP                    = 0x0000,
+  PGN_RESET                    = 0x0001,
+  PGN_AGGRADE_STARTED          = 0x0002,
+  PGN_PING                     = 0x0003,
+
+  // blade control
+  PGN_FRONT_CUT_VALVE          = 0x1000,
+  PGN_REAR_CUT_VALVE           = 0x1001,
+  PGN_FRONT_ZERO_BLADE_HEIGHT  = 0x1002,
+  PGN_REAR_ZERO_BLADE_HEIGHT   = 0x1003,
+
+  // blade status
+  PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
+  PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
+  PGN_FRONT_BLADE_DIRECTION    = 0x5002,
+  PGN_FRONT_CUTTING            = 0x5003,
+  PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
+  PGN_REAR_BLADE_PWMVALUE      = 0x5005,
+  PGN_REAR_BLADE_DIRECTION     = 0x5006,
+  PGN_REAR_CUTTING             = 0x5007,
+  PGN_FRONT_BLADE_HEIGHT       = 0x5008,
+  PGN_REAR_BLADE_HEIGHT        = 0x5009,
+
+  // IMU
+  PGN_TRACTOR_PITCH            = 0x6000,
+  PGN_TRACTOR_ROLL             = 0x6001,
+  PGN_TRACTOR_HEADING          = 0x6002,
+  PGN_TRACTOR_YAWRATE          = 0x6003,
+  PGN_TRACTOR_IMUCALIBRATION   = 0x6004,
+  PGN_FRONT_PITCH              = 0x6005,
+  PGN_FRONT_ROLL               = 0x6006,
+  PGN_FRONT_HEADING            = 0x6007,
+  PGN_FRONT_YAWRATE            = 0x6008,
+  PGN_FRONT_IMUCALIBRATION     = 0x6009,
+  PGN_REAR_PITCH               = 0x600A,
+  PGN_REAR_ROLL                = 0x600B,
+  PGN_REAR_HEADING             = 0x600C,
+  PGN_REAR_YAWRATE             = 0x600D,
+  PGN_REAR_IMUCALIBRATION      = 0x600E,
+
+  // GNSS
+  PGN_TRACTOR_NMEA             = 0x7000,
+  PGN_FRONT_NMEA               = 0x7001,
+  PGN_REAR_NMEA                = 0x7002
+} pgn_t;
+
+// information that is transmitted to/from AgGrade
+typedef struct _pgnpacket_t
+{
+  pgn_t PGN;
+  uint8_t Data[MAX_PGN_LEN] = { 0 };
+} pgnpacket_t;
 
 // data structure for reading GNSS streams
 typedef struct _gnss_reader_t
@@ -29,21 +90,116 @@ static IPAddress RemoteIPAddress(192, 168, 1, 10);
 // remote port
 static unsigned int RemotePort = 6000;
 
-// buffers for receiving and sending data
-static char packetBuffer[UDP_TX_PACKET_MAX_SIZE];  // buffer to hold incoming packet,
-static char ReplyBuffer[] = "acknowledged";        // a string to send back
 // An EthernetUDP instance to let us send and receive packets over UDP
 static EthernetUDP Udp;
+
+// UDP Transfer for packet-based communication
+static UDPTransfer UdpTransfer;
+
 // GNSS stream readers
 static gnss_reader_t TractorGNSS      = { 0 };
 static gnss_reader_t FrontScraperGNSS = { 0 };
 static gnss_reader_t RearScraperGNSS  = { 0 };
 
+// Stores a 16-bit value into a pgn packet
+static void SetPGNPacketUInt16
+  (
+  pgnpacket_t *Packet,
+  uint16_t Value
+  )
+{
+  Packet->Data[0] = Value & 0xFF;
+  Packet->Data[1] = (Value >> 8) & 0xFF;
+}
+
+// Stores a 32-bit value into a pgn packet
+static void SetPGNPacketUInt32
+  (
+  pgnpacket_t *Packet,
+  uint32_t Value
+  )
+{
+  Packet->Data[0] = Value & 0xFF;
+  Packet->Data[1] = (Value >> 8) & 0xFF;
+  Packet->Data[2] = (Value >> 16) & 0xFF;
+  Packet->Data[3] = (Value >> 24) & 0xFF;
+}
+
+// gets a 32-bit value from a pgn packet
+static uint32_t GetPGNPacketUInt32
+  (
+  pgnpacket_t *Packet
+  )
+{
+  return ((uint32_t)(Packet->Data[3]) << 24) | 
+         ((uint32_t)(Packet->Data[2]) << 16) | 
+         ((uint32_t)(Packet->Data[1]) << 8) | 
+         Packet->Data[0];
+}
+
+// sends status value over UDP using packet framing
+static void SendStatus
+  (
+  pgnpacket_t *pStatus
+  )
+{
+  // Pack the PGN
+  UdpTransfer.packet.txBuff[0] = (uint8_t)(pStatus->PGN & 0xFF);
+  UdpTransfer.packet.txBuff[1] = (uint8_t)((pStatus->PGN >> 8) & 0xFF);
+
+  // Pack the data
+  for (int b = 0; b < MAX_PGN_LEN; b++)
+  {
+    UdpTransfer.packet.txBuff[2 + b] = pStatus->Data[b];
+  }
+
+  // Send the packet
+  UdpTransfer.sendData(MAX_PGN_LEN + 2);
+}
+
+// gets a command from UDP packet
+static pgnpacket_t GetCommand
+  (
+  void
+  )
+{
+  pgnpacket_t Command;
+
+  Command.PGN = (pgn_t)(((uint16_t)UdpTransfer.packet.rxBuff[1] << 8) | 
+                         UdpTransfer.packet.rxBuff[0]);
+  for (int b = 0; b < MAX_PGN_LEN; b++)
+  {
+    Command.Data[b] = UdpTransfer.packet.rxBuff[2 + b];
+  }
+
+  return Command;
+}
+
+// sends an NMEA sentence over UDP with packet framing
+static void SendNMEASentence
+  (
+  pgn_t PGN,
+  const char* sentence,
+  uint8_t length
+  )
+{
+  pgnpacket_t NMEAPacket;
+  
+  NMEAPacket.PGN = PGN;
+  
+  // Copy as much of the sentence as will fit
+  uint8_t copyLen = (length > MAX_PGN_LEN) ? MAX_PGN_LEN : length;
+  memcpy(NMEAPacket.Data, sentence, copyLen);
+  
+  SendStatus(&NMEAPacket);
+}
+
 // processes a byte read from a GNSS stream
 static void ProcessGNSSByte
   (
   int RxByte,                 // byte to process
-  gnss_reader_t *pReader      // reader to use
+  gnss_reader_t *pReader,     // reader to use
+  pgn_t PGN                   // PGN to use when sending
   )
 {
   // byte received
@@ -67,12 +223,17 @@ static void ProcessGNSSByte
         // add null terminator
         pReader->Buffer[pReader->NextWritePos++] = NULL;
 
-        // send sentence
+        // debug output
         Serial.print(pReader->Buffer);
-
-        Udp.beginPacket(RemoteIPAddress, RemotePort);
-        Udp.write(pReader->Buffer);
-        Udp.endPacket();
+        
+        // Send using packet-based UDP
+        // Note: For full NMEA sentences (up to 83 bytes), 
+        // you may want to use a larger packet or raw UDP
+        SendNMEASentence(PGN, pReader->Buffer, strlen(pReader->Buffer));
+        // fixme - remove
+        //Udp.beginPacket(RemoteIPAddress, RemotePort);
+        //Udp.write(pReader->Buffer);
+        //Udp.endPacket();
 
         // start again
         pReader->Synced = false;
@@ -102,7 +263,7 @@ void setup
 
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
-  Serial.println("UDP Test");
+  Serial.println("UDP Test with Packet Framing");
   while (!Serial)
   {
     ; // wait for serial port to connect. Needed for native USB port only
@@ -140,6 +301,12 @@ void setup
 
   // start UDP
   Udp.begin(LocalPort);
+
+  // Initialize UDP Transfer for packet-based communication
+  UdpTransfer.begin(Udp);
+  UdpTransfer.setRemote(RemoteIPAddress, RemotePort);
+
+  Serial.println("Ready!");
 }
 
 // continually executes
@@ -149,87 +316,51 @@ void loop
 {
   int RxByte;
   
-  // process UDP
-  // if there's data available, read a packet
-  int packetSize = Udp.parsePacket();
-  if (packetSize)
+  // Check for incoming UDP packets with packet framing
+  if (UdpTransfer.available() > 0)
   {
-    Serial.print("Received packet of size ");
-    Serial.println(packetSize);
-    Serial.print("From ");
-    IPAddress remote = Udp.remoteIP();
-    for (int i=0; i < 4; i++) {
-      Serial.print(remote[i], DEC);
-      if (i < 3) {
-        Serial.print(".");
-      }
+    // We received a complete packet
+    pgnpacket_t Command = GetCommand();
+    
+    Serial.print("Received PGN: 0x");
+    Serial.println(Command.PGN, HEX);
+    
+    // Process the command based on PGN
+    switch (Command.PGN)
+    {
+      case PGN_PING:
+        // Respond with a ping
+        {
+          pgnpacket_t Response;
+          Response.PGN = PGN_PING;
+          SendStatus(&Response);
+        }
+        break;
+        
+      case PGN_RESET:
+        // Reset the device
+        Serial.println("Reset requested");
+        // SCB_AIRCR = 0x05FA0004;  // Uncomment to enable reset
+        break;
+        
+      // Add more command handlers as needed
+      
+      default:
+        Serial.print("Unknown PGN: 0x");
+        Serial.println(Command.PGN, HEX);
+        break;
     }
-    Serial.print(", port ");
-    Serial.println(Udp.remotePort());
-
-    // read the packet into packetBufffer
-    Udp.read(packetBuffer, UDP_TX_PACKET_MAX_SIZE);
-    Serial.println("Contents:");
-    Serial.println(packetBuffer);
-
-    //// send a reply to the IP address and port that sent us the packet we received
-    //Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    //Udp.write(ReplyBuffer);
-    //Udp.endPacket();
   }
 
   // process tractor GNSS
   RxByte = Serial6.read();
-  ProcessGNSSByte(RxByte, &TractorGNSS);
+  ProcessGNSSByte(RxByte, &TractorGNSS, PGN_TRACTOR_NMEA);
 
   // process front scraper GNSS
   RxByte = Serial7.read();
-  ProcessGNSSByte(RxByte, &FrontScraperGNSS);
+  ProcessGNSSByte(RxByte, &FrontScraperGNSS, PGN_FRONT_NMEA);
   
   // process rear scraper GNSS
   RxByte = Serial8.read();
-  ProcessGNSSByte(RxByte, &RearScraperGNSS);
+  ProcessGNSSByte(RxByte, &RearScraperGNSS, PGN_REAR_NMEA);
 }
-
-
-/*
-  Processing sketch to run with this example
- =====================================================
-
- // Processing UDP example to send and receive string data from Arduino
- // press any key to send the "Hello Arduino" message
-
-
- import hypermedia.net.*;
-
- UDP udp;  // define the UDP object
-
-
- void setup() {
- udp = new UDP( this, 6000 );  // create a new datagram connection on port 6000
- //udp.log( true ); 		// <-- printout the connection activity
- udp.listen( true );           // and wait for incoming message
- }
-
- void draw()
- {
- }
-
- void keyPressed() {
- String ip       = "192.168.1.177";	// the remote IP address
- int port        = 8888;		// the destination port
-
- udp.send("Hello World", ip, port );   // the message to send
-
- }
-
- void receive( byte[] data ) { 			// <-- default handler
- //void receive( byte[] data, String ip, int port ) {	// <-- extended handler
-
- for(int i=0; i < data.length; i++)
- print(char(data[i]));
- println();
- }
- */
-
-
