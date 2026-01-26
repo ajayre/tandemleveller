@@ -1,75 +1,159 @@
-/*
- UDPSendReceiveString:
- This sketch receives UDP message strings, prints them to the serial port
- and sends an "acknowledge" string back to the sender
-
- A Processing sketch is included at the end of file that can be used to send
- and received messages for testing with a computer.
-
- created 21 Aug 2010
- by Michael Margolis
-
- This code is in the public domain.
- */
-
-
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network:
-byte mac[] = {
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED
-};
-IPAddress ip(192, 168, 1, 177);
+// NMEA 0183 special characters
+#define LF 0x0A
+#define CR 0x0D
 
-unsigned int localPort = 8888;      // local port to listen on
+// maximum length of an NMEA 0183 sentence
+#define MAX_NMEA_LENGTH 83
+
+// data structure for reading GNSS streams
+typedef struct _gnss_reader_t
+{
+  bool Synced;
+  uint8_t NextWritePos;
+  char Buffer[MAX_NMEA_LENGTH];
+} gnss_reader_t;
+
+// MAC address for this device
+static byte MACAddress[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+
+// our IP address
+static IPAddress OurIPAddress(192, 168, 1, 100);
+// local port to listen on
+static unsigned int LocalPort = 8888;
+
+// remote IP address
+static IPAddress RemoteIPAddress(192, 168, 1, 10);
+// remote port
+static unsigned int RemotePort = 6000;
 
 // buffers for receiving and sending data
-char packetBuffer[UDP_TX_PACKET_MAX_SIZE];  // buffer to hold incoming packet,
-char ReplyBuffer[] = "acknowledged";        // a string to send back
-
+static char packetBuffer[UDP_TX_PACKET_MAX_SIZE];  // buffer to hold incoming packet,
+static char ReplyBuffer[] = "acknowledged";        // a string to send back
 // An EthernetUDP instance to let us send and receive packets over UDP
-EthernetUDP Udp;
+static EthernetUDP Udp;
+// GNSS stream readers
+static gnss_reader_t TractorGNSS      = { 0 };
+static gnss_reader_t FrontScraperGNSS = { 0 };
+static gnss_reader_t RearScraperGNSS  = { 0 };
 
-void setup()
+// processes a byte read from a GNSS stream
+static void ProcessGNSSByte
+  (
+  int RxByte,                 // byte to process
+  gnss_reader_t *pReader      // reader to use
+  )
 {
-  // start the Ethernet
-  Ethernet.begin(mac, ip);
+  // byte received
+  if (RxByte != -1)
+  {
+    // waiting to sync, got start of sentence
+    if (!pReader->Synced && (RxByte == '$'))
+    {
+      pReader->Synced = true;
+      pReader->NextWritePos = 0;
+      pReader->Buffer[pReader->NextWritePos++] = RxByte;
+    }
+    // synced, store character
+    else if (pReader->Synced)
+    {
+      pReader->Buffer[pReader->NextWritePos++] = (char)RxByte;
+
+      // if end of sentence
+      if (RxByte == LF)
+      {
+        // add null terminator
+        pReader->Buffer[pReader->NextWritePos++] = NULL;
+
+        // send sentence
+        Serial.print(pReader->Buffer);
+
+        Udp.beginPacket(RemoteIPAddress, RemotePort);
+        Udp.write(pReader->Buffer);
+        Udp.endPacket();
+
+        // start again
+        pReader->Synced = false;
+      }
+      // sentence too long - must be mangled, discard
+      else if (pReader->NextWritePos == MAX_NMEA_LENGTH)
+      {
+        pReader->Synced = false;
+      }
+    }
+  }
+}
+
+// initialization
+void setup
+  (
+  )
+{
+  // secondary tablet
+  Serial5.begin(115200);
+  // tractor GNSS
+  Serial6.begin(115200);
+  // front scraper GNSS
+  Serial7.begin(115200);
+  // rear scraper GNSS
+  Serial8.begin(115200);
 
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("UDP Test");
-  while (!Serial) {
+  while (!Serial)
+  {
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  Serial.println("Checking for Ethernet...");
+  // look for working Ethernet connection
+  bool LinkUp = false;
+  do
+  {
+    // start Ethernet
+    Ethernet.begin(MACAddress, OurIPAddress);
+
+    Serial.println("Checking for Ethernet...");
  
-  // Check for Ethernet hardware present
-  if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-    Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
-    while (true) {
-      delay(1); // do nothing, no point running without Ethernet hardware
+    // Check for Ethernet hardware present
+    if (Ethernet.hardwareStatus() == EthernetNoHardware)
+    {
+      Serial.println("Ethernet hardware not found");
+      continue;
     }
-  }
 
-  Serial.println("Checking for link...");
+    Serial.println("Checking for link...");
 
-  if (Ethernet.linkStatus() == LinkOFF) {
-    Serial.println("Ethernet cable is not connected.");
-  }
+    if (Ethernet.linkStatus() == LinkOFF)
+    {
+      Serial.println("Ethernet cable is not connected.");
+    }
+    else
+    {
+      LinkUp = true;
+    }
+  } while (!LinkUp);
 
   Serial.println("Starting UDP...");
 
   // start UDP
-  Udp.begin(localPort);
+  Udp.begin(LocalPort);
 }
 
-void loop() {
+// continually executes
+void loop
+  (
+  )
+{
+  int RxByte;
+  
+  // process UDP
   // if there's data available, read a packet
   int packetSize = Udp.parsePacket();
-  if (packetSize) {
+  if (packetSize)
+  {
     Serial.print("Received packet of size ");
     Serial.println(packetSize);
     Serial.print("From ");
@@ -88,12 +172,23 @@ void loop() {
     Serial.println("Contents:");
     Serial.println(packetBuffer);
 
-    // send a reply to the IP address and port that sent us the packet we received
-    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    Udp.write(ReplyBuffer);
-    Udp.endPacket();
+    //// send a reply to the IP address and port that sent us the packet we received
+    //Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+    //Udp.write(ReplyBuffer);
+    //Udp.endPacket();
   }
-  delay(10);
+
+  // process tractor GNSS
+  RxByte = Serial6.read();
+  ProcessGNSSByte(RxByte, &TractorGNSS);
+
+  // process front scraper GNSS
+  RxByte = Serial7.read();
+  ProcessGNSSByte(RxByte, &FrontScraperGNSS);
+  
+  // process rear scraper GNSS
+  RxByte = Serial8.read();
+  ProcessGNSSByte(RxByte, &RearScraperGNSS);
 }
 
 
