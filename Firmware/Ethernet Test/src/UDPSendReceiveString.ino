@@ -7,7 +7,7 @@
 #define CR 0x0D
 
 // maximum length of an NMEA 0183 sentence
-#define MAX_NMEA_LENGTH 83
+#define MAX_NMEA_LENGTH 90
 
 // maximum number of bytes in a PGN packet payload
 #define MAX_PGN_LEN (MAX_NMEA_LENGTH + 2)
@@ -222,18 +222,9 @@ static void ProcessGNSSByte
       {
         // add null terminator
         pReader->Buffer[pReader->NextWritePos++] = NULL;
-
-        // debug output
-        Serial.print(pReader->Buffer);
         
         // Send using packet-based UDP
-        // Note: For full NMEA sentences (up to 83 bytes), 
-        // you may want to use a larger packet or raw UDP
         SendNMEASentence(PGN, pReader->Buffer, strlen(pReader->Buffer));
-        // fixme - remove
-        //Udp.beginPacket(RemoteIPAddress, RemotePort);
-        //Udp.write(pReader->Buffer);
-        //Udp.endPacket();
 
         // start again
         pReader->Synced = false;
@@ -263,7 +254,7 @@ void setup
 
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
-  Serial.println("UDP Test with Packet Framing");
+  Serial.println("Tandem Scraper Controller with UDP");
   while (!Serial)
   {
     ; // wait for serial port to connect. Needed for native USB port only
@@ -334,6 +325,7 @@ void loop
           pgnpacket_t Response;
           Response.PGN = PGN_PING;
           SendStatus(&Response);
+          Serial.print("P");
         }
         break;
         
