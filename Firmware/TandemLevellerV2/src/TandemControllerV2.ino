@@ -1292,7 +1292,7 @@ void setup
   // rear scraper GNSS
   Serial8.begin(115200);
 
-  // Open serial communications and wait for port to open:
+  // Open serial communications for debug
   Serial.begin(115200);
   Serial.println("Tandem Scraper Controller with UDP");
   //while (!Serial)
@@ -1455,6 +1455,22 @@ void setup
   TxRearBladeHeight();
 
   ResetAllNodes();
+
+  // fixme - remove
+  // test connection to secondary tablet
+  Serial.println("Sec tablet test...");
+  int RxByte;
+  Serial5.write('A');
+  while ((RxByte = Serial5.read()) == -1);
+  if (RxByte == 'A')
+  {
+    Serial.println("Secondary tablet echo received");
+  }
+  else
+  {
+    Serial.print("Secondary tablet echo failed with: ");
+    Serial.println(RxByte);
+  }
 
   Serial.println("Ready!");
 }
