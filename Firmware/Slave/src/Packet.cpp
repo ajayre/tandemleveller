@@ -1,0 +1,279 @@
+/*
+ * Packet.cpp
+ * 
+ * Packet framing for reliable data transmission over UDP.
+ * Based on the SerialTransfer library protocol.
+ */
+
+#include "Packet.h"
+
+Packet::Packet()
+    : _crc()
+    , _state(FIND_START_BYTE)
+    , _bytesToRec(0)
+    , _payIndex(0)
+    , _idByte(0)
+    , _overheadByte(0)
+    , _recOverheadByte(0)
+    , _bytesRead(0)
+    , _status(PACKET_NO_DATA)
+    , _packetStart(0)
+    , _timeout(50)
+{
+    // Initialize preamble with start byte
+    _preamble[0] = PACKET_START_BYTE;
+    _preamble[1] = 0;
+    _preamble[2] = 0;
+    _preamble[3] = 0;
+    
+    // Initialize postamble with stop byte
+    _postamble[0] = 0;
+    _postamble[1] = PACKET_STOP_BYTE;
+    
+    // Clear buffers
+    memset(_txBuff, 0, PACKET_MAX_PAYLOAD);
+    memset(_rxBuff, 0, PACKET_MAX_PAYLOAD);
+    memset(txBuff, 0, PACKET_MAX_PAYLOAD);
+    memset(rxBuff, 0, PACKET_MAX_PAYLOAD);
+}
+
+void Packet::begin(uint32_t timeout)
+{
+    _timeout = timeout;
+    reset();
+}
+
+uint8_t Packet::constructPacket(uint16_t messageLen, uint8_t packetId)
+{
+    uint8_t processedLen;
+    
+    // Copy from public buffer to internal buffer
+    memcpy(_txBuff, txBuff, PACKET_MAX_PAYLOAD);
+    
+    if (messageLen > PACKET_MAX_PAYLOAD)
+    {
+        calcOverhead(_txBuff, PACKET_MAX_PAYLOAD);
+        stuffPacket(_txBuff, PACKET_MAX_PAYLOAD);
+        uint8_t crcVal = _crc.calculate(_txBuff, PACKET_MAX_PAYLOAD);
+        
+        _preamble[1] = packetId;
+        _preamble[2] = _overheadByte;
+        _preamble[3] = PACKET_MAX_PAYLOAD;
+        
+        _postamble[0] = crcVal;
+        
+        processedLen = PACKET_MAX_PAYLOAD;
+    }
+    else
+    {
+        calcOverhead(_txBuff, (uint8_t)messageLen);
+        stuffPacket(_txBuff, (uint8_t)messageLen);
+        uint8_t crcVal = _crc.calculate(_txBuff, (uint8_t)messageLen);
+        
+        _preamble[1] = packetId;
+        _preamble[2] = _overheadByte;
+        _preamble[3] = (uint8_t)messageLen;
+        
+        _postamble[0] = crcVal;
+        
+        processedLen = (uint8_t)messageLen;
+    }
+    
+    return processedLen;
+}
+
+uint8_t Packet::parse(uint8_t recChar, bool valid)
+{
+    // Check for stale packet
+    bool packetFresh = (_packetStart == 0) || ((millis() - _packetStart) < _timeout);
+    
+    if (!packetFresh)
+    {
+        _bytesRead = 0;
+        _state = FIND_START_BYTE;
+        _status = PACKET_STALE_ERROR;
+        _packetStart = 0;
+        
+        return _bytesRead;
+    }
+    
+    if (valid)
+    {
+        switch (_state)
+        {
+            case FIND_START_BYTE:
+                if (recChar == PACKET_START_BYTE)
+                {
+                    _state = FIND_ID_BYTE;
+                    _packetStart = millis();
+                }
+                break;
+                
+            case FIND_ID_BYTE:
+                _idByte = recChar;
+                _state = FIND_OVERHEAD_BYTE;
+                break;
+                
+            case FIND_OVERHEAD_BYTE:
+                _recOverheadByte = recChar;
+                _state = FIND_PAYLOAD_LEN;
+                break;
+                
+            case FIND_PAYLOAD_LEN:
+                if (recChar > 0 && recChar <= PACKET_MAX_PAYLOAD)
+                {
+                    _bytesToRec = recChar;
+                    _payIndex = 0;
+                    _state = FIND_PAYLOAD;
+                }
+                else
+                {
+                    _bytesRead = 0;
+                    _state = FIND_START_BYTE;
+                    _status = PACKET_PAYLOAD_ERROR;
+                    reset();
+                    return _bytesRead;
+                }
+                break;
+                
+            case FIND_PAYLOAD:
+                if (_payIndex < _bytesToRec)
+                {
+                    _rxBuff[_payIndex] = recChar;
+                    _payIndex++;
+                    
+                    if (_payIndex == _bytesToRec)
+                        _state = FIND_CRC;
+                }
+                break;
+                
+            case FIND_CRC:
+            {
+                uint8_t calcCrc = _crc.calculate(_rxBuff, _bytesToRec);
+                
+                if (calcCrc == recChar)
+                {
+                    _state = FIND_END_BYTE;
+                }
+                else
+                {
+                    _bytesRead = 0;
+                    _state = FIND_START_BYTE;
+                    _status = PACKET_CRC_ERROR;
+                    reset();
+                    return _bytesRead;
+                }
+                break;
+            }
+                
+            case FIND_END_BYTE:
+                _state = FIND_START_BYTE;
+                
+                if (recChar == PACKET_STOP_BYTE)
+                {
+                    unpackPacket(_rxBuff);
+                    
+                    // Copy to public buffer
+                    memcpy(rxBuff, _rxBuff, PACKET_MAX_PAYLOAD);
+                    
+                    _bytesRead = _bytesToRec;
+                    _status = PACKET_NEW_DATA;
+                    _packetStart = 0;
+                    
+                    return _bytesRead;
+                }
+                
+                _bytesRead = 0;
+                _status = PACKET_STOP_BYTE_ERROR;
+                reset();
+                return _bytesRead;
+                
+            default:
+                reset();
+                _bytesRead = 0;
+                _state = FIND_START_BYTE;
+                break;
+        }
+    }
+    else
+    {
+        _bytesRead = 0;
+        _status = PACKET_NO_DATA;
+        return _bytesRead;
+    }
+    
+    _bytesRead = 0;
+    _status = PACKET_CONTINUE;
+    return _bytesRead;
+}
+
+void Packet::reset()
+{
+    memset(_txBuff, 0, PACKET_MAX_PAYLOAD);
+    memset(_rxBuff, 0, PACKET_MAX_PAYLOAD);
+    memset(txBuff, 0, PACKET_MAX_PAYLOAD);
+    memset(rxBuff, 0, PACKET_MAX_PAYLOAD);
+    
+    _bytesRead = 0;
+    _packetStart = 0;
+    _state = FIND_START_BYTE;
+}
+
+void Packet::calcOverhead(uint8_t* arr, uint8_t len)
+{
+    _overheadByte = 0xFF;
+    
+    for (uint8_t i = 0; i < len; i++)
+    {
+        if (arr[i] == PACKET_START_BYTE)
+        {
+            _overheadByte = i;
+            break;
+        }
+    }
+}
+
+int16_t Packet::findLast(uint8_t* arr, uint8_t len)
+{
+    for (int16_t i = len - 1; i >= 0; i--)
+    {
+        if (arr[i] == PACKET_START_BYTE)
+            return i;
+    }
+    
+    return -1;
+}
+
+void Packet::stuffPacket(uint8_t* arr, uint8_t len)
+{
+    int16_t refByte = findLast(arr, len);
+    
+    if (refByte != -1)
+    {
+        for (int16_t i = len - 1; i >= 0; i--)
+        {
+            if (arr[i] == PACKET_START_BYTE)
+            {
+                arr[i] = (uint8_t)(refByte - i);
+                refByte = i;
+            }
+        }
+    }
+}
+
+void Packet::unpackPacket(uint8_t* arr)
+{
+    uint8_t testIndex = _recOverheadByte;
+    uint8_t delta = 0;
+    
+    if (testIndex <= PACKET_MAX_PAYLOAD)
+    {
+        while (arr[testIndex] != 0)
+        {
+            delta = arr[testIndex];
+            arr[testIndex] = PACKET_START_BYTE;
+            testIndex += delta;
+        }
+        arr[testIndex] = PACKET_START_BYTE;
+    }
+}
