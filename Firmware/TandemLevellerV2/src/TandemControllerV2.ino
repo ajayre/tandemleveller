@@ -115,6 +115,17 @@ typedef enum _pgn_t : uint16_t
   PGN_RESET                    = 0x0001,
   PGN_AGGRADE_STARTED          = 0x0002,
   PGN_PING                     = 0x0003,
+  PGN_CLEAR_ESTOP              = 0x0004,
+  PGN_TRACTOR_IMU_FOUND        = 0x0005, // fixme - to do
+  PGN_TRACTOR_IMU_LOST         = 0x0006, // fixme - to do
+  PGN_FRONT_IMU_FOUND          = 0x0007, // fixme - to do
+  PGN_FRONT_IMU_LOST           = 0x0008, // fixme - to do
+  PGN_REAR_IMU_FOUND           = 0x0009, // fixme - to do
+  PGN_REAR_IMU_LOST            = 0x000A, // fixme - to do
+  PGN_FRONT_HEIGHT_FOUND       = 0x000B, // fixme - to do
+  PGN_FRONT_HEIGHT_LOST        = 0x000C, // fixme - to do
+  PGN_REAR_HEIGHT_FOUND        = 0x000D, // fixme - to do
+  PGN_REAR_HEIGHT_LOST         = 0x000E, // fixme - to do
 
   // blade control
   PGN_FRONT_CUT_VALVE          = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
@@ -140,22 +151,6 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_INTEGRAL_MULTPLIER  = 0x2010,
   PGN_REAR_DEADBAND            = 0x2011,
 
-  // autosteer control
-  PGN_AUTOSTEER_RELAY          = 0x3000,
-  PGN_AUTOSTEER_SPEED          = 0x3001,
-  PGN_AUTOSTEER_DISTANCE       = 0x3002,
-  PGN_AUTOSTEER_ANGLE          = 0x3003,
-
-  // autosteer configuration
-  PGN_AUTOSTEER_KP             = 0x4000,
-  PGN_AUTOSTEER_KI             = 0x4001,
-  PGN_AUTOSTEER_KD             = 0x4002,
-  PGN_AUTOSTEER_KO             = 0x4003,
-  PGN_AUTOSTEER_OFFSET         = 0x4004,
-  PGN_AUTOSTEER_MIN_PWM        = 0x4005,
-  PGN_AUTOSTEER_MAX_INTEGRAL   = 0x4006,
-  PGN_AUTOSTEER_COUNTS_PER_DEG = 0x4007,
-
   // blade status
   PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
   PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
@@ -167,23 +162,13 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_CUTTING             = 0x5007,
   PGN_FRONT_BLADE_HEIGHT       = 0x5008,
   PGN_REAR_BLADE_HEIGHT        = 0x5009,
+  PGN_FRONT_DUMPING            = 0x500A, // fixme - to do
+  PGN_REAR_DUMPING             = 0x500B, // fixme - to do
 
   // IMU
-  PGN_TRACTOR_PITCH            = 0x6000,
-  PGN_TRACTOR_ROLL             = 0x6001,
-  PGN_TRACTOR_HEADING          = 0x6002,
-  PGN_TRACTOR_YAWRATE          = 0x6003,
-  PGN_TRACTOR_IMUCALIBRATION   = 0x6004,
-  PGN_FRONT_PITCH              = 0x6005,
-  PGN_FRONT_ROLL               = 0x6006,
-  PGN_FRONT_HEADING            = 0x6007,
-  PGN_FRONT_YAWRATE            = 0x6008,
-  PGN_FRONT_IMUCALIBRATION     = 0x6009,
-  PGN_REAR_PITCH               = 0x600A,
-  PGN_REAR_ROLL                = 0x600B,
-  PGN_REAR_HEADING             = 0x600C,
-  PGN_REAR_YAWRATE             = 0x600D,
-  PGN_REAR_IMUCALIBRATION      = 0x600E,
+  PGN_TRACTOR_IMU              = 0x6000,
+  PGN_FRONT_IMU                = 0x6001,
+  PGN_REAR_IMU                 = 0x6002,
 
   // GNSS
   PGN_TRACTOR_NMEA             = 0x7000,
@@ -493,6 +478,20 @@ static void SetPGNPacketUInt32
   Packet->Data[3] = (Value >> 24) & 0xFF;
 }
 
+// Stores a 32-bit value into a pgn packet at a specific byte offset
+static void SetPGNPacketUInt32AtOffset
+  (
+  pgnpacket_t *Packet,
+  uint8_t Offset,
+  uint32_t Value
+  )
+{
+  Packet->Data[Offset + 0] = Value & 0xFF;
+  Packet->Data[Offset + 1] = (Value >> 8) & 0xFF;
+  Packet->Data[Offset + 2] = (Value >> 16) & 0xFF;
+  Packet->Data[Offset + 3] = (Value >> 24) & 0xFF;
+}
+
 // gets a 32-bit value from a pgn packet
 static uint32_t GetPGNPacketUInt32
   (
@@ -661,20 +660,12 @@ static void TxTractorIMU
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_TRACTOR_ROLL;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[TRACTOR_IDX].Roll * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_TRACTOR_PITCH;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[TRACTOR_IDX].Pitch * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_TRACTOR_HEADING;
-  SetPGNPacketUInt32(&Status, (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_TRACTOR_YAWRATE;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[TRACTOR_IDX].YawRate * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_TRACTOR_IMUCALIBRATION;
-  Status.Data[0] = IMUValues[TRACTOR_IDX].CalibrationStatus;
+  Status.PGN = PGN_TRACTOR_IMU;
+  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)(IMUValues[TRACTOR_IDX].Pitch * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)(IMUValues[TRACTOR_IDX].Roll * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[TRACTOR_IDX].YawRate * 100));
+  Status.Data[16] = IMUValues[TRACTOR_IDX].CalibrationStatus;
   SendStatus(&Status);
 }
 
@@ -686,20 +677,12 @@ static void TxFrontScraperIMU
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_FRONT_ROLL;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_FRONT_PITCH;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_FRONT_HEADING;
-  SetPGNPacketUInt32(&Status, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_FRONT_YAWRATE;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_FRONT_IMUCALIBRATION;
-  Status.Data[0] = IMUValues[FRONT_BLADE_IDX].CalibrationStatus;
+  Status.PGN = PGN_FRONT_IMU;
+  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100));
+  Status.Data[16] = IMUValues[FRONT_BLADE_IDX].CalibrationStatus;
   SendStatus(&Status);
 }
 
@@ -711,20 +694,12 @@ static void TxRearScraperIMU
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_REAR_ROLL;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_REAR_PITCH;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_REAR_HEADING;
-  SetPGNPacketUInt32(&Status, (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_REAR_YAWRATE;
-  SetPGNPacketUInt32(&Status, (int32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100));
-  SendStatus(&Status);
-  Status.PGN = PGN_REAR_IMUCALIBRATION;
-  Status.Data[0] = IMUValues[REAR_BLADE_IDX].CalibrationStatus;
+  Status.PGN = PGN_REAR_IMU;
+  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100));
+  Status.Data[16] = IMUValues[REAR_BLADE_IDX].CalibrationStatus;
   SendStatus(&Status);
 }
 
@@ -940,6 +915,11 @@ static void ProcessPendantTPDO
       if (ButtonState.Fields.Button1Pressed && ButtonState.Fields.Button2Pressed &&
           ButtonState.Fields.Button3Pressed && ButtonState.Fields.Button4Pressed)
       {
+        // notify AgGrade
+        pgnpacket_t Status;
+        Status.PGN = PGN_CLEAR_ESTOP;
+        SendStatus(&Status);
+
         elapsedMillis Delay = 0;
         while (Delay < 2000);
         Reset();
