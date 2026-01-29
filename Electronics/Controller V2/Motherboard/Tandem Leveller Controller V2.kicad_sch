@@ -1,0 +1,22 @@
+(kicad_sch (version 20230121) (generator eeschema)
+
+  (uuid dceffac9-8f5b-4889-8265-b6c471cb5dde)
+
+  (paper "A4")
+
+  (title_block
+    (title "Tandem Leveller Controller")
+    (date "2026-01-23")
+    (rev "V2.0")
+    (company "Copyright Britishideas.com 2026")
+    (comment 1 "PROVIDED AS-IS, NO WARRANTY")
+  )
+
+  (lib_symbols
+  )
+
+
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)
