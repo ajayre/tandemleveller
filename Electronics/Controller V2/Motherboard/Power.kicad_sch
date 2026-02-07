@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2026-02-02")
+    (date "2026-02-06")
     (rev "V2.0")
     (company "(C) andy@britishideas.com 2026")
     (comment 1 "PROVIDED AS-IS, NO WARRANTY")
@@ -1261,6 +1261,10 @@
     (stroke (width 0) (type default))
     (uuid a0d513e9-cf9f-4813-a44a-3c4dd542c244)
   )
+  (wire (pts (xy 104.775 106.045) (xy 104.775 107.95))
+    (stroke (width 0) (type default))
+    (uuid a2bf69c7-2324-471d-adad-779ebda8c939)
+  )
   (wire (pts (xy 80.645 99.06) (xy 80.645 106.045))
     (stroke (width 0) (type default))
     (uuid a50f9870-e2f5-4582-a357-6262540fef76)
@@ -2459,6 +2463,31 @@
       (project "Tandem Leveller Controller V2"
         (path "/dceffac9-8f5b-4889-8265-b6c471cb5dde/c704cbc6-3202-48f7-92de-057996cf69f8"
           (reference "C9") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:GND") (at 104.775 107.95 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid e575fc21-7783-4e0c-8aa7-5a3fdd4901ea)
+    (property "Reference" "#PWR039" (at 104.775 114.3 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 104.775 111.76 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 104.775 107.95 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 104.775 107.95 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 1832d3ad-9ddf-4374-b91a-aaf81821e152))
+    (instances
+      (project "Tandem Leveller Controller V2"
+        (path "/dceffac9-8f5b-4889-8265-b6c471cb5dde/c704cbc6-3202-48f7-92de-057996cf69f8"
+          (reference "#PWR039") (unit 1)
         )
       )
     )
