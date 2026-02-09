@@ -1,4 +1,4 @@
-22885348973490608
+22887119646820991
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -372,11 +372,11 @@ Britishideas
 5
 Britishideas
 776180-1 AMPHENOL AMP 35pos
-AMPHENOL AMP 8pos PCB connector right angle
+AMPHENOL AMP 35pos PCB connector right angle
 
 0
-8
-8
+35
+35
 Britishideas
 776279-1 AMPHENOL AMP 8pos
 AMPHENOL AMP 8pos PCB connector right angle
@@ -720,6 +720,13 @@ Shield Finger
 0
 1
 1
+Britishideas
+TM151_TM171
+SYD IMU
+
+0
+9
+5
 Britishideas
 TO-220-3_Vertical_Heatsink
 TO-220-3, Vertical, RM 2.54mm, see https://www.vishay.com/docs/66542/to-220-1.pdf

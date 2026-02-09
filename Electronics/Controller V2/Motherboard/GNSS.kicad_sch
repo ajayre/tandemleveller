@@ -6,7 +6,7 @@
 
   (title_block
     (title "Tandem Leveller Controller")
-    (date "2026-02-06")
+    (date "2026-02-09")
     (rev "V2.0")
     (company "(C) andy@britishideas.com 2026")
     (comment 1 "PROVIDED AS-IS, NO WARRANTY")
@@ -650,7 +650,7 @@
     (effects (font (size 1.27 1.27)) (justify right))
     (uuid 35de1fbf-1a7e-4c08-afaf-ed1d1b0b4040)
   )
-  (hierarchical_label "GPIO_G2" (shape bidirectional) (at 125.095 102.87 0) (fields_autoplaced)
+  (hierarchical_label "GPIO_G2_TX" (shape bidirectional) (at 125.095 102.87 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left))
     (uuid 39096b1e-1858-49ed-80f4-523047c35091)
   )
@@ -666,7 +666,7 @@
     (effects (font (size 1.27 1.27)) (justify left))
     (uuid 5fa3178b-3918-4f8e-be26-0ff7975e850b)
   )
-  (hierarchical_label "GPIO_G1" (shape bidirectional) (at 125.095 100.33 0) (fields_autoplaced)
+  (hierarchical_label "GPIO_G1_RX" (shape bidirectional) (at 125.095 100.33 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left))
     (uuid 67903ed9-b1f5-4d6f-b738-b3062879369d)
   )
