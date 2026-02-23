@@ -1,0 +1,2 @@
+1. Monitor for IMU freezes and send reset command (not NMT reset).
+
