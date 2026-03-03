@@ -536,6 +536,10 @@
     [
       "c704cbc6-3202-48f7-92de-057996cf69f8",
       "Power"
+    ],
+    [
+      "f43c4e36-971b-41e2-adc7-d90929e38a42",
+      "Autosteer"
     ]
   ],
   "text_variables": {}
