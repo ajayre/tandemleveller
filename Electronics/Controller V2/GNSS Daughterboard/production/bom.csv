@@ -1,0 +1,5 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+"H1, H2, H3, H4",MountingHole_6.4mm_M6,4,MountingHole,
+"J1, J8",JST_PH_B12B-PH-K_1x12_P2.00mm_Vertical,2,GNSS,
+"J2, J3, J4, J5, J6, J7",PinHeader_1x02_P2.54mm_Vertical,6,Conn_01x02,C7494857
+U1,simpleRTK2B,1,simpleRTK2B,

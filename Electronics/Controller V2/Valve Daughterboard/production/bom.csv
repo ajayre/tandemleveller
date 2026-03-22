@@ -1,0 +1,9 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+D1,D_DO-35_SOD27_P7.62mm_Horizontal,1,1N4148,
+"H1, H2, H3, H4",MountingHole_6.4mm_M6,4,MountingHole,
+"J1, J19",JST_PH_B9B-PH-K_1x09_P2.00mm_Vertical,2,Conn_01x08,
+"J10, J20",JST_XH_B10B-XH-A_1x10_P2.50mm_Vertical,2,Conn_01x10,
+"J11, J12, J13, J14, J15, J16, J17, J18, J2, J21, J23, J3, J4, J5, J6, J7, J8, J9",PinHeader_1x02_P2.54mm_Vertical,18,Conn_01x02,
+J22,JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical,1,Conn_01x04,
+K1,Relay_SPDT_Omron-G5LE-1,1,G5LE-1,
+U1,MD13S-SUMO,1,~,
