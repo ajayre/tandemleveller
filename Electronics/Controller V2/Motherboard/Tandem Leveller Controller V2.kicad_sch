@@ -1351,6 +1351,30 @@
     (uuid cdf82779-063e-473b-8a5d-d9b8670101c2)
   )
 
+  (symbol (lib_id "Mechanical:MountingHole") (at 97.79 191.135 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 0132f9f4-aa4d-437e-ac55-04b0ddb1a212)
+    (property "Reference" "H18" (at 100.33 189.865 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "MountingHole" (at 100.33 192.405 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "MountingHole:MountingHole_4mm" (at 97.79 191.135 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 97.79 191.135 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (instances
+      (project "Tandem Leveller Controller V2"
+        (path "/dceffac9-8f5b-4889-8265-b6c471cb5dde"
+          (reference "H18") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "Mechanical:MountingHole") (at 132.08 185.42 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3d794f44-4377-4a87-b23a-cb13b0629dee)
@@ -1434,6 +1458,30 @@
     )
   )
 
+  (symbol (lib_id "Mechanical:MountingHole") (at 97.79 185.42 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 5453786f-f4c8-4265-9971-0fa3ca875c38)
+    (property "Reference" "H17" (at 100.33 184.15 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "MountingHole" (at 100.33 186.69 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "MountingHole:MountingHole_4mm" (at 97.79 185.42 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 97.79 185.42 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (instances
+      (project "Tandem Leveller Controller V2"
+        (path "/dceffac9-8f5b-4889-8265-b6c471cb5dde"
+          (reference "H17") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "power:+5V") (at 229.235 25.4 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 78baadbb-dd99-4cac-a989-5445e78e1c31)
@@ -1503,6 +1551,30 @@
       (project "Tandem Leveller Controller V2"
         (path "/dceffac9-8f5b-4889-8265-b6c471cb5dde"
           (reference "#FLG05") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "Mechanical:MountingHole") (at 78.74 191.135 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 95b2589a-2c85-4f9a-a58d-1abaef4a1b30)
+    (property "Reference" "H19" (at 81.28 189.865 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "MountingHole" (at 81.28 192.405 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "MountingHole:MountingHole_4mm" (at 78.74 191.135 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 78.74 191.135 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (instances
+      (project "Tandem Leveller Controller V2"
+        (path "/dceffac9-8f5b-4889-8265-b6c471cb5dde"
+          (reference "H19") (unit 1)
         )
       )
     )
