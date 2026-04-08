@@ -6,7 +6,9 @@
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
+#include "Global.h"
 #include "UDPTransfer.h"
+#include "AgGrade.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -105,83 +107,8 @@
 #define LF 0x0A
 #define CR 0x0D
 
-// maximum length of an NMEA 0183 sentence
-#define MAX_NMEA_LENGTH 90
-
 // GGA: talker + max 14 comma-separated data fields (split buffer)
 #define MAX_GGA_FIELDS 16
-
-// maximum number of bytes in a PGN packet payload
-#define MAX_PGN_LEN (MAX_NMEA_LENGTH + 2)
-
-// supported PGNs
-typedef enum _pgn_t : uint16_t
-{
-  // misc
-  PGN_ESTOP                    = 0x0000,
-  PGN_RESET                    = 0x0001,
-  PGN_AGGRADE_STARTED          = 0x0002,
-  PGN_PING                     = 0x0003,
-  PGN_CLEAR_ESTOP              = 0x0004,
-  PGN_TRACTOR_IMU_FOUND        = 0x0005, // fixme - to do
-  PGN_TRACTOR_IMU_LOST         = 0x0006, // fixme - to do
-  PGN_FRONT_IMU_FOUND          = 0x0007, // fixme - to do
-  PGN_FRONT_IMU_LOST           = 0x0008, // fixme - to do
-  PGN_REAR_IMU_FOUND           = 0x0009, // fixme - to do
-  PGN_REAR_IMU_LOST            = 0x000A, // fixme - to do
-  PGN_FRONT_HEIGHT_FOUND       = 0x000B, // fixme - to do
-  PGN_FRONT_HEIGHT_LOST        = 0x000C, // fixme - to do
-  PGN_REAR_HEIGHT_FOUND        = 0x000D, // fixme - to do
-  PGN_REAR_HEIGHT_LOST         = 0x000E, // fixme - to do
-
-  // blade control
-  PGN_FRONT_CUT_VALVE          = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
-  PGN_REAR_CUT_VALVE           = 0x1001,   // CUTVALVE_MIN -> CUTVALVE_MAX
-  PGN_FRONT_ZERO_BLADE_HEIGHT  = 0x1002,
-  PGN_REAR_ZERO_BLADE_HEIGHT   = 0x1003,
-
-  // blade configuration
-  PGN_FRONT_PWM_GAIN_UP        = 0x2002,
-  PGN_FRONT_PWM_GAIN_DOWN      = 0x2003,
-  PGN_FRONT_PWM_MIN_UP         = 0x2004,
-  PGN_FRONT_PWM_MIN_DOWN       = 0x2005,
-  PGN_FRONT_PWM_MAX_UP         = 0x2006,
-  PGN_FRONT_PWM_MAX_DOWN       = 0x2007,
-  PGN_FRONT_INTEGRAL_MULTPLIER = 0x2008,
-  PGN_FRONT_DEADBAND           = 0x2009,
-  PGN_REAR_PWM_GAIN_UP         = 0x200A,
-  PGN_REAR_PWM_GAIN_DOWN       = 0x200B,
-  PGN_REAR_PWM_MIN_UP          = 0x200C,
-  PGN_REAR_PWM_MIN_DOWN        = 0x200D,
-  PGN_REAR_PWM_MAX_UP          = 0x200E,
-  PGN_REAR_PWM_MAX_DOWN        = 0x200F,
-  PGN_REAR_INTEGRAL_MULTPLIER  = 0x2010,
-  PGN_REAR_DEADBAND            = 0x2011,
-
-  // blade status
-  PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
-  PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
-  PGN_FRONT_BLADE_DIRECTION    = 0x5002,
-  PGN_FRONT_CUTTING            = 0x5003,
-  PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
-  PGN_REAR_BLADE_PWMVALUE      = 0x5005,
-  PGN_REAR_BLADE_DIRECTION     = 0x5006,
-  PGN_REAR_CUTTING             = 0x5007,
-  PGN_FRONT_BLADE_HEIGHT       = 0x5008,
-  PGN_REAR_BLADE_HEIGHT        = 0x5009,
-  PGN_FRONT_DUMPING            = 0x500A, // fixme - to do
-  PGN_REAR_DUMPING             = 0x500B, // fixme - to do
-
-  // IMU
-  PGN_TRACTOR_IMU              = 0x6000,
-  PGN_FRONT_IMU                = 0x6001,
-  PGN_REAR_IMU                 = 0x6002,
-
-  // GNSS
-  PGN_TRACTOR_NMEA             = 0x7000,
-  PGN_FRONT_NMEA               = 0x7001,
-  PGN_REAR_NMEA                = 0x7002
-} pgn_t;
 
 typedef enum _blade_direction_t
 {
@@ -194,13 +121,6 @@ typedef enum _state_t
   STATE_RUN,
   STATE_ESTOP
 } state_t;
-
-// information that is transmitted to/from AgGrade
-typedef struct _pgnpacket_t
-{
-  pgn_t PGN;
-  uint8_t Data[MAX_PGN_LEN] = { 0 };
-} pgnpacket_t;
 
 // configuration of blade control
 typedef struct _blade_config_t
@@ -299,6 +219,9 @@ static EthernetUDP Udp;
 
 // UDP Transfer for packet-based communication
 static UDPTransfer UdpTransfer;
+
+// access to AgGrade
+static AgGrade agGrade(&UdpTransfer);
 
 // CAN bus instance
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
@@ -428,7 +351,7 @@ static void EmergencyStop
     // tell AgGrade
     pgnpacket_t Status;
     Status.PGN = PGN_ESTOP;
-    SendStatus(&Status);
+    agGrade.SendStatus(&Status);
 
     // send emergency message so all CAN nodes are aware of the stop
     CAN_message_t txmsg;
@@ -509,26 +432,6 @@ static uint32_t GetPGNPacketUInt32
          ((uint32_t)(Packet->Data[2]) << 16) | 
          ((uint32_t)(Packet->Data[1]) << 8) | 
          Packet->Data[0];
-}
-
-// sends status value over UDP using packet framing
-static void SendStatus
-  (
-  pgnpacket_t *pStatus
-  )
-{
-  // Pack the PGN
-  UdpTransfer.packet.txBuff[0] = (uint8_t)(pStatus->PGN & 0xFF);
-  UdpTransfer.packet.txBuff[1] = (uint8_t)((pStatus->PGN >> 8) & 0xFF);
-
-  // Pack the data
-  for (int b = 0; b < MAX_PGN_LEN; b++)
-  {
-    UdpTransfer.packet.txBuff[2 + b] = pStatus->Data[b];
-  }
-
-  // Send the packet
-  UdpTransfer.sendData(MAX_PGN_LEN + 2);
 }
 
 // gets a command from UDP packet
@@ -643,7 +546,7 @@ static void TxFrontBladeHeight
 
   Status.PGN = PGN_FRONT_BLADE_HEIGHT;
   SetPGNPacketUInt32(&Status, BladeHeight[FRONT_BLADE_IDX]);
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // sends the rear blade height to AgGrade
@@ -656,7 +559,7 @@ static void TxRearBladeHeight
 
   Status.PGN = PGN_REAR_BLADE_HEIGHT;
   SetPGNPacketUInt32(&Status, BladeHeight[REAR_BLADE_IDX]);
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send tractor IMU values to AgGrade
@@ -673,7 +576,7 @@ static void TxTractorIMU
   SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100));
   SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[TRACTOR_IDX].YawRate * 100));
   Status.Data[16] = IMUValues[TRACTOR_IDX].CalibrationStatus;
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send front scraper IMU values to AgGrade
@@ -690,7 +593,7 @@ static void TxFrontScraperIMU
   SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100));
   SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100));
   Status.Data[16] = IMUValues[FRONT_BLADE_IDX].CalibrationStatus;
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send rear scraper IMU values to AgGrade
@@ -707,7 +610,7 @@ static void TxRearScraperIMU
   SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100));
   SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100));
   Status.Data[16] = IMUValues[REAR_BLADE_IDX].CalibrationStatus;
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send front blade slave offset to AgGrade
@@ -720,7 +623,7 @@ static void TxFrontBladeSlaveOffset
 
   Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
   SetPGNPacketUInt16(&Status, BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send rear blade slave offset to AgGrade
@@ -733,7 +636,7 @@ static void TxRearBladeSlaveOffset
 
   Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
   SetPGNPacketUInt16(&Status, BladeStatus[REAR_BLADE_IDX].SlaveOffset);
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send front blade auto state to AgGrade
@@ -746,7 +649,7 @@ static void TxFrontBladeAuto
 
   Status.PGN = PGN_FRONT_CUTTING;
   Status.Data[0] = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // send rear blade auto state to AgGrade
@@ -759,7 +662,7 @@ static void TxRearBladeAuto
 
   Status.PGN = PGN_REAR_CUTTING;
   Status.Data[0] = BladeStatus[REAR_BLADE_IDX].BladeAuto;
-  SendStatus(&Status);
+  agGrade.SendStatus(&Status);
 }
 
 // process TPDO from pendant
@@ -925,7 +828,7 @@ static void ProcessPendantTPDO
         // notify AgGrade
         pgnpacket_t Status;
         Status.PGN = PGN_CLEAR_ESTOP;
-        SendStatus(&Status);
+        agGrade.SendStatus(&Status);
 
         elapsedMillis Delay = 0;
         while (Delay < 2000);
@@ -1169,11 +1072,11 @@ static void SetFrontValvePWM
     pgnpacket_t Status;
     Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
     SetPGNPacketUInt32(&Status, BladeStatus[FRONT_BLADE_IDX].BladePWM);
-    SendStatus(&Status);
+    agGrade.SendStatus(&Status);
 
     Status.PGN = PGN_FRONT_BLADE_DIRECTION;
     Status.Data[0] = digitalRead(FRONT_HEIGHT_DIR);
-    SendStatus(&Status);
+    agGrade.SendStatus(&Status);
   }
 }
 
@@ -1194,11 +1097,11 @@ static void SetRearValvePWM
     pgnpacket_t Status;
     Status.PGN = PGN_REAR_BLADE_PWMVALUE;
     SetPGNPacketUInt32(&Status, BladeStatus[REAR_BLADE_IDX].BladePWM);
-    SendStatus(&Status);
+    agGrade.SendStatus(&Status);
 
     Status.PGN = PGN_REAR_BLADE_DIRECTION;
     Status.Data[0] = digitalRead(REAR_HEIGHT_DIR);
-    SendStatus(&Status);
+    agGrade.SendStatus(&Status);
   }
 }
 
@@ -1506,7 +1409,7 @@ static void SendNMEASentence
   uint8_t copyLen = (length > MAX_PGN_LEN) ? MAX_PGN_LEN : length;
   memcpy(NMEAPacket.Data, sentence, copyLen);
   
-  SendStatus(&NMEAPacket);
+  agGrade.SendStatus(&NMEAPacket);
 }
 
 // processes a byte read from a GNSS stream
@@ -1944,7 +1847,7 @@ void loop
 
     pgnpacket_t Status;
     Status.PGN   = PGN_PING;
-    SendStatus(&Status);
+    agGrade.SendStatus(&Status);
   }
 
   // process tractor GNSS
