@@ -11,14 +11,54 @@ AgGrade::AgGrade
 {
 }
 
+// starts ethernet
+void AgGrade::StartEthernet
+  (
+  byte MACAddress[],           // our MAC address
+  IPAddress LocalIPAddress     // our IP address
+  )
+{
+    // look for working Ethernet connection
+  bool LinkUp = false;
+  do
+  {
+    // start Ethernet
+    Ethernet.begin(MACAddress, LocalIPAddress);
+
+    Serial.println("Checking for Ethernet...");
+ 
+    // Check for Ethernet hardware present
+    if (Ethernet.hardwareStatus() == EthernetNoHardware)
+    {
+      Serial.println("Ethernet hardware not found");
+      continue;
+    }
+
+    Serial.println("Checking for link...");
+
+    if (Ethernet.linkStatus() == LinkOFF)
+    {
+      Serial.println("Ethernet cable is not connected.");
+    }
+    else
+    {
+      LinkUp = true;
+    }
+  } while (!LinkUp);
+}
+
 // connects to AgGrade
 void AgGrade::Connect
   (
+  byte MACAddress[],            // our MAC address
+  IPAddress LocalIPAddress,     // our IP address
   unsigned int LocalPort,       // port that we listen on
   IPAddress RemoteIPAddress,    // IP address of AgGrade
   unsigned int RemotePort       // port that AgGrade is listening on
   )
 {
+  StartEthernet(MACAddress, LocalIPAddress);
+
   // start UDP
   Udp.begin(LocalPort);
 

@@ -103,6 +103,8 @@ class AgGrade
     // connects to AgGrade
     void Connect
       (
+      byte MACAddress[],            // our MAC address
+      IPAddress LocalIPAddress,     // our IP address
       unsigned int LocalPort,       // port that we listen on
       IPAddress RemoteIPAddress,    // IP address of AgGrade
       unsigned int RemotePort       // port that AgGrade is listening on
@@ -131,6 +133,13 @@ class AgGrade
     UDPTransfer UdpTransfer;
     // An EthernetUDP instance to let us send and receive packets over UDP
     EthernetUDP Udp;
+
+    // starts ethernet
+    void AgGrade::StartEthernet
+      (
+      byte MACAddress[],           // our MAC address
+      IPAddress LocalIPAddress     // our IP address
+      );
 };
 
 #endif // _AGGRADEH_
