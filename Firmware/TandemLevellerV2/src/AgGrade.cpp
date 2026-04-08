@@ -3,13 +3,8 @@
 #include "AgGrade.h"
 #include "UDPTransfer.h"
 
-// constructor
-AgGrade::AgGrade
-  (
-  void
-  )
-{
-}
+///////////////////////////////////////////////////////////////////////////////////
+// PRIVATE FUNCTIONS
 
 // starts ethernet
 void AgGrade::StartEthernet
@@ -45,6 +40,18 @@ void AgGrade::StartEthernet
       LinkUp = true;
     }
   } while (!LinkUp);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////
+// PUBLIC FUNCTIONS
+
+// constructor
+AgGrade::AgGrade
+  (
+  void
+  )
+{
 }
 
 // connects to AgGrade

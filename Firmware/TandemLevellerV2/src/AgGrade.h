@@ -135,7 +135,7 @@ class AgGrade
     EthernetUDP Udp;
 
     // starts ethernet
-    void AgGrade::StartEthernet
+    void StartEthernet
       (
       byte MACAddress[],           // our MAC address
       IPAddress LocalIPAddress     // our IP address
