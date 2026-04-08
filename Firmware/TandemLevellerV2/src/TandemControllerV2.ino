@@ -7,7 +7,6 @@
 #include <NativeEthernetUdp.h>
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
 #include "Global.h"
-#include "UDPTransfer.h"
 #include "AgGrade.h"
 
 // front height:
@@ -214,14 +213,8 @@ static IPAddress RemoteIPAddress(192, 168, 1, 10);
 // remote port
 static unsigned int RemotePort = 6000;
 
-// An EthernetUDP instance to let us send and receive packets over UDP
-static EthernetUDP Udp;
-
-// UDP Transfer for packet-based communication
-static UDPTransfer UdpTransfer;
-
 // access to AgGrade
-static AgGrade agGrade(&UdpTransfer);
+static AgGrade agGrade;
 
 // CAN bus instance
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
@@ -432,24 +425,6 @@ static uint32_t GetPGNPacketUInt32
          ((uint32_t)(Packet->Data[2]) << 16) | 
          ((uint32_t)(Packet->Data[1]) << 8) | 
          Packet->Data[0];
-}
-
-// gets a command from UDP packet
-static pgnpacket_t GetCommand
-  (
-  void
-  )
-{
-  pgnpacket_t Command;
-
-  Command.PGN = (pgn_t)(((uint16_t)UdpTransfer.packet.rxBuff[1] << 8) | 
-                         UdpTransfer.packet.rxBuff[0]);
-  for (int b = 0; b < MAX_PGN_LEN; b++)
-  {
-    Command.Data[b] = UdpTransfer.packet.rxBuff[2 + b];
-  }
-
-  return Command;
 }
 
 // process TPDO from angle sensors
@@ -1508,12 +1483,7 @@ void setup
 
   Serial.println("Starting UDP...");
 
-  // start UDP
-  Udp.begin(LocalPort);
-
-  // Initialize UDP Transfer for packet-based communication
-  UdpTransfer.begin(Udp);
-  UdpTransfer.setRemote(RemoteIPAddress, RemotePort);
+  agGrade.Connect(LocalPort, RemoteIPAddress, RemotePort);
 
   // configure CAN bus
   CANBus.begin();
@@ -1665,11 +1635,11 @@ void loop
 
   CheckForMissingNodes();
   
-  // Check for incoming UDP packets with packet framing
-  if (UdpTransfer.available() > 0)
+  // Check for incoming commands
+  if (agGrade.IsCommandAvailable())
   {
-    // We received a complete packet
-    pgnpacket_t Command = GetCommand();
+    // We received a complete command
+    pgnpacket_t Command = agGrade.GetCommand();
     
     AgGradeFound = true;
     

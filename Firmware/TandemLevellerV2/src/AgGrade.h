@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <NativeEthernet.h>
+#include <NativeEthernetUdp.h>
 #include "Global.h"
 #include "UDPTransfer.h"
 
@@ -95,17 +97,40 @@ class AgGrade
   public:
     AgGrade
       (
-        UDPTransfer *pUdpTransfer
+      void
+      );
+
+    // connects to AgGrade
+    void Connect
+      (
+      unsigned int LocalPort,       // port that we listen on
+      IPAddress RemoteIPAddress,    // IP address of AgGrade
+      unsigned int RemotePort       // port that AgGrade is listening on
       );
 
     // sends status value over UDP using packet framing
     void SendStatus
-    (
+      (
       pgnpacket_t *pStatus
-    );
+      );
+
+    // checks if a command is waiting to be read
+    // returns true if command waiting
+    bool IsCommandAvailable
+      (
+      void  
+      );
+
+    // gets a command from AgGrade
+    pgnpacket_t GetCommand
+      (
+      void
+      );
 
   private:
-    UDPTransfer *pUdpTransfer;
+    UDPTransfer UdpTransfer;
+    // An EthernetUDP instance to let us send and receive packets over UDP
+    EthernetUDP Udp;
 };
 
 #endif // _AGGRADEH_
