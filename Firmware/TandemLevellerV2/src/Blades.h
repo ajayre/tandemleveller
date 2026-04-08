@@ -63,6 +63,7 @@ class Blades
     blade_status_t BladeStatus[NUM_BLADES];
     blade_command_t BladeCommand[NUM_BLADES];
     int BladeHeight[NUM_BLADES];  // in mm
+    elapsedMillis LastJogTime[NUM_BLADES];
 
     // calculate new output for blade
     void ControlBlade
@@ -80,6 +81,21 @@ class Blades
     void SetCallback
       (
       blades_blade_changed_callback_t BladeChangedCallback
+      );
+
+    // jogs a blade
+    void JogBlade
+      (
+      int BladeIndex,                 // index of blade to jog xxx_BLADE_IDX
+      blade_direction_t Direction     // jog direction
+      );
+
+    // jogs a blade offset
+    // returns true if jog occurred
+    bool JogOffset
+      (
+      int BladeIndex,                 // index of blade to jog offset xxx_BLADE_IDX
+      blade_direction_t Direction     // jog direction
       );
 
   private:
