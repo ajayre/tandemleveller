@@ -7,6 +7,7 @@
 #include "Global.h"
 #include "AgGrade.h"
 #include "GNSS.h"
+#include "Blades.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -16,14 +17,6 @@
 //  dir = high, PWM output on M2B
 
 // GPIO pins
-#define FRONT_HEIGHT_DIR 0
-#define FRONT_HEIGHT_PWM 1
-#define REAR_HEIGHT_DIR  2
-#define REAR_HEIGHT_PWM  3
-#define FRONT_DUMP_DIR   4
-#define FRONT_DUMP_PWM   5
-#define REAR_DUMP_DIR    6
-#define REAR_DUMP_PWM    7
 #define LED              13
 
 // node IDs
@@ -34,17 +27,6 @@
 #define PENDANT_NODE_ID          0x05
 #define FRONT_ANGLE_NODE_ID      0x10
 #define REAR_ANGLE_NODE_ID       0x11
-
-// from EHPR98-G35 specs
-#define PWM_FREQUENCY_HZ 120
-
-// number of blades we support
-#define NUM_BLADES 2
-
-// indices into arrays
-#define FRONT_BLADE_IDX 0
-#define REAR_BLADE_IDX  1
-#define TRACTOR_IDX     2
 
 // how often to toggle the LED
 #define LED_FLASH_PERIOD_MS 1000
@@ -77,10 +59,6 @@
 // CAN bus speed
 #define CAN_BITRATE_BPS 125000
 
-// the height of the blade that represents ground level
-// when communicating with AgGrade
-#define BLADE_HEIGHT_GROUND_LEVEL 200
-
 // perform blade control periodically
 #define BLADE_CONTROL_PERIOD_MS 50
 
@@ -101,46 +79,11 @@
 // time to wait before deciding that AgGrade has disconnected
 #define PING_TIMEOUT_PERIOD_MS 3000
 
-typedef enum _blade_direction_t
-{
-  BLADE_DIR_DOWN = 0,
-  BLADE_DIR_UP   = 1
-} blade_direction_t;
-
 typedef enum _state_t
 {
   STATE_RUN,
   STATE_ESTOP
 } state_t;
-
-// configuration of blade control
-typedef struct _blade_config_t
-{
-  int PWMGainUp;
-  int PWMGainDown;
-  uint8_t PWMMinUp;
-  uint8_t PWMMinDown;
-  uint8_t PWMMaxUp;
-  uint8_t PWMMaxDown;
-  int IntegralMultiplier;
-  int Deadband;
-} blade_config_t;
-
-// current status of the blade
-typedef struct _blade_status_t
-{
-  int BladePWM;
-  int BladeCommand;
-  blade_direction_t BladeDirection;
-  bool BladeAuto;
-  int16_t SlaveOffset;
-} blade_status_t;
-
-// movement command for blade
-typedef struct _blade_command_t
-{
-  int CutValve;       // target blade height in mm. BLADE_HEIGHT_GROUND_LEVEL = on target, < BLADE_HEIGHT_GROUND_LEVEL below target, > BLADE_HEIGHT_GROUND_LEVEL above target. Range is 0 - 400
-} blade_command_t;
 
 typedef union _button_state_t
 {
@@ -203,6 +146,9 @@ static AgGrade agGrade;
 // access to GNSS data streams and processing
 static GNSS NavData;
 
+// blade control
+static Blades BladeControl;
+
 // CAN bus instance
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 
@@ -214,17 +160,12 @@ static elapsedMillis PendantSearchTimestamp;
 static button_state_t ButtonState;
 static joystick_state_t JoystickState;
 static bool PendantSearch;
-static blade_config_t BladeConfig[NUM_BLADES];
-static blade_status_t BladeStatus[NUM_BLADES];
-static blade_command_t BladeCommand[NUM_BLADES];
 static elapsedMillis BladeControlTimestamp;
-static int pwm1ago[NUM_BLADES] = { 0 } , pwm2ago[NUM_BLADES] = { 0 }, pwm3ago[NUM_BLADES] = { 0 }, pwm4ago[NUM_BLADES] = { 0 }, pwm5ago[NUM_BLADES] = { 0 };
 static elapsedMillis TPDOTimestamp;
 static elapsedMillis HBTimestamp;
 static state_t State;
 static elapsedMillis LastJogTime[NUM_BLADES];
 static imu_t IMUValues[NUM_BLADES + 1];
-static int BladeHeight[NUM_BLADES];  // in mm
 static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
@@ -286,15 +227,15 @@ static void TxTPDO1
 {
   uint8_t Data[8];
 
-  Data[0] = BladeStatus[FRONT_BLADE_IDX].BladePWM & 0xFF;
-  Data[1] = (BladeStatus[FRONT_BLADE_IDX].BladePWM >> 8) & 0xFF;
-  Data[2] = BladeStatus[FRONT_BLADE_IDX].BladeCommand;
-  Data[3] = (BladeStatus[FRONT_BLADE_IDX].BladeDirection & 0x01) | ((BladeStatus[FRONT_BLADE_IDX].BladeAuto & 0x01) << 1);
+  Data[0] = BladeControl.BladeStatus[FRONT_BLADE_IDX].BladePWM & 0xFF;
+  Data[1] = (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladePWM >> 8) & 0xFF;
+  Data[2] = BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeCommand;
+  Data[3] = (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeDirection & 0x01) | ((BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto & 0x01) << 1);
 
-  Data[4] = BladeStatus[REAR_BLADE_IDX].BladePWM & 0xFF;
-  Data[5] = (BladeStatus[REAR_BLADE_IDX].BladePWM >> 8) & 0xFF;
-  Data[6] = BladeStatus[REAR_BLADE_IDX].BladeCommand;
-  Data[7] = (BladeStatus[REAR_BLADE_IDX].BladeDirection & 0x01) | ((BladeStatus[REAR_BLADE_IDX].BladeAuto & 0x01) << 1);
+  Data[4] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladePWM & 0xFF;
+  Data[5] = (BladeControl.BladeStatus[REAR_BLADE_IDX].BladePWM >> 8) & 0xFF;
+  Data[6] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladeCommand;
+  Data[7] = (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeDirection & 0x01) | ((BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto & 0x01) << 1);
 
   TxCANMessage(0x180 + CONTROLLER_NODE_ID, 8, Data);
 }
@@ -307,8 +248,8 @@ static void TxTPDO2
 {
   uint8_t Data[2];
 
-  Data[0] = (uint8_t)BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
-  Data[1] = (uint8_t)BladeStatus[REAR_BLADE_IDX].SlaveOffset;
+  Data[0] = (uint8_t)BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
+  Data[1] = (uint8_t)BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset;
 
   TxCANMessage(0x280 + CONTROLLER_NODE_ID, 2, Data);
 }
@@ -342,14 +283,7 @@ static void EmergencyStop
     txmsg.buf[7] = 0x00;
     CANBus.write(txmsg);
 
-    // switch to manual control, stop movement
-    for (int b = 0; b < NUM_BLADES; b++)
-    {
-      BladeStatus[b].BladeAuto = false;
-      BladeCommand[b].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
-    }
-    SetFrontValvePWM(0);
-    SetRearValvePWM(0);
+    BladeControl.EmergencyStop();
 
     TxTPDO1();
     TxTPDO2();
@@ -357,6 +291,31 @@ static void EmergencyStop
     TxFrontBladeAuto();
     TxRearBladeAuto();
   }
+}
+
+// called when a blade changes height or direction
+static void BladeChanged
+  (
+  int BladeIndex,                // index of blade that changed xx_BLADE_IDX
+  int PWM,                       // current PWM output to blade
+  blade_direction_t Direction    // direction of blade movement
+  )
+{
+    // update AgGrade
+    pgnpacket_t Status;
+    if (BladeIndex == FRONT_BLADE_IDX)
+      Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
+    else
+      Status.PGN = PGN_REAR_BLADE_PWMVALUE;
+    SetPGNPacketUInt32(&Status, PWM);
+    agGrade.SendStatus(&Status);
+
+    if (BladeIndex == FRONT_BLADE_IDX)
+      Status.PGN = PGN_FRONT_BLADE_DIRECTION;
+    else
+      Status.PGN = PGN_REAR_BLADE_DIRECTION;
+    Status.Data[0] = Direction;
+    agGrade.SendStatus(&Status);
 }
 
 // Stores a 16-bit value into a pgn packet
@@ -502,7 +461,7 @@ static void TxFrontBladeHeight
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_HEIGHT;
-  SetPGNPacketUInt32(&Status, BladeHeight[FRONT_BLADE_IDX]);
+  SetPGNPacketUInt32(&Status, BladeControl.BladeHeight[FRONT_BLADE_IDX]);
   agGrade.SendStatus(&Status);
 }
 
@@ -515,7 +474,7 @@ static void TxRearBladeHeight
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_HEIGHT;
-  SetPGNPacketUInt32(&Status, BladeHeight[REAR_BLADE_IDX]);
+  SetPGNPacketUInt32(&Status, BladeControl.BladeHeight[REAR_BLADE_IDX]);
   agGrade.SendStatus(&Status);
 }
 
@@ -579,7 +538,7 @@ static void TxFrontBladeSlaveOffset
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
-  SetPGNPacketUInt16(&Status, BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
+  SetPGNPacketUInt16(&Status, BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
   agGrade.SendStatus(&Status);
 }
 
@@ -592,7 +551,7 @@ static void TxRearBladeSlaveOffset
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
-  SetPGNPacketUInt16(&Status, BladeStatus[REAR_BLADE_IDX].SlaveOffset);
+  SetPGNPacketUInt16(&Status, BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
   agGrade.SendStatus(&Status);
 }
 
@@ -605,7 +564,7 @@ static void TxFrontBladeAuto
   pgnpacket_t Status;
 
   Status.PGN = PGN_FRONT_CUTTING;
-  Status.Data[0] = BladeStatus[FRONT_BLADE_IDX].BladeAuto;
+  Status.Data[0] = BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto;
   agGrade.SendStatus(&Status);
 }
 
@@ -618,7 +577,7 @@ static void TxRearBladeAuto
   pgnpacket_t Status;
 
   Status.PGN = PGN_REAR_CUTTING;
-  Status.Data[0] = BladeStatus[REAR_BLADE_IDX].BladeAuto;
+  Status.Data[0] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto;
   agGrade.SendStatus(&Status);
 }
 
@@ -648,13 +607,13 @@ static void ProcessPendantTPDO
       // toggle auto mode for front blade
       if (ButtonState.Fields.Button1Pressed && !LastButton1State)
       {
-        if (BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
         {
-          BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
+          BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
         }
         else
         {
-          BladeStatus[FRONT_BLADE_IDX].BladeAuto = true;
+          BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = true;
         }
         TxFrontBladeAuto();
       }
@@ -662,40 +621,40 @@ static void ProcessPendantTPDO
       // toggle auto mode for rear blade
       if (ButtonState.Fields.Button2Pressed && !LastButton2State)
       {
-        if (BladeStatus[REAR_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
         {
-          BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
+          BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
         }
         else
         {
-          BladeStatus[REAR_BLADE_IDX].BladeAuto = true;
+          BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = true;
         }
         TxRearBladeAuto();
       }
 
       // if joystick 1 is moved up or down in auto mode then exit auto mode
-      if ((JoystickState.Fields.Joystick1Up || JoystickState.Fields.Joystick1Down) && BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+      if ((JoystickState.Fields.Joystick1Up || JoystickState.Fields.Joystick1Down) && BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
       {
-        BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
+        BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
         TxFrontBladeAuto();
       }
 
       // if joystick 2 is moved up or down in auto mode then exit auto mode
-      if ((JoystickState.Fields.Joystick2Up || JoystickState.Fields.Joystick2Down) && BladeStatus[REAR_BLADE_IDX].BladeAuto)
+      if ((JoystickState.Fields.Joystick2Up || JoystickState.Fields.Joystick2Down) && BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
       {
-        BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
+        BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
         TxRearBladeAuto();
       }
 
-      if (!BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+      if (!BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
       {
         // jog front blade (joystick button not pressed)
         if (JoystickState.Fields.Joystick1Up && !ButtonState.Fields.Joystick1Pressed)
         {
           if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeCommand[FRONT_BLADE_IDX].CutValve += 1;
-            if (BladeCommand[FRONT_BLADE_IDX].CutValve > CUTVALVE_MAX) BladeCommand[FRONT_BLADE_IDX].CutValve = CUTVALVE_MAX;
+            BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve += 1;
+            if (BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve > CUTVALVE_MAX) BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve = CUTVALVE_MAX;
             LastJogTime[FRONT_BLADE_IDX] = 0;
           }
         }
@@ -703,8 +662,8 @@ static void ProcessPendantTPDO
         {
           if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeCommand[FRONT_BLADE_IDX].CutValve -= 1;
-            if (BladeCommand[FRONT_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeCommand[FRONT_BLADE_IDX].CutValve = CUTVALVE_MIN;
+            BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve -= 1;
+            if (BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve = CUTVALVE_MIN;
             LastJogTime[FRONT_BLADE_IDX] = 0;
           }
         }
@@ -713,8 +672,8 @@ static void ProcessPendantTPDO
         {
           if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeStatus[FRONT_BLADE_IDX].SlaveOffset += 1;
-            if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
+            BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset += 1;
+            if (BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
             LastJogTime[FRONT_BLADE_IDX] = 0;
             TxFrontBladeSlaveOffset();
           }
@@ -723,23 +682,23 @@ static void ProcessPendantTPDO
         {
           if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
-            if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
+            BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
+            if (BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
             LastJogTime[FRONT_BLADE_IDX] = 0;
             TxFrontBladeSlaveOffset();
           }
         }
       }
 
-      if (!BladeStatus[REAR_BLADE_IDX].BladeAuto)
+      if (!BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
       {
         // jog rear blade (joystick button not pressed)
         if (JoystickState.Fields.Joystick2Up && !ButtonState.Fields.Joystick2Pressed)
         {
           if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeCommand[REAR_BLADE_IDX].CutValve += 1;
-            if (BladeCommand[REAR_BLADE_IDX].CutValve > CUTVALVE_MAX) BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MAX;
+            BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve += 1;
+            if (BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve > CUTVALVE_MAX) BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MAX;
             LastJogTime[REAR_BLADE_IDX] = 0;
           }
         }
@@ -747,8 +706,8 @@ static void ProcessPendantTPDO
         {
           if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeCommand[REAR_BLADE_IDX].CutValve -= 1;
-            if (BladeCommand[REAR_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MIN;
+            BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve -= 1;
+            if (BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MIN;
             LastJogTime[REAR_BLADE_IDX] = 0;
           }
         }
@@ -757,8 +716,8 @@ static void ProcessPendantTPDO
         {
           if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeStatus[REAR_BLADE_IDX].SlaveOffset += 1;
-            if (BladeStatus[REAR_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
+            BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset += 1;
+            if (BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
             LastJogTime[REAR_BLADE_IDX] = 0;
             TxRearBladeSlaveOffset();
           }
@@ -767,8 +726,8 @@ static void ProcessPendantTPDO
         {
           if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
           {
-            BladeStatus[REAR_BLADE_IDX].SlaveOffset -= 1;
-            if (BladeStatus[REAR_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
+            BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset -= 1;
+            if (BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
             LastJogTime[REAR_BLADE_IDX] = 0;
             TxRearBladeSlaveOffset();
           }
@@ -927,141 +886,6 @@ static void ResetAllNodes
   CANBus.write(txmsg);
 }
 
-// calculate new output for blade
-static void ControlBlade
-  (
-  int BladeIndex              // xxx_BLADE_IDX
-  )
-{
-  int PWMValue;
-  float PWMHist;
-
-  // only control the blade if we are in the run state
-  if (State != STATE_RUN)
-  {
-    return;
-  }
-
-  // store command
-  BladeStatus[BladeIndex].BladeCommand = BladeCommand[BladeIndex].CutValve;
-
-  // lower the blade
-  if (BladeCommand[BladeIndex].CutValve >= (BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband))
-  {
-    // PWM value is negative
-    PWMValue = -((BladeCommand[BladeIndex].CutValve - BLADE_HEIGHT_GROUND_LEVEL - BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainDown + BladeConfig[BladeIndex].PWMMinDown);
-  }
-  // lift the blade
-  else if (BladeCommand[BladeIndex].CutValve <= (BLADE_HEIGHT_GROUND_LEVEL - BladeConfig[BladeIndex].Deadband))
-  {
-    // PWM value is positive
-    PWMValue = -((BladeCommand[BladeIndex].CutValve - BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainUp - BladeConfig[BladeIndex].PWMMinUp);
-  }
-  else
-  {
-    PWMValue = 0;
-  }
-
-  // calculate a derivative
-  if (BladeCommand[BladeIndex].CutValve != BLADE_HEIGHT_GROUND_LEVEL && PWMValue != 0)
-  {
-    PWMHist = ((((pwm1ago[BladeIndex]) + pwm2ago[BladeIndex] + (pwm3ago[BladeIndex]) + (pwm4ago[BladeIndex]) + (pwm5ago[BladeIndex] / 2.000)) * (sq(BladeConfig[BladeIndex].IntegralMultiplier) / 100.0000)) / sq(BladeCommand[BladeIndex].CutValve - (float)BLADE_HEIGHT_GROUND_LEVEL));
-
-    //put pwmHist to 0 when the blade cross the line.
-    if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) > 0) PWMHist = 0;
-    if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) < 0) PWMHist = 0;
-
-    PWMValue = (PWMValue - PWMHist);
-  }
-
-  // shuffle samples down
-  pwm5ago[BladeIndex] = pwm4ago[BladeIndex];
-  pwm4ago[BladeIndex] = pwm3ago[BladeIndex];
-  pwm3ago[BladeIndex] = pwm2ago[BladeIndex];
-  pwm2ago[BladeIndex] = pwm1ago[BladeIndex];
-  pwm1ago[BladeIndex] = PWMValue;
-  
-  // enforce limits
-  if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && PWMValue > 0) PWMValue = 0;
-  if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && PWMValue < -(BladeConfig[BladeIndex].PWMMaxDown)) PWMValue = -(BladeConfig[BladeIndex].PWMMaxDown);
-  if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && PWMValue < 0) PWMValue = 0;
-  if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && PWMValue > BladeConfig[BladeIndex].PWMMaxUp) PWMValue = BladeConfig[BladeIndex].PWMMaxUp;
-  if (PWMValue > 0 && PWMValue < BladeConfig[BladeIndex].PWMMinUp) PWMValue = 0;
-  if (PWMValue < 0 && PWMValue > -(BladeConfig[BladeIndex].PWMMinDown)) PWMValue = 0;
-
-  if (PWMValue < 0)
-  {
-    digitalWrite(BladeIndex == FRONT_BLADE_IDX ? FRONT_HEIGHT_DIR : REAR_HEIGHT_DIR, HIGH);
-    BladeStatus[BladeIndex].BladeDirection = BLADE_DIR_DOWN;
-  }
-  else
-  {
-    digitalWrite(BladeIndex == FRONT_BLADE_IDX ? FRONT_HEIGHT_DIR : REAR_HEIGHT_DIR, LOW);
-    BladeStatus[BladeIndex].BladeDirection = BLADE_DIR_UP;
-  }
-
-  switch (BladeIndex)
-  {
-    case FRONT_BLADE_IDX:
-      SetFrontValvePWM(abs(PWMValue));
-      break;
-      
-    case REAR_BLADE_IDX:
-      SetRearValvePWM(abs(PWMValue));
-      break;
-  }
-}
-
-// sets the PWM value for the front valve
-static void SetFrontValvePWM
-  (
-  uint8_t Value          // new valve PWM setting 0 - 255
-  )
-{
-  // if value has changed
-  if (abs(Value) != BladeStatus[FRONT_BLADE_IDX].BladePWM)
-  {
-    // set to 0 - 255
-    BladeStatus[FRONT_BLADE_IDX].BladePWM = abs(Value);
-    analogWrite(FRONT_HEIGHT_PWM, BladeStatus[FRONT_BLADE_IDX].BladePWM);
-
-    // update AgGrade
-    pgnpacket_t Status;
-    Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
-    SetPGNPacketUInt32(&Status, BladeStatus[FRONT_BLADE_IDX].BladePWM);
-    agGrade.SendStatus(&Status);
-
-    Status.PGN = PGN_FRONT_BLADE_DIRECTION;
-    Status.Data[0] = digitalRead(FRONT_HEIGHT_DIR);
-    agGrade.SendStatus(&Status);
-  }
-}
-
-// sets the PWM value for the rear valve
-static void SetRearValvePWM
-  (
-  uint8_t Value          // new valve PWM setting 0 - 255
-  )
-{
-  // if value has changed
-  if (abs(Value) != BladeStatus[REAR_BLADE_IDX].BladePWM)
-  {
-    // set to 0 - 255
-    BladeStatus[REAR_BLADE_IDX].BladePWM = abs(Value);
-    analogWrite(REAR_HEIGHT_PWM, BladeStatus[REAR_BLADE_IDX].BladePWM);
-
-    // update AgGrade
-    pgnpacket_t Status;
-    Status.PGN = PGN_REAR_BLADE_PWMVALUE;
-    SetPGNPacketUInt32(&Status, BladeStatus[REAR_BLADE_IDX].BladePWM);
-    agGrade.SendStatus(&Status);
-
-    Status.PGN = PGN_REAR_BLADE_DIRECTION;
-    Status.Data[0] = digitalRead(REAR_HEIGHT_DIR);
-    agGrade.SendStatus(&Status);
-  }
-}
-
 // sends an NMEA sentence over UDP with packet framing
 static void SendNMEASentence
   (
@@ -1104,6 +928,8 @@ void setup
   NavData.Connect();
   NavData.SetCallback(SendNMEASentence);
 
+  BladeControl.SetCallback(BladeChanged);
+
   // configure CAN bus
   CANBus.begin();
   CANBus.setBaudRate(CAN_BITRATE_BPS);
@@ -1120,25 +946,6 @@ void setup
   CANBus.setFIFOFilterRange(2, 0x701, 0x77F, STD);
 
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
-
-  // set PWM frequency to 120Hz (from EHPR98-G35 specs)
-  analogWriteFrequency(FRONT_HEIGHT_PWM, PWM_FREQUENCY_HZ);
-  analogWriteFrequency(REAR_HEIGHT_PWM,  PWM_FREQUENCY_HZ);
-  analogWriteFrequency(FRONT_DUMP_PWM,   PWM_FREQUENCY_HZ);
-  analogWriteFrequency(REAR_DUMP_PWM,    PWM_FREQUENCY_HZ);
-  analogWriteResolution(8); // 0 - 255
-
-  // set up direction control signals
-  pinMode(FRONT_HEIGHT_DIR, OUTPUT);
-  pinMode(REAR_HEIGHT_DIR,  OUTPUT);
-  pinMode(FRONT_DUMP_DIR,   OUTPUT);
-  pinMode(REAR_DUMP_DIR,    OUTPUT);
-
-  // initalize direction
-  digitalWrite(FRONT_HEIGHT_DIR, LOW);
-  digitalWrite(REAR_HEIGHT_DIR,  LOW);
-  digitalWrite(FRONT_DUMP_DIR,   LOW);
-  digitalWrite(REAR_DUMP_DIR,    LOW);
 
   // set up LED
   pinMode(LED, OUTPUT);
@@ -1173,36 +980,7 @@ void setup
     memset(&IMUValues[i], 0, sizeof(imu_t));
   }
 
-  // reset blade heights
-  for (int b = 0; b < NUM_BLADES; b++)
-  {
-    BladeHeight[b] = 0;
-  }
-
-  // initial blade status
-  memset(&BladeStatus, 0, sizeof(blade_status_t));
-  BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
-  BladeStatus[REAR_BLADE_IDX].BladeAuto  = false;
-
-  // initial state is no movement
-  BladeCommand[FRONT_BLADE_IDX].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
-  BladeCommand[REAR_BLADE_IDX].CutValve  = BLADE_HEIGHT_GROUND_LEVEL;
-
   BladeControlTimestamp = 0;
-
-  // default PWM configuruation
-  for(int b = 0; b < NUM_BLADES; b++)
-  {
-    BladeConfig[b].PWMGainUp          = 4;
-    BladeConfig[b].PWMGainDown        = 3;
-    BladeConfig[b].PWMMinUp           = 50;
-    BladeConfig[b].PWMMinDown         = 50;
-    BladeConfig[b].PWMMaxUp           = 180;
-    BladeConfig[b].PWMMaxDown         = 180;
-    BladeConfig[b].IntegralMultiplier = 20;
-    BladeConfig[b].Deadband           = 3;
-  }
-
   PingTimestamp = 0;
   LastPingRxTimestamp = 0;
 
@@ -1282,79 +1060,79 @@ void loop
 
       // reset blade height
       case PGN_FRONT_ZERO_BLADE_HEIGHT:
-        BladeHeight[FRONT_BLADE_IDX] = 0;
+        BladeControl.BladeHeight[FRONT_BLADE_IDX] = 0;
         break;
       case PGN_REAR_ZERO_BLADE_HEIGHT:
-        BladeHeight[REAR_BLADE_IDX] = 0;
+        BladeControl.BladeHeight[REAR_BLADE_IDX] = 0;
         break;
 
         // front blade configuration
       case PGN_FRONT_PWM_GAIN_UP:
-        BladeConfig[FRONT_BLADE_IDX].PWMGainUp = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMGainUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_GAIN_DOWN:
-        BladeConfig[FRONT_BLADE_IDX].PWMGainDown = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMGainDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MIN_UP:
-        BladeConfig[FRONT_BLADE_IDX].PWMMinUp = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMMinUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MIN_DOWN:
-        BladeConfig[FRONT_BLADE_IDX].PWMMinDown = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMMinDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MAX_UP:
-        BladeConfig[FRONT_BLADE_IDX].PWMMaxUp = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMMaxUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_PWM_MAX_DOWN:
-        BladeConfig[FRONT_BLADE_IDX].PWMMaxDown = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMMaxDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_INTEGRAL_MULTPLIER:
-        BladeConfig[FRONT_BLADE_IDX].IntegralMultiplier = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].IntegralMultiplier = GetPGNPacketUInt32(&Command);
         break;
       case PGN_FRONT_DEADBAND:
-        BladeConfig[FRONT_BLADE_IDX].Deadband = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[FRONT_BLADE_IDX].Deadband = GetPGNPacketUInt32(&Command);
         break;
 
       // rear blade configuration
       case PGN_REAR_PWM_GAIN_UP:
-        BladeConfig[REAR_BLADE_IDX].PWMGainUp = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].PWMGainUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_GAIN_DOWN:
-        BladeConfig[REAR_BLADE_IDX].PWMGainDown = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].PWMGainDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MIN_UP:
-        BladeConfig[REAR_BLADE_IDX].PWMMinUp = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].PWMMinUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MIN_DOWN:
-        BladeConfig[REAR_BLADE_IDX].PWMMinDown = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].PWMMinDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MAX_UP:
-        BladeConfig[REAR_BLADE_IDX].PWMMaxUp = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].PWMMaxUp = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_PWM_MAX_DOWN:
-        BladeConfig[REAR_BLADE_IDX].PWMMaxDown = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].PWMMaxDown = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_INTEGRAL_MULTPLIER:
-        BladeConfig[REAR_BLADE_IDX].IntegralMultiplier = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].IntegralMultiplier = GetPGNPacketUInt32(&Command);
         break;
       case PGN_REAR_DEADBAND:
-        BladeConfig[REAR_BLADE_IDX].Deadband = GetPGNPacketUInt32(&Command);
+        BladeControl.BladeConfig[REAR_BLADE_IDX].Deadband = GetPGNPacketUInt32(&Command);
         break;
         
       // front blade commands
       case PGN_FRONT_CUT_VALVE:
-        if (BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
         {
           // store for use on next calculation pass
-          BladeCommand[FRONT_BLADE_IDX].CutValve = GetPGNPacketUInt32(&Command);
+          BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve = GetPGNPacketUInt32(&Command);
         }
         break;
 
       // rear blade commands
       case PGN_REAR_CUT_VALVE:
-        if (BladeStatus[REAR_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
         {
           // store for use on next calculation pass
-          BladeCommand[REAR_BLADE_IDX].CutValve = GetPGNPacketUInt32(&Command);
+          BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = GetPGNPacketUInt32(&Command);
         }
         break;
         
@@ -1370,9 +1148,13 @@ void loop
   {
     BladeControlTimestamp = 0;
 
-    for (int b = 0; b < NUM_BLADES; b++)
+    // only control the blade if we are in the run state
+    if (State == STATE_RUN)
     {
-      ControlBlade(b);
+      for (int b = 0; b < NUM_BLADES; b++)
+      {
+        BladeControl.ControlBlade(b);
+      }
     }
   }
 
