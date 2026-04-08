@@ -62,17 +62,6 @@
 // perform blade control periodically
 #define BLADE_CONTROL_PERIOD_MS 50
 
-// mimumum time between two jog moves per mm
-#define MIN_TIME_BETWEEN_JOGS_MS 200
-
-// allowed range for the cutvalve command
-#define CUTVALVE_MIN 0
-#define CUTVALVE_MAX 200
-
-// allowed range for slave offset
-#define SLAVE_OFFSET_MIN (-128)
-#define SLAVE_OFFSET_MAX 127
-
 // how often to send ping to AgGrade
 #define PING_PERIOD_MS 1000
 
@@ -164,7 +153,6 @@ static elapsedMillis BladeControlTimestamp;
 static elapsedMillis TPDOTimestamp;
 static elapsedMillis HBTimestamp;
 static state_t State;
-static elapsedMillis LastJogTime[NUM_BLADES];
 static imu_t IMUValues[NUM_BLADES + 1];
 static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
@@ -651,40 +639,24 @@ static void ProcessPendantTPDO
         // jog front blade (joystick button not pressed)
         if (JoystickState.Fields.Joystick1Up && !ButtonState.Fields.Joystick1Pressed)
         {
-          if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
-          {
-            BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve += 1;
-            if (BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve > CUTVALVE_MAX) BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve = CUTVALVE_MAX;
-            LastJogTime[FRONT_BLADE_IDX] = 0;
-          }
+          BladeControl.JogBlade(FRONT_BLADE_IDX, BLADE_DIR_UP);
         }
         else if (JoystickState.Fields.Joystick1Down && !ButtonState.Fields.Joystick1Pressed)
         {
-          if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
-          {
-            BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve -= 1;
-            if (BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve = CUTVALVE_MIN;
-            LastJogTime[FRONT_BLADE_IDX] = 0;
-          }
+          BladeControl.JogBlade(FRONT_BLADE_IDX, BLADE_DIR_DOWN);
         }
         // adjust slave offset (joystick button is pressed)
         else if (JoystickState.Fields.Joystick1Up && ButtonState.Fields.Joystick1Pressed)
         {
-          if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          if (BladeControl.JogOffset(FRONT_BLADE_IDX, BLADE_DIR_UP))
           {
-            BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset += 1;
-            if (BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
-            LastJogTime[FRONT_BLADE_IDX] = 0;
             TxFrontBladeSlaveOffset();
           }
         }
         else if (JoystickState.Fields.Joystick1Down && ButtonState.Fields.Joystick1Pressed)
         {
-          if (LastJogTime[FRONT_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          if (BladeControl.JogOffset(FRONT_BLADE_IDX, BLADE_DIR_DOWN))
           {
-            BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
-            if (BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
-            LastJogTime[FRONT_BLADE_IDX] = 0;
             TxFrontBladeSlaveOffset();
           }
         }
@@ -695,40 +667,24 @@ static void ProcessPendantTPDO
         // jog rear blade (joystick button not pressed)
         if (JoystickState.Fields.Joystick2Up && !ButtonState.Fields.Joystick2Pressed)
         {
-          if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
-          {
-            BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve += 1;
-            if (BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve > CUTVALVE_MAX) BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MAX;
-            LastJogTime[REAR_BLADE_IDX] = 0;
-          }
+          BladeControl.JogBlade(REAR_BLADE_IDX, BLADE_DIR_UP);
         }
         else if (JoystickState.Fields.Joystick2Down && !ButtonState.Fields.Joystick2Pressed)
         {
-          if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
-          {
-            BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve -= 1;
-            if (BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve < CUTVALVE_MIN) BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = CUTVALVE_MIN;
-            LastJogTime[REAR_BLADE_IDX] = 0;
-          }
+          BladeControl.JogBlade(REAR_BLADE_IDX, BLADE_DIR_DOWN);
         }
         // adjust slave offset (joystick button is pressed)
         else if (JoystickState.Fields.Joystick2Up && ButtonState.Fields.Joystick2Pressed)
         {
-          if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          if (BladeControl.JogOffset(REAR_BLADE_IDX, BLADE_DIR_UP))
           {
-            BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset += 1;
-            if (BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset > SLAVE_OFFSET_MAX) BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MAX;
-            LastJogTime[REAR_BLADE_IDX] = 0;
             TxRearBladeSlaveOffset();
           }
         }
         else if (JoystickState.Fields.Joystick2Down && ButtonState.Fields.Joystick2Pressed)
         {
-          if (LastJogTime[REAR_BLADE_IDX] >= MIN_TIME_BETWEEN_JOGS_MS)
+          if (BladeControl.JogOffset(REAR_BLADE_IDX, BLADE_DIR_DOWN))
           {
-            BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset -= 1;
-            if (BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
-            LastJogTime[REAR_BLADE_IDX] = 0;
             TxRearBladeSlaveOffset();
           }
         }
@@ -968,11 +924,6 @@ void setup
 
   HBTimestamp = 0;
   TPDOTimestamp = 0;
-
-  for (int b = 0; b < NUM_BLADES; b++)
-  {
-    LastJogTime[b] = 0;
-  }
 
   // clear all IMU values
   for (int i = 0; i < NUM_BLADES + 1; i++)

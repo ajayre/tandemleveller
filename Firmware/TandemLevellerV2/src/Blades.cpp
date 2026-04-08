@@ -15,6 +15,17 @@
 // from EHPR98-G35 specs
 #define PWM_FREQUENCY_HZ 120
 
+// allowed range for the cutvalve command
+#define CUTVALVE_MIN 0
+#define CUTVALVE_MAX 200
+
+// mimumum time between two jog moves per mm
+#define MIN_TIME_BETWEEN_JOGS_MS 200
+
+// allowed range for slave offset
+#define SLAVE_OFFSET_MIN (-128)
+#define SLAVE_OFFSET_MAX 127
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
@@ -114,6 +125,11 @@ Blades::Blades
     BladeConfig[b].PWMMaxDown         = 180;
     BladeConfig[b].IntegralMultiplier = 20;
     BladeConfig[b].Deadband           = 3;
+  }
+
+  for (int b = 0; b < NUM_BLADES; b++)
+  {
+    LastJogTime[b] = 0;
   }
 }
 
@@ -220,4 +236,55 @@ void Blades::SetCallback
   )
 {
   BladeChangedCallback = _BladeChangedCallback;
+}
+
+// jogs a blade
+void Blades::JogBlade
+  (
+  int BladeIndex,                 // index of blade to jog xxx_BLADE_IDX
+  blade_direction_t Direction     // jog direction
+  )
+{
+  if (LastJogTime[BladeIndex] >= MIN_TIME_BETWEEN_JOGS_MS)
+  {
+    if (Direction == BLADE_DIR_UP)
+    {
+      BladeCommand[BladeIndex].CutValve += 1;
+      if (BladeCommand[BladeIndex].CutValve > CUTVALVE_MAX) BladeCommand[BladeIndex].CutValve = CUTVALVE_MAX;
+    }
+    else
+    {
+      BladeCommand[BladeIndex].CutValve -= 1;
+      if (BladeCommand[BladeIndex].CutValve < CUTVALVE_MIN) BladeCommand[BladeIndex].CutValve = CUTVALVE_MIN;
+    }
+    LastJogTime[BladeIndex] = 0;
+  }
+}
+
+// jogs a blade offset
+// returns true if jog occurred
+bool Blades::JogOffset
+  (
+  int BladeIndex,                 // index of blade to jog offset xxx_BLADE_IDX
+  blade_direction_t Direction     // jog direction
+  )
+{
+  if (LastJogTime[BladeIndex] >= MIN_TIME_BETWEEN_JOGS_MS)
+  {
+    if (Direction == BLADE_DIR_UP)
+    {
+      BladeStatus[BladeIndex].SlaveOffset += 1;
+      if (BladeStatus[BladeIndex].SlaveOffset > SLAVE_OFFSET_MAX) BladeStatus[BladeIndex].SlaveOffset = SLAVE_OFFSET_MAX;
+    }
+    else
+    {
+      BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
+      if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
+    }
+    LastJogTime[BladeIndex] = 0;
+
+    return true;
+  }
+
+  return false;
 }
