@@ -3,11 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <NativeEthernet.h>
-#include <NativeEthernetUdp.h>
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
 #include "Global.h"
 #include "AgGrade.h"
+#include "GNSS.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -215,6 +214,9 @@ static unsigned int RemotePort = 6000;
 
 // access to AgGrade
 static AgGrade agGrade;
+
+// access to GNSS data streams and processing
+static GNSS NavData;
 
 // CAN bus instance
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
@@ -1438,52 +1440,18 @@ void setup
 {
   // secondary tablet
   Serial5.begin(115200);
-  // tractor GNSS
-  Serial6.begin(115200);
-  // front scraper GNSS
-  Serial7.begin(115200);
-  // rear scraper GNSS
-  Serial8.begin(115200);
 
   // Open serial communications for debug
   Serial.begin(115200);
-  Serial.println("Tandem Scraper Controller with UDP");
+  Serial.println("AgGrade Controller");
   //while (!Serial)
   //{
   //  ; // wait for serial port to connect. Needed for native USB port only
   //}
 
-  // look for working Ethernet connection
-  bool LinkUp = false;
-  do
-  {
-    // start Ethernet
-    Ethernet.begin(MACAddress, OurIPAddress);
-
-    Serial.println("Checking for Ethernet...");
- 
-    // Check for Ethernet hardware present
-    if (Ethernet.hardwareStatus() == EthernetNoHardware)
-    {
-      Serial.println("Ethernet hardware not found");
-      continue;
-    }
-
-    Serial.println("Checking for link...");
-
-    if (Ethernet.linkStatus() == LinkOFF)
-    {
-      Serial.println("Ethernet cable is not connected.");
-    }
-    else
-    {
-      LinkUp = true;
-    }
-  } while (!LinkUp);
-
   Serial.println("Starting UDP...");
 
-  agGrade.Connect(LocalPort, RemoteIPAddress, RemotePort);
+  agGrade.Connect(MACAddress, OurIPAddress, LocalPort, RemoteIPAddress, RemotePort);
 
   // configure CAN bus
   CANBus.begin();
