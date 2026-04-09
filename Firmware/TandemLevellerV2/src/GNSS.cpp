@@ -297,6 +297,8 @@ void GNSS::ProcessNMEASentence
   double lat = NMEAParseLatLonToDecimal(fields[2], fields[3]);
   double lon = NMEAParseLatLonToDecimal(fields[4], fields[5]);
 
+  // fixme - to do - add sensor fusing
+
   char latDm[16];
   char latNS[2];
   char lonDm[16];
