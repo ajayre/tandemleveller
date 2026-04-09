@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "FlexCAN_T4-master/FlexCAN_T4.h"
 #include "Global.h"
 #include "AgGrade.h"
 #include "GNSS.h"
 #include "Blades.h"
+#include "CANopen.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -17,41 +17,10 @@
 //  dir = high, PWM output on M2B
 
 // GPIO pins
-#define LED              13
-
-// node IDs
-#define CONTROLLER_NODE_ID       0x01
-#define TRACTOR_IMU_NODE_ID      0x02
-#define FRONTSCRAPER_IMU_NODE_ID 0x03
-#define REARSCRAPER_IMU_NODE_ID  0x04
-#define PENDANT_NODE_ID          0x05
-#define FRONT_ANGLE_NODE_ID      0x10
-#define REAR_ANGLE_NODE_ID       0x11
+#define LED 13
 
 // how often to toggle the LED
 #define LED_FLASH_PERIOD_MS 1000
-
-// how often to transmit TPDOs
-#define TPDO_OUTPUT_PERIOD_MS 50
-
-#define NMT_RESET_CMD 0x81
-#define NMT_RESET_ALL 0x00
-
-// NMT states
-#define NMT_STATE_BOOTUP      0x00
-#define NMT_STATE_OPERATIONAL 0x05
-
-// number of nodes to monitor
-#define NUM_NODES 8
-
-// maximum time to wait for a heartbeat before declaring a node as missing
-#define MAX_HEARTBEAT_TIME 300
-
-// time between heartbeats in millseconds
-#define HB_PRODUCER_TIME_MS 100
-
-// CANopen error code for estop
-#define ESTOP_ERROR_CODE 0x1000
 
 // max time to find the pendant before we assume emergency stop
 #define MAX_PENDANT_SEARCH_TIME 4000
@@ -138,13 +107,11 @@ static GNSS NavData;
 // blade control
 static Blades BladeControl;
 
-// CAN bus instance
-static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
+// CAN bus
+static CANopen CANopn;
 
 // State variables
 static elapsedMillis LEDFlashTimestamp;
-static elapsedMillis HBTime[NUM_NODES];
-static bool NodeFound[NUM_NODES];
 static elapsedMillis PendantSearchTimestamp;
 static button_state_t ButtonState;
 static joystick_state_t JoystickState;
@@ -168,80 +135,6 @@ static void Reset
   while(1);
 }
 
-// transmits a CAN message
-static void TxCANMessage
-  (
-  uint16_t Id,
-  uint8_t Length,
-  uint8_t Data[]
-  )
-{
-  CAN_message_t txmsg;
-  txmsg.id = Id;
-  txmsg.len = Length;
-  for (uint8_t i = 0; i < Length; i++ ) txmsg.buf[i] = Data[i];
-  CANBus.write(txmsg);
-}
-
-// transmits a bootup message
-static void TxBootup
-  (
-  void
-  )
-{
-  uint8_t Data[1];
-
-  Data[0] = NMT_STATE_BOOTUP;
-  TxCANMessage(0x700 + CONTROLLER_NODE_ID, 1, Data);
-}
-
-// transmits a heartbeat message
-static void TxHeartbeat
-  (
-  void
-  )
-{
-  uint8_t Data[1];
-
-  Data[0] = NMT_STATE_OPERATIONAL;
-  TxCANMessage(0x700 + CONTROLLER_NODE_ID, 1, Data);
-}
-
-// transmit TPDO1
-static void TxTPDO1
-  (
-  void
-  )
-{
-  uint8_t Data[8];
-
-  Data[0] = BladeControl.BladeStatus[FRONT_BLADE_IDX].BladePWM & 0xFF;
-  Data[1] = (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladePWM >> 8) & 0xFF;
-  Data[2] = BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeCommand;
-  Data[3] = (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeDirection & 0x01) | ((BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto & 0x01) << 1);
-
-  Data[4] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladePWM & 0xFF;
-  Data[5] = (BladeControl.BladeStatus[REAR_BLADE_IDX].BladePWM >> 8) & 0xFF;
-  Data[6] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladeCommand;
-  Data[7] = (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeDirection & 0x01) | ((BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto & 0x01) << 1);
-
-  TxCANMessage(0x180 + CONTROLLER_NODE_ID, 8, Data);
-}
-
-// transmit TPDO2
-static void TxTPDO2
-  (
-  void
-  )
-{
-  uint8_t Data[2];
-
-  Data[0] = (uint8_t)BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset;
-  Data[1] = (uint8_t)BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset;
-
-  TxCANMessage(0x280 + CONTROLLER_NODE_ID, 2, Data);
-}
-
 // perform an emergency stop of blade control
 static void EmergencyStop
   (
@@ -257,24 +150,12 @@ static void EmergencyStop
     Status.PGN = PGN_ESTOP;
     agGrade.SendStatus(&Status);
 
-    // send emergency message so all CAN nodes are aware of the stop
-    CAN_message_t txmsg;
-    txmsg.id = 0x080 + CONTROLLER_NODE_ID;
-    txmsg.len = 8;
-    txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
-    txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
-    txmsg.buf[2] = 0x80;  // manufacturer-specific error
-    txmsg.buf[3] =  LineNumber        & 0xFF;
-    txmsg.buf[4] = (LineNumber >> 8)  & 0xFF;
-    txmsg.buf[5] = (LineNumber >> 16) & 0xFF;
-    txmsg.buf[6] = (LineNumber >> 24) & 0xFF;
-    txmsg.buf[7] = 0x00;
-    CANBus.write(txmsg);
+    CANopn.EmergencyStop(LineNumber);
 
     BladeControl.EmergencyStop();
 
-    TxTPDO1();
-    TxTPDO2();
+    CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+    CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
 
     TxFrontBladeAuto();
     TxRearBladeAuto();
@@ -826,22 +707,6 @@ static void CANReceiveHandler
   }
 }
 
-// resets all nodes on the CAN bus
-static void ResetAllNodes
-  (
-  void
-  )
-{
-  CAN_message_t txmsg;
-  
-  txmsg.id = 0x000;
-  txmsg.len = 2;
-  txmsg.buf[0] = NMT_RESET_CMD;
-  txmsg.buf[1] = NMT_RESET_ALL;
-
-  CANBus.write(txmsg);
-}
-
 // sends an NMEA sentence over UDP with packet framing
 static void SendNMEASentence
   (
@@ -937,9 +802,9 @@ void setup
 
   State = STATE_RUN;
 
-  TxBootup();
-  TxTPDO1();
-  TxTPDO2();
+  CANopn.TxBootup();
+  CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+  CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
 
   TxFrontBladeSlaveOffset();
   TxRearBladeSlaveOffset();
@@ -950,7 +815,7 @@ void setup
   TxFrontBladeHeight();
   TxRearBladeHeight();
 
-  ResetAllNodes();
+  CANopn.ResetAllNodes();
 
   /*// fixme - remove
   // test connection to secondary tablet
@@ -1114,8 +979,8 @@ void loop
   {
     TPDOTimestamp = 0;
 
-    TxTPDO1();
-    TxTPDO2();
+    CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+    CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
   }
 
   // check to see if AgGrade has disappeared
@@ -1149,7 +1014,7 @@ void loop
   {
     HBTimestamp = 0;
 
-    TxHeartbeat();
+    CANopn.TxHeartbeat();
   }
 
   // flash LED
