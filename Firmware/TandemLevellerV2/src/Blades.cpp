@@ -278,8 +278,8 @@ bool Blades::JogOffset
     }
     else
     {
-      BladeStatus[FRONT_BLADE_IDX].SlaveOffset -= 1;
-      if (BladeStatus[FRONT_BLADE_IDX].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[FRONT_BLADE_IDX].SlaveOffset = SLAVE_OFFSET_MIN;
+      BladeStatus[BladeIndex].SlaveOffset -= 1;
+      if (BladeStatus[BladeIndex].SlaveOffset < SLAVE_OFFSET_MIN) BladeStatus[BladeIndex].SlaveOffset = SLAVE_OFFSET_MIN;
     }
     LastJogTime[BladeIndex] = 0;
 
