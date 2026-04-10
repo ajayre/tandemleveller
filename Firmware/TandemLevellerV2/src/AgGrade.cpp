@@ -259,6 +259,17 @@ void AgGrade::EmergencyStop
   )
 {
   pgnpacket_t Status;
+  Status.PGN = PGN_ESTOP;
+  SendStatus(&Status);
+}
+
+// sends a clear emergency stop notification to AgGrade
+void AgGrade::ClearEmergencyStop
+  (
+  void  
+  )
+{
+  pgnpacket_t Status;
   Status.PGN = PGN_CLEAR_ESTOP;
   SendStatus(&Status);
 }

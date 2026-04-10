@@ -189,6 +189,12 @@ class AgGrade
       void  
       );
 
+    // sends a clear emergency stop notification to AgGrade
+    void ClearEmergencyStop
+      (
+      void  
+      );
+
     // sends an NMEA sentence to AgGrade
     void SendNMEASentence
       (

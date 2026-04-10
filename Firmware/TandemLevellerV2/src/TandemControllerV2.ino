@@ -9,6 +9,7 @@
 #include "Blades.h"
 #include "CANopen.h"
 #include "IMU.h"
+#include "Pendent.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -44,39 +45,6 @@ typedef enum _state_t
   STATE_ESTOP
 } state_t;
 
-typedef union _button_state_t
-{
-  uint16_t RawValue;
-  struct
-  {
-    unsigned int Button1Pressed   : 1;
-    unsigned int Button2Pressed   : 1;
-    unsigned int Button3Pressed   : 1;
-    unsigned int Button4Pressed   : 1;
-    unsigned int EStopArmed       : 1;
-    unsigned int Reserved1        : 3;
-    unsigned int Joystick1Pressed : 1;
-    unsigned int Joystick2Pressed : 1;
-    unsigned int Reserved2        : 6;
-  } Fields;
-} button_state_t;
-
-typedef union _joystick_state_t
-{
-  uint8_t RawValue;
-  struct
-  {
-    unsigned int Joystick1Up    : 1;
-    unsigned int Joystick1Down  : 1;
-    unsigned int Joystick1Right : 1;
-    unsigned int Joystick1Left  : 1;
-    unsigned int Joystick2Up    : 1;
-    unsigned int Joystick2Down  : 1;
-    unsigned int Joystick2Right : 1;
-    unsigned int Joystick2Left  : 1;
-  } Fields;
-} joystick_state_t;
-
 // MAC address for this device
 static byte MACAddress[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
@@ -105,11 +73,12 @@ static CANopen CANopn;
 // IMU handling
 static IMU IMUHandler;
 
+// pendant reading
+static Pendent Pend;
+
 // State variables
 static elapsedMillis LEDFlashTimestamp;
 static elapsedMillis PendantSearchTimestamp;
-static button_state_t ButtonState;
-static joystick_state_t JoystickState;
 static bool PendantSearch;
 static elapsedMillis BladeControlTimestamp;
 static state_t State;
@@ -197,16 +166,10 @@ static void ProcessPendantTPDO
   const uint8_t *pData
   )
 {
-  if (Length == 3)
+  if (Pend.ProcessPendentTPDO(Length, pData))
   {
-    unsigned int LastButton1State = ButtonState.Fields.Button1Pressed;
-    unsigned int LastButton2State = ButtonState.Fields.Button2Pressed;
-
-    ButtonState.RawValue = (pData[0] | ((uint16_t)pData[1] << 8));
-    JoystickState.RawValue = pData[2];
-
     // ESTOP PRESSED
-    if (!ButtonState.Fields.EStopArmed)
+    if (Pend.IsESTOPPressed())
     {
       EmergencyStop(__LINE__);
     }
@@ -214,7 +177,7 @@ static void ProcessPendantTPDO
     if (State == STATE_RUN)
     {
       // toggle auto mode for front blade
-      if (ButtonState.Fields.Button1Pressed && !LastButton1State)
+      if (Pend.IsButton1Pressed())
       {
         if (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
         {
@@ -228,7 +191,7 @@ static void ProcessPendantTPDO
       }
 
       // toggle auto mode for rear blade
-      if (ButtonState.Fields.Button2Pressed && !LastButton2State)
+      if (Pend.IsButton2Pressed())
       {
         if (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
         {
@@ -242,14 +205,14 @@ static void ProcessPendantTPDO
       }
 
       // if joystick 1 is moved up or down in auto mode then exit auto mode
-      if ((JoystickState.Fields.Joystick1Up || JoystickState.Fields.Joystick1Down) && BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+      if (Pend.IsJoystick1UpOrDown() && BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
       {
         BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
         agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
       }
 
       // if joystick 2 is moved up or down in auto mode then exit auto mode
-      if ((JoystickState.Fields.Joystick2Up || JoystickState.Fields.Joystick2Down) && BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
+      if (Pend.IsJoystick2UpOrDown() && BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
       {
         BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
         agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
@@ -258,23 +221,23 @@ static void ProcessPendantTPDO
       if (!BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
       {
         // jog front blade (joystick button not pressed)
-        if (JoystickState.Fields.Joystick1Up && !ButtonState.Fields.Joystick1Pressed)
+        if (Pend.IsJoystick1Up() && !Pend.IsJoystick1Pressed())
         {
           BladeControl.JogBlade(FRONT_BLADE_IDX, BLADE_DIR_UP);
         }
-        else if (JoystickState.Fields.Joystick1Down && !ButtonState.Fields.Joystick1Pressed)
+        else if (Pend.IsJoystick1Down() && !Pend.IsJoystick1Pressed())
         {
           BladeControl.JogBlade(FRONT_BLADE_IDX, BLADE_DIR_DOWN);
         }
         // adjust slave offset (joystick button is pressed)
-        else if (JoystickState.Fields.Joystick1Up && ButtonState.Fields.Joystick1Pressed)
+        else if (Pend.IsJoystick1Up() && Pend.IsJoystick1Pressed())
         {
           if (BladeControl.JogOffset(FRONT_BLADE_IDX, BLADE_DIR_UP))
           {
             agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
           }
         }
-        else if (JoystickState.Fields.Joystick1Down && ButtonState.Fields.Joystick1Pressed)
+        else if (Pend.IsJoystick1Down() && Pend.IsJoystick1Pressed())
         {
           if (BladeControl.JogOffset(FRONT_BLADE_IDX, BLADE_DIR_DOWN))
           {
@@ -286,23 +249,23 @@ static void ProcessPendantTPDO
       if (!BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
       {
         // jog rear blade (joystick button not pressed)
-        if (JoystickState.Fields.Joystick2Up && !ButtonState.Fields.Joystick2Pressed)
+        if (Pend.IsJoystick2Up() && !Pend.IsJoystick2Pressed())
         {
           BladeControl.JogBlade(REAR_BLADE_IDX, BLADE_DIR_UP);
         }
-        else if (JoystickState.Fields.Joystick2Down && !ButtonState.Fields.Joystick2Pressed)
+        else if (Pend.IsJoystick2Down() && !Pend.IsJoystick2Pressed())
         {
           BladeControl.JogBlade(REAR_BLADE_IDX, BLADE_DIR_DOWN);
         }
         // adjust slave offset (joystick button is pressed)
-        else if (JoystickState.Fields.Joystick2Up && ButtonState.Fields.Joystick2Pressed)
+        else if (Pend.IsJoystick2Up() && Pend.IsJoystick2Pressed())
         {
           if (BladeControl.JogOffset(REAR_BLADE_IDX, BLADE_DIR_UP))
           {
             agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
           }
         }
-        else if (JoystickState.Fields.Joystick2Down && ButtonState.Fields.Joystick2Pressed)
+        else if (Pend.IsJoystick2Down() && Pend.IsJoystick2Pressed())
         {
           if (BladeControl.JogOffset(REAR_BLADE_IDX, BLADE_DIR_DOWN))
           {
@@ -315,11 +278,10 @@ static void ProcessPendantTPDO
     else if (State == STATE_ESTOP)
     {
       // if all four buttons pressed then reboot to exit ESTOP
-      if (ButtonState.Fields.Button1Pressed && ButtonState.Fields.Button2Pressed &&
-          ButtonState.Fields.Button3Pressed && ButtonState.Fields.Button4Pressed)
+      if (Pend.AreAllButtonsPressed())
       {
         // notify AgGrade
-        agGrade.EmergencyStop();
+        agGrade.ClearEmergencyStop();
 
         elapsedMillis Delay = 0;
         while (Delay < 2000);
@@ -379,9 +341,7 @@ void setup
   PendantSearchTimestamp = 0;
   PendantSearch = true;
 
-  // reset buttons and joysticks
-  ButtonState.RawValue = 0;
-  JoystickState.RawValue = 0;
+  Pend.Init();
 
   IMUHandler.Init();
   IMUHandler.SetCallbacks(IMU_IMUChanged);
@@ -644,7 +604,7 @@ void loop
       EmergencyStop(__LINE__);
     }
     // found pendant but emergency stop is not armed
-    else if (!ButtonState.Fields.EStopArmed)
+    else if (Pend.IsESTOPPressed())
     {
       EmergencyStop(__LINE__);
     }
