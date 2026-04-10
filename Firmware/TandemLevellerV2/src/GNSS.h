@@ -14,8 +14,8 @@ typedef struct _gnss_reader_t
   char Buffer[MAX_NMEA_LENGTH];
 } gnss_reader_t;
 
-// callback function type for sending NMEA sentences
-typedef void (*gnss_send_nmea_callback_t)(pgn_t PGN, char *Sentence, uint8_t Length);
+// callback function type for receiving NMEA sentences
+typedef void (*gnss_received_nmea_callback_t)(pgn_t PGN, char *Sentence, uint8_t Length);
 
 class GNSS
 {
@@ -32,10 +32,10 @@ class GNSS
       void
       );
 
-    // sets callback function when module wants to send an NMEA sentence
+    // sets callback function when module receives an NMEA sentence
     void SetCallback
       (
-      gnss_send_nmea_callback_t GNSSSendNMEACallback  // function to call
+      gnss_received_nmea_callback_t GNSSReceivedNMEACallback  // function to call
       );
 
     // connect to the GNSS receivers
@@ -51,7 +51,7 @@ class GNSS
     gnss_reader_t RearScraperGNSS  = { 0 };
 
     // callback function
-    gnss_send_nmea_callback_t GNSSSendNMEACallback = NULL;
+    gnss_received_nmea_callback_t GNSSReceivedNMEACallback = NULL;
 
     // XOR checksum for NMEA 0183: bytes from first after '$' up to (exclusive) '*'
     uint8_t NMEAChecksumBytes
