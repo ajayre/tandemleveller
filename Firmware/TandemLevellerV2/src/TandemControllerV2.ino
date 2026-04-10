@@ -8,6 +8,7 @@
 #include "GNSS.h"
 #include "Blades.h"
 #include "CANopen.h"
+#include "IMU.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -76,15 +77,6 @@ typedef union _joystick_state_t
   } Fields;
 } joystick_state_t;
 
-typedef struct _imu_t
-{
-  float Roll;
-  float Pitch;
-  float Heading;
-  float YawRate;
-  uint8_t CalibrationStatus;
-} imu_t;
-
 // MAC address for this device
 static byte MACAddress[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
@@ -110,6 +102,9 @@ static Blades BladeControl;
 // CAN bus
 static CANopen CANopn;
 
+// IMU handling
+static IMU IMUHandler;
+
 // State variables
 static elapsedMillis LEDFlashTimestamp;
 static elapsedMillis PendantSearchTimestamp;
@@ -118,7 +113,6 @@ static joystick_state_t JoystickState;
 static bool PendantSearch;
 static elapsedMillis BladeControlTimestamp;
 static state_t State;
-static imu_t IMUValues[NUM_BLADES + 1];
 static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
@@ -277,54 +271,27 @@ static void TxRearBladeHeight
   agGrade.SendStatus(&Status);
 }
 
-// send tractor IMU values to AgGrade
-static void TxTractorIMU
+// called when an IMU has changed
+static void IMU_IMUChanged
   (
-  void
+  uint8_t Index,             // index of IMU xxx_IDX
+  imu_t *pIMUValue           // new IMU values
   )
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_TRACTOR_IMU;
-  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)(IMUValues[TRACTOR_IDX].Pitch * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)(IMUValues[TRACTOR_IDX].Roll * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[TRACTOR_IDX].Heading * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[TRACTOR_IDX].YawRate * 100));
-  Status.Data[16] = IMUValues[TRACTOR_IDX].CalibrationStatus;
-  agGrade.SendStatus(&Status);
-}
+  switch (Index)
+  {
+    case TRACTOR_IDX:     Status.PGN = PGN_TRACTOR_IMU; break;
+    case FRONT_BLADE_IDX: Status.PGN = PGN_FRONT_IMU;   break;
+    case REAR_BLADE_IDX:  Status.PGN = PGN_REAR_IMU;    break;
+  }
 
-// send front scraper IMU values to AgGrade
-static void TxFrontScraperIMU
-  (
-  void
-  )
-{
-  pgnpacket_t Status;
-
-  Status.PGN = PGN_FRONT_IMU;
-  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Pitch * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Roll * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[FRONT_BLADE_IDX].Heading * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[FRONT_BLADE_IDX].YawRate * 100));
-  Status.Data[16] = IMUValues[FRONT_BLADE_IDX].CalibrationStatus;
-  agGrade.SendStatus(&Status);
-}
-
-// send rear scraper IMU values to AgGrade
-static void TxRearScraperIMU
-  (
-  void
-  )
-{
-  pgnpacket_t Status;
-
-  Status.PGN = PGN_REAR_IMU;
-  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)(IMUValues[REAR_BLADE_IDX].Pitch * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)(IMUValues[REAR_BLADE_IDX].Roll * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)(IMUValues[REAR_BLADE_IDX].Heading * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(IMUValues[REAR_BLADE_IDX].YawRate * 100));
-  Status.Data[16] = IMUValues[REAR_BLADE_IDX].CalibrationStatus;
+  SetPGNPacketUInt32AtOffset(&Status, 0,  (uint32_t)(pIMUValue->Pitch   * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 4,  (uint32_t)(pIMUValue->Roll    * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 8,  (uint32_t)(pIMUValue->Heading * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(pIMUValue->YawRate * 100));
+  Status.Data[16] = pIMUValue->CalibrationStatus;
   agGrade.SendStatus(&Status);
 }
 
@@ -378,75 +345,6 @@ static void TxRearBladeAuto
   Status.PGN = PGN_REAR_CUTTING;
   Status.Data[0] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto;
   agGrade.SendStatus(&Status);
-}
-
-// process TPDO1 from IMU
-static void ProcessIMUTPDO1
-  (
-  uint8_t NodeId,            // node that transmitted the PDO
-  uint8_t Length,            // length of the PDO
-  const uint8_t *pData       // PDO data
-  )
-{
-  if (Length == 8)
-  {
-    float Heading = ((uint16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
-    float Pitch   = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
-    float Roll    = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
-    float YawRate = ((int16_t)(pData[6] | ((uint16_t)pData[7] << 8))) / 100.0;
-
-    switch (NodeId)
-    {
-      case TRACTOR_IMU_NODE_ID:
-        IMUValues[TRACTOR_IDX].Heading = Heading;
-        IMUValues[TRACTOR_IDX].Pitch   = Pitch;
-        IMUValues[TRACTOR_IDX].Roll    = Roll;
-        IMUValues[TRACTOR_IDX].YawRate = YawRate;
-        TxTractorIMU();
-        break;
-
-      case FRONTSCRAPER_IMU_NODE_ID:
-        IMUValues[FRONT_BLADE_IDX].Heading = Heading;
-        IMUValues[FRONT_BLADE_IDX].Pitch   = Pitch;
-        IMUValues[FRONT_BLADE_IDX].Roll    = Roll;
-        IMUValues[FRONT_BLADE_IDX].YawRate = YawRate;
-        TxFrontScraperIMU();
-        break;
-
-      case REARSCRAPER_IMU_NODE_ID:
-        IMUValues[REAR_BLADE_IDX].Heading = Heading;
-        IMUValues[REAR_BLADE_IDX].Pitch   = Pitch;
-        IMUValues[REAR_BLADE_IDX].Roll    = Roll;
-        IMUValues[REAR_BLADE_IDX].YawRate = YawRate;
-        TxRearScraperIMU();
-        break;
-    }
-  }
-}
-
-// process TPDO2 from IMU
-static void ProcessIMUTPDO2
-  (
-  uint8_t NodeId,            // node that transmitted the PDO
-  uint8_t Length,            // length of the PDO
-  const uint8_t *pData       // PDO data
-  )
-{
-  if (Length == 1)
-  {
-    switch (NodeId)
-    {
-      case TRACTOR_IMU_NODE_ID:
-        IMUValues[TRACTOR_IDX].CalibrationStatus = pData[0];
-        break;
-      case FRONTSCRAPER_IMU_NODE_ID:
-        IMUValues[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
-        break;
-      case REARSCRAPER_IMU_NODE_ID:
-        IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
-        break;
-    }
-  }
 }
 
 // process TPDO from pendant
@@ -651,11 +549,8 @@ void setup
   ButtonState.RawValue = 0;
   JoystickState.RawValue = 0;
 
-  // clear all IMU values
-  for (int i = 0; i < NUM_BLADES + 1; i++)
-  {
-    memset(&IMUValues[i], 0, sizeof(imu_t));
-  }
+  IMUHandler.Init();
+  IMUHandler.SetCallbacks(IMU_IMUChanged);
 
   BladeControlTimestamp = 0;
   PingTimestamp = 0;
@@ -739,9 +634,9 @@ static void CANopen_ProcessPDO
     case FRONTSCRAPER_IMU_NODE_ID:
     case REARSCRAPER_IMU_NODE_ID:
       if (PDONumber == 1)
-        ProcessIMUTPDO1(NodeId, DataLength, pData);
+        IMUHandler.ProcessIMUTPDO1(NodeId, DataLength, pData);
       else
-        ProcessIMUTPDO2(NodeId, DataLength, pData);
+        IMUHandler.ProcessIMUTPDO2(NodeId, DataLength, pData);
       break;
 
     case FRONT_ANGLE_NODE_ID:

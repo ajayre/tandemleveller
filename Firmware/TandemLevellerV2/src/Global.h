@@ -11,4 +11,7 @@
 #define REAR_BLADE_IDX  1
 #define TRACTOR_IDX     2
 
+// number of blades we support
+#define NUM_BLADES 2
+
 #endif // _GLOBALH_
