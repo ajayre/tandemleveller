@@ -25,9 +25,6 @@
 // max time to find the pendant before we assume emergency stop
 #define MAX_PENDANT_SEARCH_TIME 4000
 
-// CAN bus speed
-#define CAN_BITRATE_BPS 125000
-
 // perform blade control periodically
 #define BLADE_CONTROL_PERIOD_MS 50
 
@@ -36,6 +33,9 @@
 
 // time to wait before deciding that AgGrade has disconnected
 #define PING_TIMEOUT_PERIOD_MS 3000
+
+// how often to transmit TPDOs
+#define TPDO_OUTPUT_PERIOD_MS 50
 
 typedef enum _state_t
 {
@@ -117,13 +117,12 @@ static button_state_t ButtonState;
 static joystick_state_t JoystickState;
 static bool PendantSearch;
 static elapsedMillis BladeControlTimestamp;
-static elapsedMillis TPDOTimestamp;
-static elapsedMillis HBTimestamp;
 static state_t State;
 static imu_t IMUValues[NUM_BLADES + 1];
 static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
+static elapsedMillis TPDOTimestamp;
 
 // resets the controller
 static void Reset
@@ -250,75 +249,6 @@ static void ProcessAngleTPDO
   // send updated blade heights
   TxFrontBladeHeight();
   TxRearBladeHeight();
-}
-
-// process TPDO1 from IMU
-static void ProcessIMUTPDO1
-  (
-  uint8_t NodeId,
-  uint8_t Length,
-  const uint8_t *pData
-  )
-{
-  if (Length == 8)
-  {
-    float Heading = ((uint16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
-    float Pitch   = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
-    float Roll    = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
-    float YawRate = ((int16_t)(pData[6] | ((uint16_t)pData[7] << 8))) / 100.0;
-
-    switch (NodeId)
-    {
-      case TRACTOR_IMU_NODE_ID:
-        IMUValues[TRACTOR_IDX].Heading = Heading;
-        IMUValues[TRACTOR_IDX].Pitch   = Pitch;
-        IMUValues[TRACTOR_IDX].Roll    = Roll;
-        IMUValues[TRACTOR_IDX].YawRate = YawRate;
-        TxTractorIMU();
-        break;
-
-      case FRONTSCRAPER_IMU_NODE_ID:
-        IMUValues[FRONT_BLADE_IDX].Heading = Heading;
-        IMUValues[FRONT_BLADE_IDX].Pitch   = Pitch;
-        IMUValues[FRONT_BLADE_IDX].Roll    = Roll;
-        IMUValues[FRONT_BLADE_IDX].YawRate = YawRate;
-        TxFrontScraperIMU();
-        break;
-
-      case REARSCRAPER_IMU_NODE_ID:
-        IMUValues[REAR_BLADE_IDX].Heading = Heading;
-        IMUValues[REAR_BLADE_IDX].Pitch   = Pitch;
-        IMUValues[REAR_BLADE_IDX].Roll    = Roll;
-        IMUValues[REAR_BLADE_IDX].YawRate = YawRate;
-        TxRearScraperIMU();
-        break;
-    }
-  }
-}
-
-// process TPDO2 from IMU
-static void ProcessIMUTPDO2
-  (
-  uint8_t NodeId,
-  uint8_t Length,
-  const uint8_t *pData
-  )
-{
-  if (Length == 1)
-  {
-    switch (NodeId)
-    {
-      case TRACTOR_IMU_NODE_ID:
-        IMUValues[TRACTOR_IDX].CalibrationStatus = pData[0];
-        break;
-      case FRONTSCRAPER_IMU_NODE_ID:
-        IMUValues[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
-        break;
-      case REARSCRAPER_IMU_NODE_ID:
-        IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
-        break;
-    }
-  }
 }
 
 // sends the front blade height to AgGrade
@@ -448,6 +378,75 @@ static void TxRearBladeAuto
   Status.PGN = PGN_REAR_CUTTING;
   Status.Data[0] = BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto;
   agGrade.SendStatus(&Status);
+}
+
+// process TPDO1 from IMU
+static void ProcessIMUTPDO1
+  (
+  uint8_t NodeId,            // node that transmitted the PDO
+  uint8_t Length,            // length of the PDO
+  const uint8_t *pData       // PDO data
+  )
+{
+  if (Length == 8)
+  {
+    float Heading = ((uint16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
+    float Pitch   = ((int16_t)(pData[2] | ((uint16_t)pData[3] << 8))) / 100.0;
+    float Roll    = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
+    float YawRate = ((int16_t)(pData[6] | ((uint16_t)pData[7] << 8))) / 100.0;
+
+    switch (NodeId)
+    {
+      case TRACTOR_IMU_NODE_ID:
+        IMUValues[TRACTOR_IDX].Heading = Heading;
+        IMUValues[TRACTOR_IDX].Pitch   = Pitch;
+        IMUValues[TRACTOR_IDX].Roll    = Roll;
+        IMUValues[TRACTOR_IDX].YawRate = YawRate;
+        TxTractorIMU();
+        break;
+
+      case FRONTSCRAPER_IMU_NODE_ID:
+        IMUValues[FRONT_BLADE_IDX].Heading = Heading;
+        IMUValues[FRONT_BLADE_IDX].Pitch   = Pitch;
+        IMUValues[FRONT_BLADE_IDX].Roll    = Roll;
+        IMUValues[FRONT_BLADE_IDX].YawRate = YawRate;
+        TxFrontScraperIMU();
+        break;
+
+      case REARSCRAPER_IMU_NODE_ID:
+        IMUValues[REAR_BLADE_IDX].Heading = Heading;
+        IMUValues[REAR_BLADE_IDX].Pitch   = Pitch;
+        IMUValues[REAR_BLADE_IDX].Roll    = Roll;
+        IMUValues[REAR_BLADE_IDX].YawRate = YawRate;
+        TxRearScraperIMU();
+        break;
+    }
+  }
+}
+
+// process TPDO2 from IMU
+static void ProcessIMUTPDO2
+  (
+  uint8_t NodeId,            // node that transmitted the PDO
+  uint8_t Length,            // length of the PDO
+  const uint8_t *pData       // PDO data
+  )
+{
+  if (Length == 1)
+  {
+    switch (NodeId)
+    {
+      case TRACTOR_IMU_NODE_ID:
+        IMUValues[TRACTOR_IDX].CalibrationStatus = pData[0];
+        break;
+      case FRONTSCRAPER_IMU_NODE_ID:
+        IMUValues[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
+        break;
+      case REARSCRAPER_IMU_NODE_ID:
+        IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
+        break;
+    }
+  }
 }
 
 // process TPDO from pendant
@@ -591,122 +590,6 @@ static void ProcessPendantTPDO
   }
 }
 
-// process the heartbeat from a node
-static void ProcessHeartbeat
-  (
-  uint8_t NodeId,
-  uint8_t Length,
-  const uint8_t *pData
-  )
-{
-  if (Length == 1)
-  {
-    uint8_t NMTState = pData[0];
-
-    // if we see a bootup message then we have found a node
-    if (NMTState == NMT_STATE_BOOTUP)
-    {
-      NodeFound[NodeId - 1] = true;
-      HBTime[NodeId - 1] = 0;
-    }
-
-    // on every heartbeat reset the timer
-    if (NMTState == NMT_STATE_OPERATIONAL)
-    {
-      // must have missed the bootup message
-      if (!NodeFound[NodeId -1])
-      {
-        NodeFound[NodeId - 1] = true;
-      }
-
-      HBTime[NodeId - 1] = 0;
-    }
-  }
-}
-
-// checks to see if any nodes are missing
-static void CheckForMissingNodes
-  (
-  void
-  )
-{
-  for (int n = 0; n < NUM_NODES; n++)
-  {
-    if (NodeFound[n])
-    {
-      if (HBTime[n] >= MAX_HEARTBEAT_TIME)
-      {
-        NodeFound[n] = false;
-
-        // if the pendant has dissappeared then perform emergency stop
-        // as we can't see the ESTOP button
-        if (((n + 1) == PENDANT_NODE_ID) && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
-        {
-          EmergencyStop(__LINE__);
-        }
-      }
-    }
-  }
-}
-
-// called when a CAN message is received
-static void CANReceiveHandler
-  (
-  const CAN_message_t &msg
-  )
-{
-  switch (msg.id)
-  {
-    // PDOs
-    case 0x180 + PENDANT_NODE_ID:
-      ProcessPendantTPDO(msg.len, msg.buf);
-      break;
-    case 0x180 + TRACTOR_IMU_NODE_ID:
-      ProcessIMUTPDO1(TRACTOR_IMU_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x180 + FRONTSCRAPER_IMU_NODE_ID:
-      ProcessIMUTPDO1(FRONTSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x180 + REARSCRAPER_IMU_NODE_ID:
-      ProcessIMUTPDO1(REARSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x180 + FRONT_ANGLE_NODE_ID:
-      ProcessAngleTPDO(FRONT_ANGLE_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x180 + REAR_ANGLE_NODE_ID:
-      ProcessAngleTPDO(REAR_ANGLE_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x280 + TRACTOR_IMU_NODE_ID:
-      ProcessIMUTPDO2(TRACTOR_IMU_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x280 + FRONTSCRAPER_IMU_NODE_ID:
-      ProcessIMUTPDO2(FRONTSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
-      break;
-    case 0x280 + REARSCRAPER_IMU_NODE_ID:
-      ProcessIMUTPDO2(REARSCRAPER_IMU_NODE_ID, msg.len, msg.buf);
-      break;
-
-    // heartbeats
-    case 0x700 + PENDANT_NODE_ID:
-      ProcessHeartbeat(PENDANT_NODE_ID, msg.len, msg.buf);
-      break;
-  }
-
-  // process NMT message
-  if ((msg.id == 0x000) && !msg.flags.extended && (msg.len == 2))
-  {
-    // reset
-    if (msg.buf[0] == NMT_RESET_CMD)
-    {
-      // this node
-      if ((msg.buf[1] == CONTROLLER_NODE_ID) || (msg.buf[1] == NMT_RESET_ALL))
-      {
-        Reset();
-      }
-    }
-  }
-}
-
 // sends an NMEA sentence over UDP with packet framing
 static void SendNMEASentence
   (
@@ -751,33 +634,14 @@ void setup
 
   BladeControl.SetCallback(BladeChanged);
 
-  // configure CAN bus
-  CANBus.begin();
-  CANBus.setBaudRate(CAN_BITRATE_BPS);
-  CANBus.setMaxMB(64);
-  CANBus.enableFIFO();
-  CANBus.onReceive(FIFO, CANReceiveHandler);
-  CANBus.enableFIFOInterrupt();
-  
-  // TPDO1s
-  CANBus.setFIFOFilterRange(0, 0x181, 0x1FF, STD);
-  // TPDO2s
-  CANBus.setFIFOFilterRange(1, 0x281, 0x2FF, STD);
-  // Heartbeats
-  CANBus.setFIFOFilterRange(2, 0x701, 0x77F, STD);
+  TPDOTimestamp = 0;
 
-  CANBus.setMB(MB63, TX); // Set mailbox as transmit
+  CANopn.Init();
+  CANopn.SetCallbacks(ProcessPDO, NodeLost, RequestReset);
 
   // set up LED
   pinMode(LED, OUTPUT);
   digitalWrite(LED, HIGH);
-
-  // reset heartbeat timers and flags
-  for (int n = 0; n < NUM_NODES; n++)
-  {
-    HBTime[n] = 0;
-    NodeFound[n] = false;
-  }
 
   // start looking for pendant, we can't operate without it
   PendantSearchTimestamp = 0;
@@ -786,9 +650,6 @@ void setup
   // reset buttons and joysticks
   ButtonState.RawValue = 0;
   JoystickState.RawValue = 0;
-
-  HBTimestamp = 0;
-  TPDOTimestamp = 0;
 
   // clear all IMU values
   for (int i = 0; i < NUM_BLADES + 1; i++)
@@ -836,16 +697,76 @@ void setup
   Serial.println("Ready!");
 }
 
+// called when canopen module requests a reset
+static void RequestReset
+  (
+  void
+  )
+{
+  Reset();
+}
+
+// called when a node dissappears from the CAN bus
+static void NodeLost
+  (
+  uint8_t NodeId             // id of node that was lost
+  )
+{
+  // if the pendant has dissappeared then perform emergency stop
+  // as we can't see the ESTOP button
+  if ((NodeId == PENDANT_NODE_ID) && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
+  {
+    EmergencyStop(__LINE__);
+  }
+}
+
+// processes a received PDO
+static void ProcessPDO
+  (
+  uint8_t NodeId,            // id of node that transmitted the pdo
+  uint16_t PDONumber,        // TPDO number
+  size_t DataLength,         // length of data in PDO
+  const uint8_t *pData       // PDO data
+  )
+{
+  switch (NodeId)
+  {
+    case PENDANT_NODE_ID:
+      ProcessPendantTPDO(DataLength, pData);
+      break;
+
+    case TRACTOR_IMU_NODE_ID:
+    case FRONTSCRAPER_IMU_NODE_ID:
+    case REARSCRAPER_IMU_NODE_ID:
+      if (PDONumber == 1)
+        ProcessIMUTPDO1(NodeId, DataLength, pData);
+      else
+        ProcessIMUTPDO2(NodeId, DataLength, pData);
+      break;
+
+    case FRONT_ANGLE_NODE_ID:
+    case REAR_ANGLE_NODE_ID:
+      ProcessAngleTPDO(NodeId, DataLength, pData);
+      break;
+  }
+}
+
 // continually executes
 void loop
   (
   )
 {  
-  // process can module
-  CANBus.events();
-
-  CheckForMissingNodes();
+  CANopn.Process();
   
+  // periodically transmit data onto the CAN bus
+  if (TPDOTimestamp >= TPDO_OUTPUT_PERIOD_MS)
+  {
+    TPDOTimestamp = 0;
+
+    CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+    CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+  }
+
   // Check for incoming commands
   if (agGrade.IsCommandAvailable())
   {
@@ -974,15 +895,6 @@ void loop
     }
   }
 
-  // periodically transmit data onto the CAN bus
-  if (TPDOTimestamp >= TPDO_OUTPUT_PERIOD_MS)
-  {
-    TPDOTimestamp = 0;
-
-    CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
-    CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
-  }
-
   // check to see if AgGrade has disappeared
   if ((LastPingRxTimestamp >= PING_TIMEOUT_PERIOD_MS) && AgGradeFound)
   {
@@ -998,7 +910,7 @@ void loop
     PendantSearch = false;
 
     // not found
-    if (!NodeFound[PENDANT_NODE_ID - 1])
+    if (!CANopn.IsNodeFound(PENDANT_NODE_ID))
     {
       EmergencyStop(__LINE__);
     }
@@ -1007,14 +919,6 @@ void loop
     {
       EmergencyStop(__LINE__);
     }
-  }
-
-  // transmit heartbeats
-  if (HBTimestamp >= HB_PRODUCER_TIME_MS)
-  {
-    HBTimestamp = 0;
-
-    CANopn.TxHeartbeat();
   }
 
   // flash LED

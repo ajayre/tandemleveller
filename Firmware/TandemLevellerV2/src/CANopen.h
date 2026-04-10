@@ -9,7 +9,23 @@
 #include "Blades.h"
 
 // number of nodes to monitor
-#define NUM_NODES 8
+#define NUM_NODES 0x7F
+
+// node IDs
+#define CONTROLLER_NODE_ID       0x01
+#define TRACTOR_IMU_NODE_ID      0x02
+#define FRONTSCRAPER_IMU_NODE_ID 0x03
+#define REARSCRAPER_IMU_NODE_ID  0x04
+#define PENDANT_NODE_ID          0x05
+#define FRONT_ANGLE_NODE_ID      0x10
+#define REAR_ANGLE_NODE_ID       0x11
+
+// received PDO callback type
+typedef void (*canopen_process_pdo_callback_t)(uint8_t NodeId, uint16_t PDONumber, size_t DataLength, const uint8_t *pData);
+// node lost callback type
+typedef void (*canopen_node_lost_callback_t)(uint8_t NodeId);
+// reset request callback type
+typedef void (*canopen_request_reset_callback_t)(void);
 
 class CANopen
 {
@@ -66,10 +82,61 @@ class CANopen
       void
       );
 
+    // performs processing, call in the main loop
+    void Process
+      (
+      void
+      );
+
+    // performs initialization
+    void Init
+      (
+      void
+      );
+
+    // checks if a node has been found
+    // returns true if node found, false if not found
+    bool IsNodeFound
+      (
+      uint8_t NodeId             // id of node to check
+      );
+
+    // sets the callback function
+    void SetCallbacks
+      (
+      canopen_process_pdo_callback_t ProcessPDOCallback,
+      canopen_node_lost_callback_t NodeLostCallback,
+      canopen_request_reset_callback_t _ResetRequestCallback
+      );
+
+    // called when a CAN message is received
+    void _CANReceiveHandler
+      (
+      const CAN_message_t &msg
+      );
+      
   private:
     elapsedMillis HBTime[NUM_NODES];
+    elapsedMillis HBTimestamp;
     bool NodeFound[NUM_NODES];
     FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
+    canopen_process_pdo_callback_t ProcessPDOCallback;
+    canopen_node_lost_callback_t NodeLostCallback;
+    canopen_request_reset_callback_t ResetRequestCallback;
+
+    // checks to see if any nodes are missing
+    void CheckForMissingNodes
+      (
+      void
+      );
+
+    // process heartbeat from a node
+    void ProcessHeartbeat
+      (
+      uint8_t NodeId,           // node that transmitted the heartbeat
+      uint8_t Length,           // length of heartbeat message
+      const uint8_t *pData      // heartbeat message data
+      );
 };
 
 #endif // _CANOPENH_
