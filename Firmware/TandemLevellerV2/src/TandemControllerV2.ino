@@ -162,7 +162,7 @@ static void EmergencyStop
 }
 
 // called when a blade changes height or direction
-static void BladeChanged
+static void Blades_BladeChanged
   (
   int BladeIndex,                // index of blade that changed xx_BLADE_IDX
   int PWM,                       // current PWM output to blade
@@ -591,7 +591,7 @@ static void ProcessPendantTPDO
 }
 
 // sends an NMEA sentence over UDP with packet framing
-static void SendNMEASentence
+static void GNSS_SendNMEASentence
   (
   pgn_t PGN,
   char *sentence,
@@ -630,14 +630,14 @@ void setup
   agGrade.Connect(MACAddress, OurIPAddress, LocalPort, RemoteIPAddress, RemotePort);
 
   NavData.Connect();
-  NavData.SetCallback(SendNMEASentence);
+  NavData.SetCallback(GNSS_SendNMEASentence);
 
-  BladeControl.SetCallback(BladeChanged);
+  BladeControl.SetCallback(Blades_BladeChanged);
 
   TPDOTimestamp = 0;
 
   CANopn.Init();
-  CANopn.SetCallbacks(ProcessPDO, NodeLost, RequestReset);
+  CANopn.SetCallbacks(CANopen_ProcessPDO, CANopen_NodeLost, CANopen_RequestReset);
 
   // set up LED
   pinMode(LED, OUTPUT);
@@ -698,7 +698,7 @@ void setup
 }
 
 // called when canopen module requests a reset
-static void RequestReset
+static void CANopen_RequestReset
   (
   void
   )
@@ -707,7 +707,7 @@ static void RequestReset
 }
 
 // called when a node dissappears from the CAN bus
-static void NodeLost
+static void CANopen_NodeLost
   (
   uint8_t NodeId             // id of node that was lost
   )
@@ -721,7 +721,7 @@ static void NodeLost
 }
 
 // processes a received PDO
-static void ProcessPDO
+static void CANopen_ProcessPDO
   (
   uint8_t NodeId,            // id of node that transmitted the pdo
   uint16_t PDONumber,        // TPDO number
