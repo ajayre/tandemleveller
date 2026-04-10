@@ -243,12 +243,12 @@ void CANopen::_CANReceiveHandler
 {
   // process TPDOs
   uint8_t NodeId = msg.id & 0x7F;
-  uint8_t PDONumber;
+  uint8_t PDONumber = 0;
        if ((msg.id >= 0x181) && (msg.id <= 0x1FF)) PDONumber = 1;
   else if ((msg.id >= 0x281) && (msg.id <= 0x2FF)) PDONumber = 2;
   else if ((msg.id >= 0x381) && (msg.id <= 0x3FF)) PDONumber = 3;
   else if ((msg.id >= 0x481) && (msg.id <= 0x4FF)) PDONumber = 4;
-  if (ProcessPDOCallback != NULL) ProcessPDOCallback(NodeId, PDONumber, msg.len, msg.buf);
+  if ((PDONumber > 0) && (ProcessPDOCallback != NULL)) ProcessPDOCallback(NodeId, PDONumber, msg.len, msg.buf);
 
   // process heartbeats
   if ((msg.id >= 0x701) && (msg.id <= 0x77F))

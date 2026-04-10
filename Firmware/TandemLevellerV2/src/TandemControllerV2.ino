@@ -756,9 +756,7 @@ void loop
   (
   )
 {  
-  CANopn.Process();
-  
-  // periodically transmit data onto the CAN bus
+    // periodically transmit data onto the CAN bus
   if (TPDOTimestamp >= TPDO_OUTPUT_PERIOD_MS)
   {
     TPDOTimestamp = 0;
@@ -766,6 +764,8 @@ void loop
     CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
   }
+
+  CANopn.Process();
 
   // Check for incoming commands
   if (agGrade.IsCommandAvailable())
