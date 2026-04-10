@@ -2,18 +2,6 @@
 
 #include "CANopen.h"
 
-// node IDs
-#define CONTROLLER_NODE_ID       0x01
-#define TRACTOR_IMU_NODE_ID      0x02
-#define FRONTSCRAPER_IMU_NODE_ID 0x03
-#define REARSCRAPER_IMU_NODE_ID  0x04
-#define PENDANT_NODE_ID          0x05
-#define FRONT_ANGLE_NODE_ID      0x10
-#define REAR_ANGLE_NODE_ID       0x11
-
-// how often to transmit TPDOs
-#define TPDO_OUTPUT_PERIOD_MS 50
-
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
 
@@ -30,9 +18,26 @@
 // CANopen error code for estop
 #define ESTOP_ERROR_CODE 0x1000
 
+// CAN bus speed
+#define CAN_BITRATE_BPS 125000
+
+// hold pointer to singleton
+static CANopen *s_rxTarget = nullptr;
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
+
+// called when a CAN message is received
+// trampoline
+static void CANReceiveHandler
+  (
+  const CAN_message_t &msg
+  )
+{
+  // forward to singleton
+  if (s_rxTarget) s_rxTarget->_CANReceiveHandler(msg);
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -44,6 +49,44 @@ CANopen::CANopen
   void
   )
 {
+  // set up singleton pointer
+  s_rxTarget = this;
+}
+
+// performs initialization
+void CANopen::Init
+  (
+  void
+  )
+{
+  // configure CAN bus
+  CANBus.begin();
+  CANBus.setBaudRate(CAN_BITRATE_BPS);
+  CANBus.setMaxMB(64);
+  CANBus.enableFIFO();
+  CANBus.onReceive(FIFO, CANReceiveHandler);
+  CANBus.enableFIFOInterrupt();
+  
+  // reset heartbeat timers and flags
+  for (int n = 0; n < NUM_NODES; n++)
+  {
+    HBTime[n] = 0;
+    NodeFound[n] = false;
+  }
+
+  // TPDO1s
+  CANBus.setFIFOFilterRange(0, 0x181, 0x1FF, STD);
+  // TPDO2s
+  CANBus.setFIFOFilterRange(1, 0x281, 0x2FF, STD);
+  // Heartbeats
+  CANBus.setFIFOFilterRange(2, 0x701, 0x77F, STD);
+
+  CANBus.setMB(MB63, TX); // Set mailbox as transmit
+
+  HBTimestamp = 0;
+
+  ProcessPDOCallback = NULL;
+  NodeLostCallback = NULL;
 }
 
 // transmits a CAN message
@@ -157,4 +200,138 @@ void CANopen::ResetAllNodes
   txmsg.buf[1] = NMT_RESET_ALL;
 
   CANBus.write(txmsg);
+}
+
+// performs processing, call in the main loop
+void CANopen::Process
+  (
+  void
+  )
+{
+  // process can module
+  CANBus.events();
+
+  CheckForMissingNodes();
+
+  // transmit heartbeats
+  if (HBTimestamp >= HB_PRODUCER_TIME_MS)
+  {
+    HBTimestamp = 0;
+
+    TxHeartbeat();
+  }
+}
+
+// sets the callback function
+void CANopen::SetCallbacks
+  (
+  canopen_process_pdo_callback_t _ProcessPDOCallback,
+  canopen_node_lost_callback_t _NodeLostCallback,
+  canopen_request_reset_callback_t _ResetRequestCallback
+  )
+{
+  ProcessPDOCallback   = _ProcessPDOCallback;
+  NodeLostCallback     = _NodeLostCallback;
+  ResetRequestCallback = _ResetRequestCallback;
+}
+
+// called when a CAN message is received
+void CANopen::_CANReceiveHandler
+  (
+  const CAN_message_t &msg
+  )
+{
+  // process TPDOs
+  uint8_t NodeId = msg.id & 0x7F;
+  uint8_t PDONumber;
+       if ((msg.id >= 0x181) && (msg.id <= 0x1FF)) PDONumber = 1;
+  else if ((msg.id >= 0x281) && (msg.id <= 0x2FF)) PDONumber = 2;
+  else if ((msg.id >= 0x381) && (msg.id <= 0x3FF)) PDONumber = 3;
+  else if ((msg.id >= 0x481) && (msg.id <= 0x4FF)) PDONumber = 4;
+  if (ProcessPDOCallback != NULL) ProcessPDOCallback(NodeId, PDONumber, msg.len, msg.buf);
+
+  // process heartbeats
+  if ((msg.id >= 0x701) && (msg.id <= 0x77F))
+  {
+    ProcessHeartbeat(NodeId, msg.len, msg.buf);
+  }
+
+  // process NMT message
+  if ((msg.id == 0x000) && !msg.flags.extended && (msg.len == 2))
+  {
+    // reset
+    if (msg.buf[0] == NMT_RESET_CMD)
+    {
+      // this node
+      if ((msg.buf[1] == CONTROLLER_NODE_ID) || (msg.buf[1] == NMT_RESET_ALL))
+      {
+        if (ResetRequestCallback != NULL) ResetRequestCallback();
+      }
+    }
+  }
+}
+
+// checks to see if any nodes are missing
+void CANopen::CheckForMissingNodes
+  (
+  void
+  )
+{
+  for (int n = 0; n < NUM_NODES; n++)
+  {
+    if (NodeFound[n])
+    {
+      if (HBTime[n] >= MAX_HEARTBEAT_TIME)
+      {
+        NodeFound[n] = false;
+
+        if (NodeLostCallback != NULL) NodeLostCallback(n + 1);
+      }
+    }
+  }
+}
+
+// process heartbeat from a node
+void CANopen::ProcessHeartbeat
+  (
+  uint8_t NodeId,            // node that transmitted the heartbeat
+  uint8_t Length,            // length of heartbeat message
+  const uint8_t *pData       // heartbeat message data
+  )
+{
+  if (Length == 1)
+  {
+    uint8_t NMTState = pData[0];
+
+    // if we see a bootup message then we have found a node
+    if (NMTState == NMT_STATE_BOOTUP)
+    {
+      NodeFound[NodeId - 1] = true;
+      HBTime[NodeId - 1] = 0;
+    }
+
+    // on every heartbeat reset the timer
+    if (NMTState == NMT_STATE_OPERATIONAL)
+    {
+      // must have missed the bootup message
+      if (!NodeFound[NodeId -1])
+      {
+        NodeFound[NodeId - 1] = true;
+      }
+
+      HBTime[NodeId - 1] = 0;
+    }
+  }
+}
+
+// checks if a node has been found
+// returns true if node found, false if not found
+bool CANopen::IsNodeFound
+  (
+  uint8_t NodeId             // id of node to check
+  )
+{
+  if (NodeId == 0) return false;
+
+  return NodeFound[NodeId - 1];
 }
