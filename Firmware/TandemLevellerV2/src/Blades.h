@@ -6,9 +6,6 @@
 #include <Arduino.h>
 #include "Global.h"
 
-// number of blades we support
-#define NUM_BLADES 2
-
 // the height of the blade that represents ground level
 // when communicating with AgGrade
 #define BLADE_HEIGHT_GROUND_LEVEL 200
