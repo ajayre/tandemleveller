@@ -123,3 +123,211 @@ pgnpacket_t AgGrade::GetCommand
 
   return Command;
 }
+
+// call when a blade changes height or direction
+// sends the new state to AgGrade.
+void AgGrade::SendBladeState
+  (
+  int BladeIndex,                // index of blade that changed xx_BLADE_IDX
+  int PWM,                       // current PWM output to blade
+  blade_direction_t Direction    // direction of blade movement
+  )
+{
+    // update AgGrade
+    pgnpacket_t Status;
+    if (BladeIndex == FRONT_BLADE_IDX)
+      Status.PGN = PGN_FRONT_BLADE_PWMVALUE;
+    else
+      Status.PGN = PGN_REAR_BLADE_PWMVALUE;
+    SetPGNPacketUInt32(&Status, PWM);
+    SendStatus(&Status);
+
+    if (BladeIndex == FRONT_BLADE_IDX)
+      Status.PGN = PGN_FRONT_BLADE_DIRECTION;
+    else
+      Status.PGN = PGN_REAR_BLADE_DIRECTION;
+    Status.Data[0] = Direction;
+    SendStatus(&Status);
+}
+
+// sends the front blade height to AgGrade
+void AgGrade::SendFrontBladeHeight
+  (
+  int Height                 // blade height
+  )
+{
+  pgnpacket_t Status;
+
+  Status.PGN = PGN_FRONT_BLADE_HEIGHT;
+  SetPGNPacketUInt32(&Status, Height);
+  SendStatus(&Status);
+}
+
+// sends the rear blade height to AgGrade
+void AgGrade::SendRearBladeHeight
+  (
+  int Height                 // blade height
+  )
+{
+  pgnpacket_t Status;
+
+  Status.PGN = PGN_REAR_BLADE_HEIGHT;
+  SetPGNPacketUInt32(&Status, Height);
+  SendStatus(&Status);
+}
+
+// sends an IMU state to AgGrade
+void AgGrade::SendIMUState
+  (
+  int IMUIndex,              // index of IMU xxx_IDX
+  imu_t *pIMUValue           // new IMU values
+  )
+{
+  pgnpacket_t Status;
+
+  switch (IMUIndex)
+  {
+    case TRACTOR_IDX:     Status.PGN = PGN_TRACTOR_IMU; break;
+    case FRONT_BLADE_IDX: Status.PGN = PGN_FRONT_IMU;   break;
+    case REAR_BLADE_IDX:  Status.PGN = PGN_REAR_IMU;    break;
+  }
+
+  SetPGNPacketUInt32AtOffset(&Status, 0,  (uint32_t)(pIMUValue->Pitch   * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 4,  (uint32_t)(pIMUValue->Roll    * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 8,  (uint32_t)(pIMUValue->Heading * 100));
+  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(pIMUValue->YawRate * 100));
+  Status.Data[16] = pIMUValue->CalibrationStatus;
+  SendStatus(&Status);
+}
+
+// sends front blade slave offset to AgGrade
+void AgGrade::TxFrontBladeSlaveOffset
+  (
+  int16_t Offset
+  )
+{
+  pgnpacket_t Status;
+
+  Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
+  SetPGNPacketUInt16(&Status, Offset);
+  SendStatus(&Status);
+}
+
+// sends rear blade slave offset to AgGrade
+void AgGrade::TxRearBladeSlaveOffset
+  (
+  int16_t Offset
+  )
+{
+  pgnpacket_t Status;
+
+  Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
+  SetPGNPacketUInt16(&Status, Offset);
+  SendStatus(&Status);
+}
+
+// sends front blade auto state to AgGrade
+void AgGrade::SendFrontBladeAuto
+  (
+  bool Auto
+  )
+{
+  pgnpacket_t Status;
+
+  Status.PGN = PGN_FRONT_CUTTING;
+  Status.Data[0] = Auto;
+  SendStatus(&Status);
+}
+
+// sends rear blade auto state to AgGrade
+void AgGrade::SendRearBladeAuto
+  (
+  bool Auto
+  )
+{
+  pgnpacket_t Status;
+
+  Status.PGN = PGN_REAR_CUTTING;
+  Status.Data[0] = Auto;
+  SendStatus(&Status);
+}
+
+// sends an emergency stop notification to AgGrade
+void AgGrade::EmergencyStop
+  (
+  void  
+  )
+{
+  pgnpacket_t Status;
+  Status.PGN = PGN_CLEAR_ESTOP;
+  SendStatus(&Status);
+}
+
+// sends an NMEA sentence to AgGrade
+void AgGrade::SendNMEASentence
+  (
+  pgn_t PGN,                 // PGN for sentence
+  char *sentence,            // sentence
+  uint8_t length             // sentence length
+  )
+{
+  pgnpacket_t NMEAPacket;
+  
+  NMEAPacket.PGN = PGN;
+  
+  // Copy as much of the sentence as will fit
+  uint8_t copyLen = (length > MAX_PGN_LEN) ? MAX_PGN_LEN : length;
+  memcpy(NMEAPacket.Data, sentence, copyLen);
+  
+  SendStatus(&NMEAPacket);
+}
+
+// Stores a 16-bit value into a pgn packet
+void AgGrade::SetPGNPacketUInt16
+  (
+  pgnpacket_t *Packet,
+  uint16_t Value
+  )
+{
+  Packet->Data[0] = Value & 0xFF;
+  Packet->Data[1] = (Value >> 8) & 0xFF;
+}
+
+// Stores a 32-bit value into a pgn packet
+void AgGrade::SetPGNPacketUInt32
+  (
+  pgnpacket_t *Packet,
+  uint32_t Value
+  )
+{
+  Packet->Data[0] = Value & 0xFF;
+  Packet->Data[1] = (Value >> 8) & 0xFF;
+  Packet->Data[2] = (Value >> 16) & 0xFF;
+  Packet->Data[3] = (Value >> 24) & 0xFF;
+}
+
+// Stores a 32-bit value into a pgn packet at a specific byte offset
+void AgGrade::SetPGNPacketUInt32AtOffset
+  (
+  pgnpacket_t *Packet,
+  uint8_t Offset,
+  uint32_t Value
+  )
+{
+  Packet->Data[Offset + 0] = Value & 0xFF;
+  Packet->Data[Offset + 1] = (Value >> 8) & 0xFF;
+  Packet->Data[Offset + 2] = (Value >> 16) & 0xFF;
+  Packet->Data[Offset + 3] = (Value >> 24) & 0xFF;
+}
+
+// gets a 32-bit value from a pgn packet
+uint32_t AgGrade::GetPGNPacketUInt32
+  (
+  pgnpacket_t *Packet
+  )
+{
+  return ((uint32_t)(Packet->Data[3]) << 24) | 
+         ((uint32_t)(Packet->Data[2]) << 16) | 
+         ((uint32_t)(Packet->Data[1]) << 8) | 
+         Packet->Data[0];
+}

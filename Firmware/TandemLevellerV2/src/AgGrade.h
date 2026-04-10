@@ -12,6 +12,8 @@
 #include <NativeEthernetUdp.h>
 #include "Global.h"
 #include "UDPTransfer.h"
+#include "Blades.h"
+#include "IMU.h"
 
 // maximum number of bytes in a PGN packet payload
 #define MAX_PGN_LEN (MAX_NMEA_LENGTH + 2)
@@ -129,6 +131,78 @@ class AgGrade
       void
       );
 
+    // call when a blade changes height or direction
+    // sends the new state to AgGrade.
+    void SendBladeState
+      (
+      int BladeIndex,                // index of blade that changed xx_BLADE_IDX
+      int PWM,                       // current PWM output to blade
+      blade_direction_t Direction    // direction of blade movement
+      );
+
+    // sends the front blade height to AgGrade
+    void SendFrontBladeHeight
+      (
+      int Height                     // blade height
+      );
+
+    // sends the rear blade height to AgGrade
+    void SendRearBladeHeight
+      (
+      int Height                     // blade height
+      );
+
+    // sends an IMU state to AgGrade
+    void SendIMUState
+      (
+      int IMUIndex,                  // index of IMU xxx_IDX
+      imu_t *pIMUValue               // new IMU values
+      );
+
+    // sends front blade slave offset to AgGrade
+    void TxFrontBladeSlaveOffset
+      (
+      int16_t Offset
+      );
+
+    // sends rear blade slave offset to AgGrade
+    void TxRearBladeSlaveOffset
+      (
+      int16_t Offset
+      );
+
+    // sends front blade auto state to AgGrade
+    void SendFrontBladeAuto
+      (
+      bool Auto
+      );
+
+    // sends rear blade auto state to AgGrade
+    void SendRearBladeAuto
+      (
+      bool Auto
+      );
+
+    // sends an emergency stop notification to AgGrade
+    void EmergencyStop
+      (
+      void  
+      );
+
+    // sends an NMEA sentence to AgGrade
+    void SendNMEASentence
+      (
+      pgn_t PGN,                     // PGN for sentence
+      char *sentence,                // sentence
+      uint8_t length                 // sentence length
+      );
+
+    // gets a 32-bit value from a pgn packet
+    uint32_t GetPGNPacketUInt32
+      (
+      pgnpacket_t *Packet
+      );
+
   private:
     UDPTransfer UdpTransfer;
     // An EthernetUDP instance to let us send and receive packets over UDP
@@ -137,8 +211,30 @@ class AgGrade
     // starts ethernet
     void StartEthernet
       (
-      byte MACAddress[],           // our MAC address
-      IPAddress LocalIPAddress     // our IP address
+      byte MACAddress[],             // our MAC address
+      IPAddress LocalIPAddress       // our IP address
+      );
+
+    // Stores a 16-bit value into a pgn packet
+    void SetPGNPacketUInt16
+      (
+      pgnpacket_t *Packet,
+      uint16_t Value
+      );
+
+    // Stores a 32-bit value into a pgn packet
+    void SetPGNPacketUInt32
+      (
+      pgnpacket_t *Packet,
+      uint32_t Value
+      );
+
+    // Stores a 32-bit value into a pgn packet at a specific byte offset
+    void SetPGNPacketUInt32AtOffset
+      (
+      pgnpacket_t *Packet,
+      uint8_t Offset,
+      uint32_t Value
       );
 };
 

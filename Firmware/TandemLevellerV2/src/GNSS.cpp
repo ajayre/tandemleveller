@@ -245,9 +245,9 @@ void GNSS::ProcessNMEASentence
   if (!isGga)
   {
     // send the sentence
-    if (GNSSSendNMEACallback != NULL)
+    if (GNSSReceivedNMEACallback != NULL)
     {
-      GNSSSendNMEACallback(PGN, (char *)sentence, length);
+      GNSSReceivedNMEACallback(PGN, (char *)sentence, length);
     }
 
     return;
@@ -350,9 +350,9 @@ void GNSS::ProcessNMEASentence
   }
 
   // send the sentence
-  if (GNSSSendNMEACallback != NULL)
+  if (GNSSReceivedNMEACallback != NULL)
   {
-    GNSSSendNMEACallback(PGN, out, (uint8_t)o);
+    GNSSReceivedNMEACallback(PGN, out, (uint8_t)o);
   }
 }
 
@@ -382,13 +382,13 @@ void GNSS::Connect
   Serial8.begin(115200);
 }
 
-// sets callback function when module wants to send an NMEA sentence
+// sets callback function when module receives an NMEA sentence
 void GNSS::SetCallback
   (
-  gnss_send_nmea_callback_t _GNSSSendNMEACallback  // function to call
+  gnss_received_nmea_callback_t _GNSSReceivedNMEACallback  // function to call
   )
 {
-  GNSSSendNMEACallback = _GNSSSendNMEACallback;
+  GNSSReceivedNMEACallback = _GNSSReceivedNMEACallback;
 }
 
 // processes the GNSS serial streams
