@@ -112,12 +112,6 @@ class AgGrade
       unsigned int RemotePort       // port that AgGrade is listening on
       );
 
-    // sends status value over UDP using packet framing
-    void SendStatus
-      (
-      pgnpacket_t *pStatus
-      );
-
     // checks if a command is waiting to be read
     // returns true if command waiting
     bool IsCommandAvailable
@@ -195,6 +189,12 @@ class AgGrade
       void  
       );
 
+    // sends a ping to AgGrade
+    void SendPing
+      (
+      void
+      );
+
     // sends an NMEA sentence to AgGrade
     void SendNMEASentence
       (
@@ -213,6 +213,12 @@ class AgGrade
     UDPTransfer UdpTransfer;
     // An EthernetUDP instance to let us send and receive packets over UDP
     EthernetUDP Udp;
+
+    // sends status value over UDP using packet framing
+    void Send
+      (
+      pgnpacket_t *pStatus
+      );
 
     // starts ethernet
     void StartEthernet

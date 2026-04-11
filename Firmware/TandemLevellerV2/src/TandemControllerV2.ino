@@ -10,6 +10,7 @@
 #include "CANopen.h"
 #include "IMU.h"
 #include "Pendent.h"
+#include "SecondaryTablet.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -76,6 +77,9 @@ static IMU IMUHandler;
 // pendant reading
 static Pendent Pend;
 
+// secondary tablet
+static SecondaryTablet SecTablet;
+
 // State variables
 static elapsedMillis LEDFlashTimestamp;
 static elapsedMillis PendantSearchTimestamp;
@@ -86,6 +90,7 @@ static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
 static elapsedMillis TPDOTimestamp;
+static bool SecTabletPresent;
 
 // resets the controller
 static void Reset
@@ -291,7 +296,7 @@ static void ProcessPendantTPDO
   }
 }
 
-// called when an NMT sentence has been recived
+// called when an NMEA sentence has been received
 // sends to AgGrade
 static void GNSS_ReceivedNMEASentence
   (
@@ -301,89 +306,6 @@ static void GNSS_ReceivedNMEASentence
   )
 {
   agGrade.SendNMEASentence(PGN, sentence, length);
-}
-
-// initialization
-void setup
-  (
-  )
-{
-  // secondary tablet
-  Serial5.begin(115200);
-
-  // Open serial communications for debug
-  Serial.begin(115200);
-  Serial.println("AgGrade Controller");
-  //while (!Serial)
-  //{
-  //  ; // wait for serial port to connect. Needed for native USB port only
-  //}
-
-  Serial.println("Starting UDP...");
-
-  agGrade.Connect(MACAddress, OurIPAddress, LocalPort, RemoteIPAddress, RemotePort);
-
-  NavData.Connect();
-  NavData.SetCallback(GNSS_ReceivedNMEASentence);
-
-  BladeControl.SetCallback(Blades_BladeChanged);
-
-  TPDOTimestamp = 0;
-
-  CANopn.Init();
-  CANopn.SetCallbacks(CANopen_ProcessPDO, CANopen_NodeLost, CANopen_RequestReset);
-
-  // set up LED
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, HIGH);
-
-  // start looking for pendant, we can't operate without it
-  PendantSearchTimestamp = 0;
-  PendantSearch = true;
-
-  Pend.Init();
-
-  IMUHandler.Init();
-  IMUHandler.SetCallbacks(IMU_IMUChanged);
-
-  BladeControlTimestamp = 0;
-  PingTimestamp = 0;
-  LastPingRxTimestamp = 0;
-
-  State = STATE_RUN;
-
-  CANopn.TxBootup();
-  CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
-  CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
-
-  agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
-  agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
-
-  agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
-  agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
-
-  agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
-  agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
-
-  CANopn.ResetAllNodes();
-
-  /*// fixme - remove
-  // test connection to secondary tablet
-  Serial.println("Sec tablet test...");
-  int RxByte;
-  Serial5.write('A');
-  while ((RxByte = Serial5.read()) == -1);
-  if (RxByte == 'A')
-  {
-    Serial.println("Secondary tablet echo received");
-  }
-  else
-  {
-    Serial.print("Secondary tablet echo failed with: ");
-    Serial.println(RxByte);
-  }*/
-
-  Serial.println("Ready!");
 }
 
 // called when canopen module requests a reset
@@ -438,6 +360,76 @@ static void CANopen_ProcessPDO
       ProcessAngleTPDO(NodeId, DataLength, pData);
       break;
   }
+}
+
+// initialization
+void setup
+  (
+  )
+{
+  // Open serial communications for debug
+  Serial.begin(115200);
+  Serial.println("AgGrade Controller");
+  //while (!Serial)
+  //{
+  //  ; // wait for serial port to connect. Needed for native USB port only
+  //}
+
+  SecTablet.Init();
+  SecTabletPresent = SecTablet.IsPresent();
+
+  Serial.print("Secondary tablet found ");
+  Serial.println(SecTabletPresent ? "yes" : "no");
+
+  Serial.println("Starting UDP...");
+
+  agGrade.Connect(MACAddress, OurIPAddress, LocalPort, RemoteIPAddress, RemotePort);
+
+  NavData.Connect();
+  NavData.SetCallback(GNSS_ReceivedNMEASentence);
+
+  BladeControl.SetCallback(Blades_BladeChanged);
+
+  TPDOTimestamp = 0;
+
+  CANopn.Init();
+  CANopn.SetCallbacks(CANopen_ProcessPDO, CANopen_NodeLost, CANopen_RequestReset);
+
+  // set up LED
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, HIGH);
+
+  // start looking for pendant, we can't operate without it
+  PendantSearchTimestamp = 0;
+  PendantSearch = true;
+
+  Pend.Init();
+
+  IMUHandler.Init();
+  IMUHandler.SetCallbacks(IMU_IMUChanged);
+
+  BladeControlTimestamp = 0;
+  PingTimestamp = 0;
+  LastPingRxTimestamp = 0;
+
+  State = STATE_RUN;
+
+  CANopn.TxBootup();
+  CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+  CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+
+  agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
+  agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
+
+  agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
+  agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
+
+  agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
+  agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
+
+  CANopn.ResetAllNodes();
+
+  Serial.println("Ready!");
 }
 
 // continually executes
@@ -623,9 +615,7 @@ void loop
   {
     PingTimestamp = 0;
 
-    pgnpacket_t Status;
-    Status.PGN   = PGN_PING;
-    agGrade.SendStatus(&Status);
+    agGrade.SendPing();
   }
 
   NavData.Process();
