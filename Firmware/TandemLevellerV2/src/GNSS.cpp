@@ -1,14 +1,18 @@
 // GNSS interface and processing
 
 #include <Arduino.h>
+#include <stdlib.h>
 #include "GNSS.h"
 
 // NMEA 0183 special characters
 #define LF 0x0A
 #define CR 0x0D
 
-// GGA: talker + max 14 comma-separated data fields (split buffer)
+// GGA/VTG: talker + comma-separated data fields (split buffer)
 #define MAX_GGA_FIELDS 16
+
+// Nautical miles per hour (knots) to km/h
+#define NMEA_KNOTS_TO_KPH 1.852
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -232,6 +236,9 @@ int GNSS::NMEAFormatLongitude
   return NMEAAppendMinutes(dmOut, dmLen, (size_t)n, min);
 }
 
+// Handles three paths: (1) unknown sentences — pass through unchanged;
+// (2) VTG — checksum, fill TractorLocation speed/track, pass through;
+// (3) GGA — checksum, fill TractorLocation fix, rebuild GGA with formatted lat/lon for callback.
 void GNSS::ProcessNMEASentence
   (
   pgn_t PGN,
@@ -241,10 +248,12 @@ void GNSS::ProcessNMEASentence
 {
   bool isGga = (strncmp(sentence, "$GPGGA,", 7) == 0) ||
                (strncmp(sentence, "$GNGGA,", 7) == 0);
+  bool isVtg = (strncmp(sentence, "$GPVTG,", 7) == 0) ||
+               (strncmp(sentence, "$GNVTG,", 7) == 0);
 
-  if (!isGga)
+  // (1) Not GGA or VTG: no parsing, forward raw sentence
+  if (!isGga && !isVtg)
   {
-    // send the sentence
     if (GNSSReceivedNMEACallback != NULL)
     {
       GNSSReceivedNMEACallback(PGN, (char *)sentence, length);
@@ -253,6 +262,7 @@ void GNSS::ProcessNMEASentence
     return;
   }
 
+  // GGA and VTG share: verify checksum and split comma fields (different field layouts below).
   const char *star = strchr(sentence, '*');
   if (star == NULL || star[1] == '\0' || star[2] == '\0')
   {
@@ -289,6 +299,47 @@ void GNSS::ProcessNMEASentence
 
   char *fields[MAX_GGA_FIELDS];
   int nfields = NMEASplitFields(work + 1, fields, MAX_GGA_FIELDS);
+
+  gnss_location_t *pLoc;
+  switch (PGN)
+  {
+    default:
+    case PGN_TRACTOR_NMEA: pLoc = &TractorLocation;      break;
+    case PGN_FRONT_NMEA:   pLoc = &FrontScraperLocation; break;
+    case PGN_REAR_NMEA:    pLoc = &RearScraperLocation;  break;
+  }
+
+  // (2) VTG only: fields[] are VTG columns, not GGA. Update speed/course; send original sentence.
+  if (isVtg)
+  {
+    // $--VTG,cogTrue,T,cogMag,M,sogKn,N,sogKph,K — indices 1..8 after talker in fields[0]
+    if (nfields > 7 && fields[7][0] != '\0')
+    {
+      pLoc->SpeedKph = strtod(fields[7], NULL);
+    }
+    else if (nfields > 5 && fields[5][0] != '\0')
+    {
+      pLoc->SpeedKph = strtod(fields[5], NULL) * (double)NMEA_KNOTS_TO_KPH;
+    }
+
+    if (nfields > 3 && fields[3][0] != '\0')
+    {
+      pLoc->TrackMagneticDeg = strtod(fields[3], NULL);
+    }
+    else if (nfields > 1 && fields[1][0] != '\0')
+    {
+      pLoc->TrackMagneticDeg = strtod(fields[1], NULL);
+    }
+
+    if (GNSSReceivedNMEACallback != NULL)
+    {
+      GNSSReceivedNMEACallback(PGN, (char *)sentence, length);
+    }
+
+    return;
+  }
+
+  // (3) GGA only: fields[] are GGA columns (lat/lon/quality/altitude, etc.)
   if (nfields < 6)
   {
     return;
@@ -297,22 +348,48 @@ void GNSS::ProcessNMEASentence
   double lat = NMEAParseLatLonToDecimal(fields[2], fields[3]);
   double lon = NMEAParseLatLonToDecimal(fields[4], fields[5]);
 
-  // store the tractor location
-  if (PGN == PGN_TRACTOR_NMEA)
+  pLoc->Latitude = lat;
+  pLoc->Longitude = lon;
+
+  int qual = 0;
+  if (nfields > 6 && fields[6][0] != '\0')
   {
-    TractorLocation.Latitude = lat;
-    TractorLocation.Longitude = lon;
+    qual = atoi(fields[6]);
+  }
+  switch (qual)
+  {
+    case 4:
+      pLoc->RtkStatus = GNSS_RTK_FIX;
+      break;
+    case 5:
+      pLoc->RtkStatus = GNSS_RTK_FLOAT;
+      break;
+    default:
+      pLoc->RtkStatus = GNSS_RTK_NONE;
+      break;
   }
 
-  // fixme - to do - add sensor fusing
+  pLoc->Altitude = 0.0;
+  if (nfields > 9 && fields[9][0] != '\0')
+  {
+    pLoc->Altitude = strtod(fields[9], NULL);
+  }
+
+  pLoc->LastFixTimeValid = 1;
+  pLoc->LastFixTimeMs = millis();
+
+  if (GNSSRequestFuseCallback != NULL)
+  {
+    GNSSRequestFuseCallback(PGN, pLoc);
+  }
 
   char latDm[16];
   char latNS[2];
   char lonDm[16];
   char lonEW[2];
 
-  if (NMEAFormatLatitude(lat, latDm, sizeof(latDm), latNS) < 0 ||
-      NMEAFormatLongitude(lon, lonDm, sizeof(lonDm), lonEW) < 0)
+  if (NMEAFormatLatitude(pLoc->Latitude, latDm, sizeof(latDm), latNS) < 0 ||
+      NMEAFormatLongitude(pLoc->Longitude, lonDm, sizeof(lonDm), lonEW) < 0)
   {
     return;
   }
@@ -327,7 +404,17 @@ void GNSS::ProcessNMEASentence
 
   for (int f = 6; f < nfields; f++)
   {
-    int add = snprintf(out + o, sizeof(out) - (size_t)o, ",%s", fields[f]);
+    int add;
+    if (f == 9)
+    {
+      char altStr[24];
+      snprintf(altStr, sizeof(altStr), "%.3f", pLoc->Altitude);
+      add = snprintf(out + o, sizeof(out) - (size_t)o, ",%s", altStr);
+    }
+    else
+    {
+      add = snprintf(out + o, sizeof(out) - (size_t)o, ",%s", fields[f]);
+    }
     if (add < 0 || (size_t)add >= sizeof(out) - (size_t)o)
     {
       return;
@@ -376,13 +463,15 @@ void GNSS::Connect
   Serial8.begin(115200);
 }
 
-// sets callback function when module receives an NMEA sentence
-void GNSS::SetCallback
+// sets callback functions
+void GNSS::SetCallbacks
   (
-  gnss_received_nmea_callback_t _GNSSReceivedNMEACallback  // function to call
+  gnss_received_nmea_callback_t _GNSSReceivedNMEACallback,
+  gnss_request_fuse_callback_t _GNSSRequestFuseCallback
   )
 {
   GNSSReceivedNMEACallback = _GNSSReceivedNMEACallback;
+  GNSSRequestFuseCallback = _GNSSRequestFuseCallback;
 }
 
 // processes the GNSS serial streams

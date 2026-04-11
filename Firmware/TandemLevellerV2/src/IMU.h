@@ -20,6 +20,8 @@ typedef void (*imu_changed_callback_t)(uint8_t Index, imu_t *pimu);
 class IMU
 {
   public:
+    imu_t IMUValues[NUM_BLADES + 1];
+
     // constructor
     IMU
       (
@@ -55,7 +57,6 @@ class IMU
       );
 
   private:
-    imu_t IMUValues[NUM_BLADES + 1];
     imu_changed_callback_t IMUChanged;
 };
 

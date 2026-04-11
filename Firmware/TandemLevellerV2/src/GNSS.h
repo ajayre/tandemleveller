@@ -14,19 +14,38 @@ typedef struct _gnss_reader_t
   char Buffer[MAX_NMEA_LENGTH];
 } gnss_reader_t;
 
+/** RTK quality from fix / GGA quality (matches fusion and common NMEA usage). */
+typedef enum _gnss_rtk_status_t
+{
+  GNSS_RTK_NONE = 0,
+  GNSS_RTK_FIX,
+  GNSS_RTK_FLOAT
+} gnss_rtk_status_t;
+
 typedef struct _gnss_location_t
 {
   double Latitude;
   double Longitude;
+  double Altitude;
+  /** Course over ground, degrees (magnetic from VTG field 3, else true from field 1). */
+  double TrackMagneticDeg;
+  double SpeedKph;
+  gnss_rtk_status_t RtkStatus;
+  int LastFixTimeValid;
+  uint32_t LastFixTimeMs;
 } gnss_location_t;
 
 // callback function type for receiving NMEA sentences
 typedef void (*gnss_received_nmea_callback_t)(pgn_t PGN, char *Sentence, uint8_t Length);
+// callback function for requesting sensor fusing
+typedef void (*gnss_request_fuse_callback_t)(pgn_t PGN, gnss_location_t *pLocation);
 
 class GNSS
 {
   public:
-    gnss_location_t TractorLocation = { 0 };
+    gnss_location_t TractorLocation      = { 0 };
+    gnss_location_t FrontScraperLocation = { 0 };
+    gnss_location_t RearScraperLocation  = { 0 };
 
     // constructor
     GNSS
@@ -40,10 +59,11 @@ class GNSS
       void
       );
 
-    // sets callback function when module receives an NMEA sentence
-    void SetCallback
+    // sets callback functions
+    void SetCallbacks
       (
-      gnss_received_nmea_callback_t GNSSReceivedNMEACallback  // function to call
+      gnss_received_nmea_callback_t GNSSReceivedNMEACallback,
+      gnss_request_fuse_callback_t GNSSRequestFuseCallback
       );
 
     // connect to the GNSS receivers
@@ -54,12 +74,13 @@ class GNSS
 
   private:
     // GNSS stream readers
-    gnss_reader_t TractorGNSS       = { 0 };
-    gnss_reader_t FrontScraperGNSS  = { 0 };
-    gnss_reader_t RearScraperGNSS   = { 0 };
+    gnss_reader_t TractorGNSS      = { 0 };
+    gnss_reader_t FrontScraperGNSS = { 0 };
+    gnss_reader_t RearScraperGNSS  = { 0 };
 
-    // callback function
+    // callback functions
     gnss_received_nmea_callback_t GNSSReceivedNMEACallback = NULL;
+    gnss_request_fuse_callback_t GNSSRequestFuseCallback = NULL;
 
     // XOR checksum for NMEA 0183: bytes from first after '$' up to (exclusive) '*'
     uint8_t NMEAChecksumBytes

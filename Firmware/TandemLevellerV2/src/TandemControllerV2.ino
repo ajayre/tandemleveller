@@ -1,3 +1,5 @@
+// AgGrade Controller
+
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +13,7 @@
 #include "IMU.h"
 #include "Pendent.h"
 #include "SecondaryTablet.h"
+#include "SensorFusor.h"
 
 // front height:
 //  dir = low, PWM output on M1A
@@ -80,6 +83,9 @@ static Pendent Pend;
 // secondary tablet
 static SecondaryTablet SecTablet;
 
+// sensor fusors
+static SensorFusor Fusors[NUM_BLADES + 1];
+
 // State variables
 static elapsedMillis LEDFlashTimestamp;
 static elapsedMillis PendantSearchTimestamp;
@@ -91,6 +97,7 @@ static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
 static elapsedMillis TPDOTimestamp;
 static bool SecTabletPresent;
+static antenna_location_t AntennaLocations[NUM_BLADES + 1];
 
 // resets the controller
 static void Reset
@@ -297,6 +304,31 @@ static void ProcessPendantTPDO
   }
 }
 
+// called when sensor fusing needs to happen
+// updates the location with fused data
+static void GNSS_RequestFuse
+  (
+  pgn_t PGN,                          // PGN source of the location
+  gnss_location_t *pLocation          // unfused location
+  )
+{
+  switch (PGN)
+  {
+    default:
+    case PGN_TRACTOR_NMEA:
+        Fusors[TRACTOR_IDX].Fuse(pLocation, IMUHandler.IMUValues[TRACTOR_IDX], AntennaLocations[TRACTOR_IDX]);
+        break;
+
+    case PGN_FRONT_NMEA:
+        Fusors[FRONT_BLADE_IDX].Fuse(pLocation, IMUHandler.IMUValues[FRONT_BLADE_IDX], AntennaLocations[FRONT_BLADE_IDX]);
+        break;
+
+    case PGN_REAR_NMEA:
+        Fusors[REAR_BLADE_IDX].Fuse(pLocation, IMUHandler.IMUValues[REAR_BLADE_IDX], AntennaLocations[REAR_BLADE_IDX]);
+        break;
+  }
+}
+
 // called when an NMEA sentence has been received
 // sends to AgGrade
 static void GNSS_ReceivedNMEASentence
@@ -388,7 +420,7 @@ void setup
   agGrade.Connect(MACAddress, OurIPAddress, LocalPort, RemoteIPAddress, RemotePort);
 
   NavData.Connect();
-  NavData.SetCallback(GNSS_ReceivedNMEASentence);
+  NavData.SetCallbacks(GNSS_ReceivedNMEASentence, GNSS_RequestFuse);
 
   BladeControl.SetCallback(Blades_BladeChanged);
 
