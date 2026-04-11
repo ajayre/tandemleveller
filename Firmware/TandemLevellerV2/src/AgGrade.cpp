@@ -75,7 +75,7 @@ void AgGrade::Connect
 }
 
 // sends status value over UDP using packet framing
-void AgGrade::SendStatus
+void AgGrade::Send
   (
   pgnpacket_t *pStatus
   )
@@ -140,14 +140,14 @@ void AgGrade::SendBladeState
     else
       Status.PGN = PGN_REAR_BLADE_PWMVALUE;
     SetPGNPacketUInt32(&Status, PWM);
-    SendStatus(&Status);
+    Send(&Status);
 
     if (BladeIndex == FRONT_BLADE_IDX)
       Status.PGN = PGN_FRONT_BLADE_DIRECTION;
     else
       Status.PGN = PGN_REAR_BLADE_DIRECTION;
     Status.Data[0] = Direction;
-    SendStatus(&Status);
+    Send(&Status);
 }
 
 // sends the front blade height to AgGrade
@@ -160,7 +160,7 @@ void AgGrade::SendFrontBladeHeight
 
   Status.PGN = PGN_FRONT_BLADE_HEIGHT;
   SetPGNPacketUInt32(&Status, Height);
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends the rear blade height to AgGrade
@@ -173,7 +173,7 @@ void AgGrade::SendRearBladeHeight
 
   Status.PGN = PGN_REAR_BLADE_HEIGHT;
   SetPGNPacketUInt32(&Status, Height);
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends an IMU state to AgGrade
@@ -197,7 +197,7 @@ void AgGrade::SendIMUState
   SetPGNPacketUInt32AtOffset(&Status, 8,  (uint32_t)(pIMUValue->Heading * 100));
   SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(pIMUValue->YawRate * 100));
   Status.Data[16] = pIMUValue->CalibrationStatus;
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends front blade slave offset to AgGrade
@@ -210,7 +210,7 @@ void AgGrade::TxFrontBladeSlaveOffset
 
   Status.PGN = PGN_FRONT_BLADE_OFFSET_SLAVE;
   SetPGNPacketUInt16(&Status, Offset);
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends rear blade slave offset to AgGrade
@@ -223,7 +223,7 @@ void AgGrade::TxRearBladeSlaveOffset
 
   Status.PGN = PGN_REAR_BLADE_OFFSET_SLAVE;
   SetPGNPacketUInt16(&Status, Offset);
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends front blade auto state to AgGrade
@@ -236,7 +236,7 @@ void AgGrade::SendFrontBladeAuto
 
   Status.PGN = PGN_FRONT_CUTTING;
   Status.Data[0] = Auto;
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends rear blade auto state to AgGrade
@@ -249,7 +249,7 @@ void AgGrade::SendRearBladeAuto
 
   Status.PGN = PGN_REAR_CUTTING;
   Status.Data[0] = Auto;
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends an emergency stop notification to AgGrade
@@ -260,7 +260,7 @@ void AgGrade::EmergencyStop
 {
   pgnpacket_t Status;
   Status.PGN = PGN_ESTOP;
-  SendStatus(&Status);
+  Send(&Status);
 }
 
 // sends a clear emergency stop notification to AgGrade
@@ -271,7 +271,18 @@ void AgGrade::ClearEmergencyStop
 {
   pgnpacket_t Status;
   Status.PGN = PGN_CLEAR_ESTOP;
-  SendStatus(&Status);
+  Send(&Status);
+}
+
+// sends a ping to AgGrade
+void AgGrade::SendPing
+  (
+  void
+  )
+{
+    pgnpacket_t Status;
+    Status.PGN   = PGN_PING;
+    Send(&Status);
 }
 
 // sends an NMEA sentence to AgGrade
@@ -290,7 +301,7 @@ void AgGrade::SendNMEASentence
   uint8_t copyLen = (length > MAX_PGN_LEN) ? MAX_PGN_LEN : length;
   memcpy(NMEAPacket.Data, sentence, copyLen);
   
-  SendStatus(&NMEAPacket);
+  Send(&NMEAPacket);
 }
 
 // Stores a 16-bit value into a pgn packet
