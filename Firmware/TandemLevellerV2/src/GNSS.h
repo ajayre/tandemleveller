@@ -14,12 +14,20 @@ typedef struct _gnss_reader_t
   char Buffer[MAX_NMEA_LENGTH];
 } gnss_reader_t;
 
+typedef struct _gnss_location_t
+{
+  double Latitude;
+  double Longitude;
+} gnss_location_t;
+
 // callback function type for receiving NMEA sentences
 typedef void (*gnss_received_nmea_callback_t)(pgn_t PGN, char *Sentence, uint8_t Length);
 
 class GNSS
 {
   public:
+    gnss_location_t TractorLocation = { 0 };
+
     // constructor
     GNSS
       (
@@ -46,9 +54,9 @@ class GNSS
 
   private:
     // GNSS stream readers
-    gnss_reader_t TractorGNSS      = { 0 };
-    gnss_reader_t FrontScraperGNSS = { 0 };
-    gnss_reader_t RearScraperGNSS  = { 0 };
+    gnss_reader_t TractorGNSS       = { 0 };
+    gnss_reader_t FrontScraperGNSS  = { 0 };
+    gnss_reader_t RearScraperGNSS   = { 0 };
 
     // callback function
     gnss_received_nmea_callback_t GNSSReceivedNMEACallback = NULL;

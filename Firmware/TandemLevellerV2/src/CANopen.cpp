@@ -165,25 +165,48 @@ void CANopen::TxTPDO2
   TxCANMessage(0x280 + CONTROLLER_NODE_ID, 2, Data);
 }
 
+// transmit TPDO3
+void CANopen::TxTPDO3
+  (
+  double Latitude,                   // current tractor latitude
+  double Longitude                   // current tractor longitude
+  )
+{
+  uint8_t Data[8];
+  uint32_t Lat = (int32_t)(Latitude * 10000000);
+  uint32_t Lon = (int32_t)(Longitude * 10000000);
+  
+  Data[0] =  Lat        & 0xFF;
+  Data[1] = (Lat >> 8)  & 0xFF;
+  Data[2] = (Lat >> 16) & 0xFF;
+  Data[3] = (Lat >> 24) & 0xFF;
+  Data[4] =  Lon        & 0xFF;
+  Data[5] = (Lon >> 8)  & 0xFF;
+  Data[6] = (Lon >> 16) & 0xFF;
+  Data[7] = (Lon >> 24) & 0xFF;
+
+  TxCANMessage(0x380 + CONTROLLER_NODE_ID, 8, Data);
+}
+
 // transmits an emergency message
 void CANopen::EmergencyStop
   (
   uint32_t LineNumber     // line number where the emergency happened
   )
 {
-    // send emergency message so all CAN nodes are aware of the stop
-    CAN_message_t txmsg;
-    txmsg.id = 0x080 + CONTROLLER_NODE_ID;
-    txmsg.len = 8;
-    txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
-    txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
-    txmsg.buf[2] = 0x80;  // manufacturer-specific error
-    txmsg.buf[3] =  LineNumber        & 0xFF;
-    txmsg.buf[4] = (LineNumber >> 8)  & 0xFF;
-    txmsg.buf[5] = (LineNumber >> 16) & 0xFF;
-    txmsg.buf[6] = (LineNumber >> 24) & 0xFF;
-    txmsg.buf[7] = 0x00;
-    CANBus.write(txmsg);
+  // send emergency message so all CAN nodes are aware of the stop
+  CAN_message_t txmsg;
+  txmsg.id = 0x080 + CONTROLLER_NODE_ID;
+  txmsg.len = 8;
+  txmsg.buf[0] =  ESTOP_ERROR_CODE       & 0xFF;
+  txmsg.buf[1] = (ESTOP_ERROR_CODE >> 8) & 0xFF;
+  txmsg.buf[2] = 0x80;  // manufacturer-specific error
+  txmsg.buf[3] =  LineNumber        & 0xFF;
+  txmsg.buf[4] = (LineNumber >> 8)  & 0xFF;
+  txmsg.buf[5] = (LineNumber >> 16) & 0xFF;
+  txmsg.buf[6] = (LineNumber >> 24) & 0xFF;
+  txmsg.buf[7] = 0x00;
+  CANBus.write(txmsg);
 }
 
 // resets all nodes on the CAN bus

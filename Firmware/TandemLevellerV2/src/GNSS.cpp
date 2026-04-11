@@ -297,6 +297,13 @@ void GNSS::ProcessNMEASentence
   double lat = NMEAParseLatLonToDecimal(fields[2], fields[3]);
   double lon = NMEAParseLatLonToDecimal(fields[4], fields[5]);
 
+  // store the tractor location
+  if (PGN == PGN_TRACTOR_NMEA)
+  {
+    TractorLocation.Latitude = lat;
+    TractorLocation.Longitude = lon;
+  }
+
   // fixme - to do - add sensor fusing
 
   char latDm[16];
@@ -335,19 +342,6 @@ void GNSS::ProcessNMEASentence
     return;
   }
   o += fin;
-
-  if ((uint8_t)o != length || memcmp(sentence, out, length) != 0)
-  {
-    Serial.println("NMEA GGA round-trip mismatch");
-    Serial.print("orig: ");
-    Serial.println(sentence);
-    Serial.print("recon: ");
-    Serial.println(out);
-    while (true)
-    {
-      ;
-    }
-  }
 
   // send the sentence
   if (GNSSReceivedNMEACallback != NULL)
