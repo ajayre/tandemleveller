@@ -16,14 +16,14 @@ class SecondaryTablet
       );
 
     // initializes the module
-    void SecondaryTablet::Init
+    void Init
       (
       void
       );
 
     // checks if the secondary tablet is present
     // returns true for present, false for not present
-    bool SecondaryTablet::IsPresent
+    bool IsPresent
       (
       void  
       );

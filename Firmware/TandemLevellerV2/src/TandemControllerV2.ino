@@ -122,6 +122,7 @@ static void EmergencyStop
 
     CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+    CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
 
     agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
     agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
@@ -327,6 +328,7 @@ static void CANopen_NodeLost
   // as we can't see the ESTOP button
   if ((NodeId == PENDANT_NODE_ID) && (PendantSearchTimestamp >= MAX_PENDANT_SEARCH_TIME))
   {
+    Serial.println("Pendent lost");
     EmergencyStop(__LINE__);
   }
 }
@@ -378,7 +380,7 @@ void setup
   SecTablet.Init();
   SecTabletPresent = SecTablet.IsPresent();
 
-  Serial.print("Secondary tablet found ");
+  Serial.print("Secondary tablet found: ");
   Serial.println(SecTabletPresent ? "yes" : "no");
 
   Serial.println("Starting UDP...");
@@ -417,6 +419,7 @@ void setup
   CANopn.TxBootup();
   CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
   CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+  CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
 
   agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
   agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
@@ -429,7 +432,7 @@ void setup
 
   CANopn.ResetAllNodes();
 
-  Serial.println("Ready!");
+  Serial.println("Ready");
 }
 
 // continually executes
@@ -444,6 +447,7 @@ void loop
 
     CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+    CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
   }
 
   CANopn.Process();
@@ -580,8 +584,6 @@ void loop
   if ((LastPingRxTimestamp >= PING_TIMEOUT_PERIOD_MS) && AgGradeFound)
   {
     AgGradeFound = false;
-
-    EmergencyStop(__LINE__);
   }
 
   // check for pendant

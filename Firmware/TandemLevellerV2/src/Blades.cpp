@@ -17,7 +17,7 @@
 
 // allowed range for the cutvalve command
 #define CUTVALVE_MIN 0
-#define CUTVALVE_MAX 200
+#define CUTVALVE_MAX 400
 
 // mimumum time between two jog moves per mm
 #define MIN_TIME_BETWEEN_JOGS_MS 200

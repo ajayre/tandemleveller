@@ -70,6 +70,13 @@ class CANopen
       blade_status_t *pRearBladeStatus
       );
 
+    // transmit TPDO3
+    void TxTPDO3
+      (
+      double Latitude,                   // current tractor latitude
+      double Longitude                   // current tractor longitude
+      );
+
     // transmits an emergency message
     void EmergencyStop
       (
