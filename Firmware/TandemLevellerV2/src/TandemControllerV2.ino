@@ -141,10 +141,11 @@ static void Blades_BladeChanged
   (
   int BladeIndex,                // index of blade that changed xx_BLADE_IDX
   int PWM,                       // current PWM output to blade
+  uint32_t Height,               // current blade height
   blade_direction_t Direction    // direction of blade movement
   )
 {
-    agGrade.SendBladeState(BladeIndex, PWM, Direction);
+    agGrade.SendBladeState(BladeIndex, PWM, Height, Direction);
 }
 
 // process TPDO from angle sensors

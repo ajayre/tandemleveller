@@ -130,6 +130,7 @@ void AgGrade::SendBladeState
   (
   int BladeIndex,                // index of blade that changed xx_BLADE_IDX
   int PWM,                       // current PWM output to blade
+  uint32_t Height,               // current blade height
   blade_direction_t Direction    // direction of blade movement
   )
 {
@@ -147,6 +148,13 @@ void AgGrade::SendBladeState
     else
       Status.PGN = PGN_REAR_BLADE_DIRECTION;
     Status.Data[0] = Direction;
+    Send(&Status);
+
+    if (BladeIndex == FRONT_BLADE_IDX)
+      Status.PGN = PGN_FRONT_BLADE_HEIGHT;
+    else
+      Status.PGN = PGN_REAR_BLADE_HEIGHT;
+    SetPGNPacketUInt32(&Status, Height);
     Send(&Status);
 }
 

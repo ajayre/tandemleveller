@@ -194,10 +194,10 @@ static void FrontBladeAutoChanged
   bool IsAuto                      // new auto state
   )
 {
-  // if just exited auto turn off button LED to stop flashing
-  if (!IsAuto)
+  // if just entered auto turn on button LED to stop flashing
+  if (IsAuto)
   {
-    SetButtonLED(BUTTON1_LED_PIN, LED_OFF);
+    SetButtonLED(BUTTON1_LED_PIN, LED_ON);
   }
 }
 
@@ -207,10 +207,10 @@ static void RearBladeAutoChanged
   bool IsAuto                      // new auto state
   )
 {
-  // if just exited auto turn off button LED to stop flashing
-  if (!IsAuto)
+  // if just entered auto turn on button LED to stop flashing
+  if (IsAuto)
   {
-    SetButtonLED(BUTTON2_LED_PIN, LED_OFF);
+    SetButtonLED(BUTTON2_LED_PIN, LED_ON);
   }
 }
 
@@ -315,8 +315,20 @@ static void ButtonHandler
 
     switch (btnId)
     {
-      case BUTTON1_ID:   SetButtonLED(BUTTON1_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 0); break;
-      case BUTTON2_ID:   SetButtonLED(BUTTON2_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 1); break;
+      case BUTTON1_ID:
+        if (!BladeStatus.FrontBladeAuto)
+          SetButtonLED(BUTTON1_LED_PIN, LED_OFF);
+        else
+          SetButtonLED(BUTTON1_LED_PIN, LED_ON);
+        ButtonStates &= ~(1 << 0);
+        break;
+      case BUTTON2_ID:
+        if (!BladeStatus.RearBladeAuto)
+          SetButtonLED(BUTTON2_LED_PIN, LED_OFF);
+        else
+          SetButtonLED(BUTTON2_LED_PIN, LED_ON);
+        ButtonStates &= ~(1 << 1);
+        break;
       case BUTTON3_ID:   SetButtonLED(BUTTON3_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 2); break;
       case BUTTON4_ID:   SetButtonLED(BUTTON4_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 3); break;
       case BUTTON5_ID:   SetButtonLED(BUTTON5_LED_PIN, LED_OFF); ButtonStates &= ~(1 << 4); break;
@@ -612,8 +624,8 @@ void loop
     TxPDO();
   }
 
-  // if front blade is in auto mode then flash button 1
-  if (BladeStatus.FrontBladeAuto)
+  // front blade: manual = flash LED; auto = solid on (refreshed every loop so release / no PDO edge can't leave it wrong)
+  if (!BladeStatus.FrontBladeAuto)
   {
     if (Button1FlashTimestamp >= WORK_BUTTON_FLASH_PERIOD_MS)
     {
@@ -622,8 +634,13 @@ void loop
       digitalToggle(BUTTON1_LED_PIN);
     }
   }
-  // if rear blade is in auto mode then flash button 2
-  if (BladeStatus.RearBladeAuto)
+  else
+  {
+    SetButtonLED(BUTTON1_LED_PIN, LED_ON);
+  }
+
+  // rear blade: same
+  if (!BladeStatus.RearBladeAuto)
   {
     if (Button2FlashTimestamp >= WORK_BUTTON_FLASH_PERIOD_MS)
     {
@@ -631,5 +648,9 @@ void loop
 
       digitalToggle(BUTTON2_LED_PIN);
     }
+  }
+  else
+  {
+    SetButtonLED(BUTTON2_LED_PIN, LED_ON);
   }
 }
