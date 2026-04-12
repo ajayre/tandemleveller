@@ -337,6 +337,7 @@ void loop
     {
       if (bno08x.getSensorEvent(&sensorValue))
       {
+        bool orientationUpdated = false;
         switch (sensorValue.sensorId)
         {
           case SH2_GYROSCOPE_CALIBRATED:
@@ -353,21 +354,27 @@ void loop
             CalibrationStatus = sensorValue.status & 0x03;
             // Y axis points to magnetic north but we need to change so X axis points to north to match silkscreen
             ypr.yaw -= 90;
+            orientationUpdated = true;
             break;
           
           case SH2_GYRO_INTEGRATED_RV:
             quaternionToEulerGI(&sensorValue.un.gyroIntegratedRV, &ypr, true);
             // Y axis points to magnetic north but we need to change so X axis points to north to match silkscreen
             ypr.yaw -= 90;
+            orientationUpdated = true;
             break;
         }
 
-        // perform corrections so that heading increases clockwise when viewed from above
-        if (ypr.yaw < 0) ypr.yaw += 360;
-        ypr.yaw = 360.0 - ypr.yaw;
+        // Only apply when yaw/pitch/roll were refreshed from a quaternion; gyro-only events must not re-invert.
+        if (orientationUpdated)
+        {
+          // perform corrections so that heading increases clockwise when viewed from above
+          if (ypr.yaw < 0) ypr.yaw += 360;
+          ypr.yaw = 360.0 - ypr.yaw;
 
-        // perform corrections so that downhill travel is a positive pitch
-        ypr.pitch = -ypr.pitch;
+          // perform corrections so that downhill travel is a positive pitch
+          ypr.pitch = -ypr.pitch;
+        }
 
         /*static long last = 0;
         long now = micros();
