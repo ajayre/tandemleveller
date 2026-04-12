@@ -514,10 +514,20 @@ void loop
 
       // reset blade height
       case PGN_FRONT_ZERO_BLADE_HEIGHT:
-        BladeControl.BladeHeight[FRONT_BLADE_IDX] = 0;
+        BladeControl.BladeHeight[FRONT_BLADE_IDX] = BLADE_HEIGHT_GROUND_LEVEL;
+        agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
         break;
       case PGN_REAR_ZERO_BLADE_HEIGHT:
-        BladeControl.BladeHeight[REAR_BLADE_IDX] = 0;
+        BladeControl.BladeHeight[REAR_BLADE_IDX] = BLADE_HEIGHT_GROUND_LEVEL;
+        agGrade.SendRearBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
+        break;
+
+      // request blade height
+      case PGN_FRONT_BLADE_HEIGHT:
+        agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
+        break;        
+      case PGN_REAR_BLADE_HEIGHT:
+        agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
         break;
 
         // front blade configuration

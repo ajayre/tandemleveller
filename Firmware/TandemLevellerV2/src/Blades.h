@@ -6,10 +6,6 @@
 #include <Arduino.h>
 #include "Global.h"
 
-// the height of the blade that represents ground level
-// when communicating with AgGrade
-#define BLADE_HEIGHT_GROUND_LEVEL 200
-
 typedef enum _blade_direction_t
 {
   BLADE_DIR_DOWN = 0,
@@ -45,7 +41,7 @@ typedef struct _blade_command_t
   int CutValve;       // target blade height in mm. BLADE_HEIGHT_GROUND_LEVEL = on target, < BLADE_HEIGHT_GROUND_LEVEL below target, > BLADE_HEIGHT_GROUND_LEVEL above target. Range is 0 - 400
 } blade_command_t;
 
-typedef void (*blades_blade_changed_callback_t)(int BladeIndex, int PWM, blade_direction_t Direction);
+typedef void (*blades_blade_changed_callback_t)(int BladeIndex, int PWM, uint32_t Height, blade_direction_t Direction);
 
 class Blades
 {
@@ -59,7 +55,7 @@ class Blades
     blade_config_t BladeConfig[NUM_BLADES];
     blade_status_t BladeStatus[NUM_BLADES];
     blade_command_t BladeCommand[NUM_BLADES];
-    int BladeHeight[NUM_BLADES];  // in mm
+    uint32_t BladeHeight[NUM_BLADES];
     elapsedMillis LastJogTime[NUM_BLADES];
 
     // calculate new output for blade
