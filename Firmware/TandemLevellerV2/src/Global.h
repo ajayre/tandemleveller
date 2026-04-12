@@ -16,6 +16,10 @@
 // number of blades we support
 #define NUM_BLADES 2
 
+// the height of the blade that represents ground level
+// when communicating with AgGrade
+#define BLADE_HEIGHT_GROUND_LEVEL 200
+
 // Antenna lever arm for IMU fusion: height mm; left mm (+ = port); forward mm (+ = ahead)
 typedef struct _antenna_location_t
 {

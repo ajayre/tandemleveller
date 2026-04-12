@@ -45,7 +45,7 @@ void Blades::SetFrontValvePWM
 
     if (BladeChangedCallback != NULL)
     {
-      BladeChangedCallback(FRONT_BLADE_IDX, BladeStatus[FRONT_BLADE_IDX].BladePWM, digitalRead(FRONT_HEIGHT_DIR) ? BLADE_DIR_UP : BLADE_DIR_DOWN);
+      BladeChangedCallback(FRONT_BLADE_IDX, BladeStatus[FRONT_BLADE_IDX].BladePWM, BladeHeight[FRONT_BLADE_IDX], digitalRead(FRONT_HEIGHT_DIR) ? BLADE_DIR_UP : BLADE_DIR_DOWN);
     }
   }
 }
@@ -65,7 +65,7 @@ void Blades::SetRearValvePWM
 
     if (BladeChangedCallback != NULL)
     {
-      BladeChangedCallback(REAR_BLADE_IDX, BladeStatus[REAR_BLADE_IDX].BladePWM, digitalRead(REAR_HEIGHT_DIR) ? BLADE_DIR_UP : BLADE_DIR_DOWN);
+      BladeChangedCallback(REAR_BLADE_IDX, BladeStatus[REAR_BLADE_IDX].BladePWM, BladeHeight[REAR_BLADE_IDX], digitalRead(REAR_HEIGHT_DIR) ? BLADE_DIR_UP : BLADE_DIR_DOWN);
     }
   }
 }
@@ -102,7 +102,7 @@ Blades::Blades
     // reset blade heights
   for (int b = 0; b < NUM_BLADES; b++)
   {
-    BladeHeight[b] = 0;
+    BladeHeight[b] = BLADE_HEIGHT_GROUND_LEVEL;
   }
 
   // initial blade status
@@ -142,8 +142,15 @@ void Blades::ControlBlade
   int PWMValue;
   float PWMHist;
 
+  // if already at the requested height then nothing to do
+  if (BladeCommand[BladeIndex].CutValve == BladeHeight[BladeIndex]) return;
+
   // store command
   BladeStatus[BladeIndex].BladeCommand = BladeCommand[BladeIndex].CutValve;
+
+  // fixme - remove and replace with reading actual blade height from sensors
+  // this is currently open-loop
+  BladeHeight[BladeIndex] = BladeStatus[BladeIndex].BladeCommand;
 
   // lower the blade
   if (BladeCommand[BladeIndex].CutValve >= (BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband))

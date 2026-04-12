@@ -153,7 +153,7 @@ void AgGrade::SendBladeState
 // sends the front blade height to AgGrade
 void AgGrade::SendFrontBladeHeight
   (
-  int Height                 // blade height
+  uint32_t Height            // blade height (0 -> BLADE_HEIGHT_GROUND_LEVEL * 2)
   )
 {
   pgnpacket_t Status;
@@ -166,7 +166,7 @@ void AgGrade::SendFrontBladeHeight
 // sends the rear blade height to AgGrade
 void AgGrade::SendRearBladeHeight
   (
-  int Height                 // blade height
+  uint32_t Height            // blade height (0 -> BLADE_HEIGHT_GROUND_LEVEL * 2)
   )
 {
   pgnpacket_t Status;
@@ -234,7 +234,7 @@ void AgGrade::SendFrontBladeAuto
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_FRONT_CUTTING;
+  Status.PGN = PGN_FRONT_AUTO;
   Status.Data[0] = Auto;
   Send(&Status);
 }
@@ -247,7 +247,7 @@ void AgGrade::SendRearBladeAuto
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_REAR_CUTTING;
+  Status.PGN = PGN_REAR_AUTO;
   Status.Data[0] = Auto;
   Send(&Status);
 }

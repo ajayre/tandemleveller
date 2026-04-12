@@ -43,6 +43,10 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_CUT_VALVE           = 0x1001,   // CUTVALVE_MIN -> CUTVALVE_MAX
   PGN_FRONT_ZERO_BLADE_HEIGHT  = 0x1002,
   PGN_REAR_ZERO_BLADE_HEIGHT   = 0x1003,
+  PGN_FRONT_BLADE_JOG_UP       = 0x1004, // fixme - to do
+  PGN_FRONT_BLADE_JOG_DOWN     = 0x1005, // fixme - to do
+  PGN_REAR_BLADE_JOG_UP        = 0x1006, // fixme - to do
+  PGN_REAR_BLADE_JOG_DOWN      = 0x1007, // fixme - to do
 
   // blade configuration
   PGN_FRONT_PWM_GAIN_UP        = 0x2002,
@@ -66,11 +70,11 @@ typedef enum _pgn_t : uint16_t
   PGN_FRONT_BLADE_OFFSET_SLAVE = 0x5000,
   PGN_FRONT_BLADE_PWMVALUE     = 0x5001,
   PGN_FRONT_BLADE_DIRECTION    = 0x5002,
-  PGN_FRONT_CUTTING            = 0x5003,
+  PGN_FRONT_AUTO               = 0x5003,
   PGN_REAR_BLADE_OFFSET_SLAVE  = 0x5004,
   PGN_REAR_BLADE_PWMVALUE      = 0x5005,
   PGN_REAR_BLADE_DIRECTION     = 0x5006,
-  PGN_REAR_CUTTING             = 0x5007,
+  PGN_REAR_AUTO                = 0x5007,
   PGN_FRONT_BLADE_HEIGHT       = 0x5008,
   PGN_REAR_BLADE_HEIGHT        = 0x5009,
   PGN_FRONT_DUMPING            = 0x500A, // fixme - to do
@@ -137,13 +141,13 @@ class AgGrade
     // sends the front blade height to AgGrade
     void SendFrontBladeHeight
       (
-      int Height                     // blade height
+      uint32_t Height                // blade height (0 -> BLADE_HEIGHT_GROUND_LEVEL * 2)
       );
 
     // sends the rear blade height to AgGrade
     void SendRearBladeHeight
       (
-      int Height                     // blade height
+      uint32_t Height                // blade height (0 -> BLADE_HEIGHT_GROUND_LEVEL * 2)
       );
 
     // sends an IMU state to AgGrade
