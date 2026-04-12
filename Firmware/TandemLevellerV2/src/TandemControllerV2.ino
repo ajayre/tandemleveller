@@ -97,7 +97,7 @@ static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
 static elapsedMillis TPDOTimestamp;
 static bool SecTabletPresent;
-static antenna_location_t AntennaLocations[NUM_BLADES + 1];
+static antenna_location_t AntennaLocations[NUM_BLADES + 1]; // fixme - to do - get the values from AgGrade
 
 // resets the controller
 static void Reset

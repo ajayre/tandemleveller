@@ -26,6 +26,10 @@ class SensorFusor
       );
 
   private:
+    double imu_gyro_offset = InvalidGyro;
+    double last_latitude;
+    double last_longitude;
+
     struct FusionGnssVector
     {
       double track_magnetic_deg;
@@ -117,9 +121,6 @@ class SensorFusor
       int32_t antenna_forward_mm,            // antenna forward offset, + = ahead (mm)
       FusionGnssFix *fix_out                 // output corrected fix
       );
-
-    double last_latitude;
-    double last_longitude;
 };
 
 #endif // _SENSORFUSORH_
