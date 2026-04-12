@@ -603,7 +603,38 @@ void loop
           BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = agGrade.GetPGNPacketUInt32(&Command);
         }
         break;
+
+      // antenna locations
+      case PGN_TRACTOR_ANTENNA_HEIGHT:
+        AntennaLocations[TRACTOR_IDX].HeightMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+      case PGN_TRACTOR_ANTENNA_LEFTOFF:
+        AntennaLocations[TRACTOR_IDX].LeftMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+      case PGN_TRACTOR_ANTENNA_FORWARDOFF:
+        AntennaLocations[TRACTOR_IDX].ForwardMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
         
+      case PGN_FRONT_ANTENNA_HEIGHT:
+        AntennaLocations[FRONT_BLADE_IDX].HeightMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+      case PGN_FRONT_ANTENNA_LEFTOFF:
+        AntennaLocations[FRONT_BLADE_IDX].LeftMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+      case PGN_FRONT_ANTENNA_FORWARDOFF:
+        AntennaLocations[FRONT_BLADE_IDX].ForwardMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+
+      case PGN_REAR_ANTENNA_HEIGHT:
+        AntennaLocations[REAR_BLADE_IDX].HeightMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+      case PGN_REAR_ANTENNA_LEFTOFF:
+        AntennaLocations[REAR_BLADE_IDX].LeftMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+      case PGN_REAR_ANTENNA_FORWARDOFF:
+        AntennaLocations[REAR_BLADE_IDX].ForwardMm = agGrade.GetPGNPacketUInt32(&Command);
+        break;
+
       default:
         Serial.print("Unknown PGN: 0x");
         Serial.println(Command.PGN, HEX);
