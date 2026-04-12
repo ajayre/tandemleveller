@@ -117,13 +117,12 @@ void SensorFusor::FuseInternal
   const double imu_yaw_rate = imu->yaw_rate;
   double heading = InvalidHeading;
 
-  double imu_gyro_offset = InvalidGyro;
-
   const double imu_heading = imu->heading;
   double latitude = fix_in->latitude;
   double longitude = fix_in->longitude;
   double altitude = fix_in->altitude;
 
+  // we haven't calculated the offset between the GNSS heading and the IMU heading yet
   if (imu_gyro_offset == InvalidGyro)
   {
     if (fix_in->vector.speed_kph > SpeedThresholdKph
