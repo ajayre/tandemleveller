@@ -130,6 +130,7 @@ static void EmergencyStop
     CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
+    CANopn.TxTPDO4(NavData.TractorLocation.Altitude);
 
     agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
     agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
@@ -453,6 +454,7 @@ void setup
   CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
   CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
   CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
+  CANopn.TxTPDO4(NavData.TractorLocation.Altitude);
 
   agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
   agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
@@ -481,6 +483,7 @@ void loop
     CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
+    CANopn.TxTPDO4(NavData.TractorLocation.Altitude);
   }
 
   CANopn.Process();

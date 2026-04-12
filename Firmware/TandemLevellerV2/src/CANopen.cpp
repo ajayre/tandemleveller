@@ -188,6 +188,23 @@ void CANopen::TxTPDO3
   TxCANMessage(0x380 + CONTROLLER_NODE_ID, 8, Data);
 }
 
+// transmit TPDO4
+void CANopen::TxTPDO4
+  (
+  double Altitude                    // current tractor altitude
+  )
+{
+  uint8_t Data[4];
+  uint32_t Alt = (int32_t)(Altitude * 1000);
+
+  Data[0] =  Alt        & 0xFF;
+  Data[1] = (Alt >> 8)  & 0xFF;
+  Data[2] = (Alt >> 16) & 0xFF;
+  Data[3] = (Alt >> 24) & 0xFF;
+
+  TxCANMessage(0x480 + CONTROLLER_NODE_ID, 4, Data);
+}
+
 // transmits an emergency message
 void CANopen::EmergencyStop
   (

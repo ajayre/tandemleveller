@@ -77,6 +77,12 @@ class CANopen
       double Longitude                   // current tractor longitude
       );
 
+    // transmit TPDO4
+    void TxTPDO4
+      (
+      double Altitude                    // current tractor altitude
+      );
+
     // transmits an emergency message
     void EmergencyStop
       (
