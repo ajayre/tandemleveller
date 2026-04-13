@@ -8,6 +8,11 @@
 #include "GNSS.h"
 #include "IMU.h"
 
+class SensorFusor;
+
+// fuse applied callback
+typedef void (*sensorfusor_fuse_applied_t)(SensorFusor *pFusor, int EastingMm, int NorthingMm, int AltitudeMm);
+
 class SensorFusor
 {
   public:
@@ -25,10 +30,17 @@ class SensorFusor
       const antenna_location_t &Antenna     // location of antenna 
       );
 
+    // sets the callback functions
+    void SetCallbacks
+      ( 
+      sensorfusor_fuse_applied_t FuseAppliedCallback
+      );
+
   private:
     double imu_gyro_offset = InvalidGyro;
     double last_latitude;
     double last_longitude;
+    sensorfusor_fuse_applied_t FuseAppliedCallback;
 
     struct FusionGnssVector
     {
@@ -102,6 +114,12 @@ class SensorFusor
       double to_lon_deg                      // end longitude (degrees)
       ) const;
 
+    // heading in degrees -> [0, 360)
+    double NormalizeHeadingDeg
+      (
+      double heading_deg
+      ) const;
+
     // moves (*lat_deg,*lon_deg) by distance_m along heading_deg (degrees, clockwise from north)
     void MoveDistanceBearing
       (
@@ -120,6 +138,17 @@ class SensorFusor
       int32_t antenna_left_mm,               // antenna left offset, + = port (mm)
       int32_t antenna_forward_mm,            // antenna forward offset, + = ahead (mm)
       FusionGnssFix *fix_out                 // output corrected fix
+      );
+
+    // Local tangent plane: North/East displacement (mm, fused minus input) and altitude
+    // delta in meters (fused minus input); callback Up mm = delta_alt_m * 1000.
+    void ConvertResultstoMm
+      (
+      double in_lat_deg,
+      double in_lon_deg,
+      double out_lat_deg,
+      double out_lon_deg,
+      double delta_alt_m
       );
 };
 

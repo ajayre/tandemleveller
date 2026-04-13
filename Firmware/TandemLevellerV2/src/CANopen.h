@@ -83,10 +83,18 @@ class CANopen
       double Altitude                    // current tractor altitude
       );
 
+    // transmit TPDO5
+    void TxTPDO5
+      (
+      int EastingMm,                     // fusor correction in easting in mm
+      int NorthingMm,                    // fusor correction in northing in mm
+      int AltitudeMm                     // fusor correction in altitude in mm
+      );
+
     // transmits an emergency message
     void EmergencyStop
       (
-      uint32_t LineNumber     // line number where the emergency happened
+      uint32_t LineNumber                // line number where the emergency happened
       );
 
     // resets all nodes on the CAN bus
@@ -111,7 +119,7 @@ class CANopen
     // returns true if node found, false if not found
     bool IsNodeFound
       (
-      uint8_t NodeId             // id of node to check
+      uint8_t NodeId                     // id of node to check
       );
 
     // sets the callback function
@@ -146,9 +154,9 @@ class CANopen
     // process heartbeat from a node
     void ProcessHeartbeat
       (
-      uint8_t NodeId,           // node that transmitted the heartbeat
-      uint8_t Length,           // length of heartbeat message
-      const uint8_t *pData      // heartbeat message data
+      uint8_t NodeId,                    // node that transmitted the heartbeat
+      uint8_t Length,                    // length of heartbeat message
+      const uint8_t *pData               // heartbeat message data
       );
 };
 

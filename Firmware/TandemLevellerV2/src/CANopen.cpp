@@ -1,6 +1,8 @@
 // canopen
 
+#include <math.h>
 #include "CANopen.h"
+#include "UTM.h"
 
 #define NMT_RESET_CMD 0x81
 #define NMT_RESET_ALL 0x00
@@ -20,6 +22,9 @@
 
 // CAN bus speed
 #define CAN_BITRATE_BPS 125000
+
+// node ID offset for second set of TPDOs
+#define NODE_ID_OFFSET_1 0x70
 
 // hold pointer to singleton
 static CANopen *s_rxTarget = nullptr;
@@ -186,6 +191,25 @@ void CANopen::TxTPDO3
   Data[7] = (Lon >> 24) & 0xFF;
 
   TxCANMessage(0x380 + CONTROLLER_NODE_ID, 8, Data);
+
+  double easting_m = 0.0;
+  double northing_m = 0.0;
+  UTM::LatLonToUtm(Latitude, Longitude, &easting_m, &northing_m, NULL);
+
+  // centimetres (uint32): internal UTM is double (sub-cm); link resolution 1 cm
+  const uint32_t EastingMm = (uint32_t)round(easting_m * 1000.0);
+  const uint32_t NorthingMm = (uint32_t)round(northing_m * 1000.0);
+
+  Data[0] =  EastingMm         & 0xFF;
+  Data[1] = (EastingMm >> 8)   & 0xFF;
+  Data[2] = (EastingMm >> 16)  & 0xFF;
+  Data[3] = (EastingMm >> 24)  & 0xFF;
+  Data[4] =  NorthingMm        & 0xFF;
+  Data[5] = (NorthingMm >> 8)  & 0xFF;
+  Data[6] = (NorthingMm >> 16) & 0xFF;
+  Data[7] = (NorthingMm >> 24) & 0xFF;
+
+  TxCANMessage(0x380 + NODE_ID_OFFSET_1 + CONTROLLER_NODE_ID, 8, Data);
 }
 
 // transmit TPDO4
@@ -203,6 +227,26 @@ void CANopen::TxTPDO4
   Data[3] = (Alt >> 24) & 0xFF;
 
   TxCANMessage(0x480 + CONTROLLER_NODE_ID, 4, Data);
+}
+
+// transmit TPDO5
+void CANopen::TxTPDO5
+  (
+  int EastingMm,             // fusor correction in easting in mm
+  int NorthingMm,            // fusor correction in northing in mm
+  int AltitudeMm             // fusor correction in altitude in mm
+  )
+{
+  uint8_t Data[6];
+
+  Data[0] =  (uint16_t)EastingMm        & 0xFF;
+  Data[1] = ((uint16_t)EastingMm >> 8)  & 0xFF;
+  Data[2] =  (uint16_t)NorthingMm        & 0xFF;
+  Data[3] = ((uint16_t)NorthingMm >> 8)  & 0xFF;
+  Data[4] =  (uint16_t)AltitudeMm        & 0xFF;
+  Data[5] = ((uint16_t)AltitudeMm >> 8)  & 0xFF;
+
+  TxCANMessage(0x180 + NODE_ID_OFFSET_1 + CONTROLLER_NODE_ID, 6, Data);
 }
 
 // transmits an emergency message
