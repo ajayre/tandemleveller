@@ -196,6 +196,8 @@ void CANopen::TxTPDO3
   double northing_m = 0.0;
   UTM::LatLonToUtm(Latitude, Longitude, &easting_m, &northing_m, NULL);
 
+  // Tx TPDO7
+
   // centimetres (uint32): internal UTM is double (sub-cm); link resolution 1 cm
   const uint32_t EastingMm = (uint32_t)round(easting_m * 1000.0);
   const uint32_t NorthingMm = (uint32_t)round(northing_m * 1000.0);
@@ -215,18 +217,20 @@ void CANopen::TxTPDO3
 // transmit TPDO4
 void CANopen::TxTPDO4
   (
-  double Altitude                    // current tractor altitude
+  double Altitude,                    // current tractor altitude
+  gnss_rtk_status_t RtkStatus         // current tractor RTK status
   )
 {
-  uint8_t Data[4];
+  uint8_t Data[5];
   uint32_t Alt = (int32_t)(Altitude * 1000);
 
   Data[0] =  Alt        & 0xFF;
   Data[1] = (Alt >> 8)  & 0xFF;
   Data[2] = (Alt >> 16) & 0xFF;
   Data[3] = (Alt >> 24) & 0xFF;
+  Data[4] = (uint8_t)RtkStatus;
 
-  TxCANMessage(0x480 + CONTROLLER_NODE_ID, 4, Data);
+  TxCANMessage(0x480 + CONTROLLER_NODE_ID, 5, Data);
 }
 
 // transmit TPDO5
@@ -247,6 +251,29 @@ void CANopen::TxTPDO5
   Data[5] = ((uint16_t)AltitudeMm >> 8)  & 0xFF;
 
   TxCANMessage(0x180 + NODE_ID_OFFSET_1 + CONTROLLER_NODE_ID, 6, Data);
+}
+
+// transmit TPDO6
+void CANopen::TxTPDO6
+  (
+  double Latitude,                   // current tractor latitude (raw)
+  double Longitude                   // current tractor longitude (raw)
+  )
+{
+  uint8_t Data[8];
+  uint32_t Lat = (int32_t)(Latitude * 10000000);
+  uint32_t Lon = (int32_t)(Longitude * 10000000);
+  
+  Data[0] =  Lat        & 0xFF;
+  Data[1] = (Lat >> 8)  & 0xFF;
+  Data[2] = (Lat >> 16) & 0xFF;
+  Data[3] = (Lat >> 24) & 0xFF;
+  Data[4] =  Lon        & 0xFF;
+  Data[5] = (Lon >> 8)  & 0xFF;
+  Data[6] = (Lon >> 16) & 0xFF;
+  Data[7] = (Lon >> 24) & 0xFF;
+
+  TxCANMessage(0x280 + NODE_ID_OFFSET_1 + CONTROLLER_NODE_ID, 8, Data);
 }
 
 // transmits an emergency message

@@ -1,11 +1,78 @@
 // IMU handling
 
+#include <math.h>
 #include "IMU.h"
 #include "CANopen.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// EMA on IMU samples (0..1, higher = trust new sample more). Prototype — tune for field.
+static constexpr float kImuLpAlphaRollPitch = 0.30f;
+static constexpr float kImuLpAlphaHeading  = 0.22f;
+static constexpr float kImuLpAlphaYawRate   = 0.28f;
 
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
+
+void IMU::ApplyInputLowPass
+  (
+  uint8_t Index,
+  float Heading,
+  float Pitch,
+  float Roll,
+  float YawRate
+  )
+{
+  ImuLpState *st = &imu_lp_[Index];
+
+  if (!st->init)
+  {
+    IMUValues[Index].Heading = Heading;
+    IMUValues[Index].Pitch   = Pitch;
+    IMUValues[Index].Roll    = Roll;
+    IMUValues[Index].YawRate = YawRate;
+    const float hr = Heading * (float)(M_PI / 180.0);
+    st->h_cos = cosf(hr);
+    st->h_sin = sinf(hr);
+    st->roll = Roll;
+    st->pitch = Pitch;
+    st->yaw_rate = YawRate;
+    st->init = true;
+    return;
+  }
+
+  st->roll = kImuLpAlphaRollPitch * Roll
+    + (1.0f - kImuLpAlphaRollPitch) * st->roll;
+  st->pitch = kImuLpAlphaRollPitch * Pitch
+    + (1.0f - kImuLpAlphaRollPitch) * st->pitch;
+  st->yaw_rate = kImuLpAlphaYawRate * YawRate
+    + (1.0f - kImuLpAlphaYawRate) * st->yaw_rate;
+
+  const float hr = Heading * (float)(M_PI / 180.0);
+  const float cn = cosf(hr);
+  const float sn = sinf(hr);
+  st->h_cos = kImuLpAlphaHeading * cn
+    + (1.0f - kImuLpAlphaHeading) * st->h_cos;
+  st->h_sin = kImuLpAlphaHeading * sn
+    + (1.0f - kImuLpAlphaHeading) * st->h_sin;
+
+  float h_deg = atan2f(st->h_sin, st->h_cos) * (float)(180.0 / M_PI);
+  while (h_deg < 0.0f)
+  {
+    h_deg += 360.0f;
+  }
+  while (h_deg >= 360.0f)
+  {
+    h_deg -= 360.0f;
+  }
+
+  IMUValues[Index].Heading = h_deg;
+  IMUValues[Index].Pitch   = st->pitch;
+  IMUValues[Index].Roll    = st->roll;
+  IMUValues[Index].YawRate = st->yaw_rate;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -30,6 +97,7 @@ void IMU::Init
   for (int i = 0; i < NUM_BLADES + 1; i++)
   {
     memset(&IMUValues[i], 0, sizeof(imu_t));
+    imu_lp_[i].init = false;
   }
 }
 
@@ -60,26 +128,17 @@ void IMU::ProcessIMUTPDO1
     switch (NodeId)
     {
       case TRACTOR_IMU_NODE_ID:
-        IMUValues[TRACTOR_IDX].Heading = Heading;
-        IMUValues[TRACTOR_IDX].Pitch   = Pitch;
-        IMUValues[TRACTOR_IDX].Roll    = Roll;
-        IMUValues[TRACTOR_IDX].YawRate = YawRate;
+        ApplyInputLowPass(TRACTOR_IDX, Heading, Pitch, Roll, YawRate);
         if (IMUChanged != NULL) IMUChanged(TRACTOR_IDX, &IMUValues[TRACTOR_IDX]);
         break;
 
       case FRONTSCRAPER_IMU_NODE_ID:
-        IMUValues[FRONT_BLADE_IDX].Heading = Heading;
-        IMUValues[FRONT_BLADE_IDX].Pitch   = Pitch;
-        IMUValues[FRONT_BLADE_IDX].Roll    = Roll;
-        IMUValues[FRONT_BLADE_IDX].YawRate = YawRate;
+        ApplyInputLowPass(FRONT_BLADE_IDX, Heading, Pitch, Roll, YawRate);
         if (IMUChanged != NULL) IMUChanged(FRONT_BLADE_IDX, &IMUValues[FRONT_BLADE_IDX]);
         break;
 
       case REARSCRAPER_IMU_NODE_ID:
-        IMUValues[REAR_BLADE_IDX].Heading = Heading;
-        IMUValues[REAR_BLADE_IDX].Pitch   = Pitch;
-        IMUValues[REAR_BLADE_IDX].Roll    = Roll;
-        IMUValues[REAR_BLADE_IDX].YawRate = YawRate;
+        ApplyInputLowPass(REAR_BLADE_IDX, Heading, Pitch, Roll, YawRate);
         if (IMUChanged != NULL) IMUChanged(REAR_BLADE_IDX, &IMUValues[REAR_BLADE_IDX]);
         break;
     }

@@ -6,7 +6,7 @@
 #include <Arduino.h>
 
 // maximum length of an NMEA 0183 sentence
-#define MAX_NMEA_LENGTH 90
+#define MAX_NMEA_LENGTH 128
 
 // indices into arrays
 #define FRONT_BLADE_IDX 0

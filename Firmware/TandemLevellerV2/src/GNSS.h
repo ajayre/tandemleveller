@@ -14,7 +14,7 @@ typedef struct _gnss_reader_t
   char Buffer[MAX_NMEA_LENGTH];
 } gnss_reader_t;
 
-/** RTK quality from fix / GGA quality (matches fusion and common NMEA usage). */
+// RTK quality from fix / GGA quality (matches fusion and common NMEA usage)
 typedef enum _gnss_rtk_status_t
 {
   GNSS_RTK_NONE = 0,
@@ -27,9 +27,13 @@ typedef struct _gnss_location_t
   double Latitude;
   double Longitude;
   double Altitude;
-  /** Course over ground, degrees (magnetic from VTG field 3, else true from field 1). */
+  // Course over ground, degrees (magnetic from VTG field 3, else true from field 1)
   double TrackMagneticDeg;
   double SpeedKph;
+  // GGA fix quality field (0 = invalid, 1 = GPS, 2 = DGPS, 4 = RTK fixed, 5 = RTK float, etc.)
+  int FixQuality;
+  // GGA HDOP (horizontal dilution); 0 if unknown
+  double Hdop;
   gnss_rtk_status_t RtkStatus;
   int LastFixTimeValid;
   uint32_t LastFixTimeMs;
@@ -46,6 +50,8 @@ class GNSS
     gnss_location_t TractorLocation      = { 0 };
     gnss_location_t FrontScraperLocation = { 0 };
     gnss_location_t RearScraperLocation  = { 0 };
+
+    gnss_location_t RawTractorLocation   = { 0 };
 
     // constructor
     GNSS
