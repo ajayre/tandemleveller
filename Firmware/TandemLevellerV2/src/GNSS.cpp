@@ -246,6 +246,15 @@ void GNSS::ProcessNMEASentence
   uint8_t length
   )
 {
+  // fixme - remove
+  Serial.print(sentence);
+
+  // these messages are not forwarded because we use GGA instead
+  if ((strncmp(sentence, "$GPGLL,", 7) == 0) || (strncmp(sentence, "$GNGLL,", 7) == 0))
+  {
+    return;
+  }
+
   bool isGga = (strncmp(sentence, "$GPGGA,", 7) == 0) ||
                (strncmp(sentence, "$GNGGA,", 7) == 0);
   bool isVtg = (strncmp(sentence, "$GPVTG,", 7) == 0) ||

@@ -398,6 +398,21 @@ static void CANopen_ProcessPDO
   }
 }
 
+// called when the fusor has applied a fuse
+void SensorFusor_FuseApplied
+  (
+  SensorFusor *pFusor,       // the fusor making this call
+  int EastingMm,             // correction in easting in mm
+  int NorthingMm,            // correction in northing in mm
+  int AltitudeMm             // correction in altitude in mm
+  )
+{
+  if (pFusor == &Fusors[TRACTOR_IDX])
+  {
+    CANopn.TxTPDO5(EastingMm, NorthingMm, AltitudeMm);
+  }
+}
+
 // initialization
 void setup
   (
@@ -430,6 +445,11 @@ void setup
 
   CANopn.Init();
   CANopn.SetCallbacks(CANopen_ProcessPDO, CANopen_NodeLost, CANopen_RequestReset);
+
+  for (int i = 0; i < NUM_BLADES + 1; i++)
+  {
+    Fusors[i].SetCallbacks(SensorFusor_FuseApplied);
+  }
 
   // set up LED
   pinMode(LED, OUTPUT);
@@ -466,6 +486,9 @@ void setup
   agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
 
   CANopn.ResetAllNodes();
+
+  // fixme - remove
+  AntennaLocations[TRACTOR_IDX].HeightMm = 2593;
 
   Serial.println("Ready");
 }

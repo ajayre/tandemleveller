@@ -3,8 +3,36 @@
 #include <math.h>
 #include "SensorFusor.h"
 
+
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
+
+// Local tangent plane: North/East displacement (mm) and altitude delta (mm, up +).
+// delta_alt_m is (fused altitude - input GNSS altitude), not ellipsoid height.
+void SensorFusor::ConvertResultstoMm
+  (
+  double in_lat_deg,
+  double in_lon_deg,
+  double out_lat_deg,
+  double out_lon_deg,
+  double delta_alt_m
+  )
+{
+  constexpr double earth_r_m = 6378137.0;
+  constexpr double pi = 3.14159265358979323846;
+  constexpr double deg_to_rad = pi / 180.0;
+  const double dlat = out_lat_deg - in_lat_deg;
+  const double dlon = out_lon_deg - in_lon_deg;
+  const double north_mm = dlat * deg_to_rad * earth_r_m * 1000.0;
+  const double east_mm =
+    dlon * deg_to_rad * earth_r_m * cos(in_lat_deg * deg_to_rad) * 1000.0;
+  const double up_mm = delta_alt_m * 1000.0;
+
+  if (FuseAppliedCallback != NULL)
+  {
+    FuseAppliedCallback(this, (int)east_mm, (int)north_mm, (int)up_mm);
+  }
+}
 
 // returns non-zero if fix has RTK fixed or float solution
 int SensorFusor::FixHasRtk
@@ -70,6 +98,23 @@ double SensorFusor::BearingDegrees
     * RadToDeg;
 }
 
+double SensorFusor::NormalizeHeadingDeg
+  (
+  double heading_deg
+  ) const
+{
+  double h = heading_deg;
+  while (h < 0.0)
+  {
+    h += 360.0;
+  }
+  while (h >= 360.0)
+  {
+    h -= 360.0;
+  }
+  return h;
+}
+
 // moves (*lat_deg,*lon_deg) by distance_m along heading_deg (degrees, clockwise from north)
 void SensorFusor::MoveDistanceBearing
   (
@@ -122,6 +167,10 @@ void SensorFusor::FuseInternal
   double longitude = fix_in->longitude;
   double altitude = fix_in->altitude;
 
+  const double fuse_in_lat = fix_in->latitude;
+  const double fuse_in_lon = fix_in->longitude;
+  const double fuse_in_alt = fix_in->altitude;
+
   // we haven't calculated the offset between the GNSS heading and the IMU heading yet
   if (imu_gyro_offset == InvalidGyro)
   {
@@ -155,6 +204,14 @@ void SensorFusor::FuseInternal
       {
         imu_gyro_offset = heading - imu_heading;
       }
+    }
+
+    // No GNSS course or displacement bearing yet: use IMU heading so tilt / lever-arm
+    // corrections work while stationary; offset 0 until GNSS can calibrate.
+    if (heading == InvalidHeading)
+    {
+      heading = NormalizeHeadingDeg(imu_heading);
+      imu_gyro_offset = 0.0;
     }
   }
   else
@@ -255,6 +312,8 @@ void SensorFusor::FuseInternal
     last_longitude = longitude;
 
     *fix_out = corrected;
+
+    ConvertResultstoMm(fuse_in_lat, fuse_in_lon, corrected.latitude, corrected.longitude, corrected.altitude - fuse_in_alt);
     return;
   }
 
@@ -302,6 +361,9 @@ void SensorFusor::FuseInternal
     last_longitude = longitude;
 
     *fix_out = corrected;
+
+    ConvertResultstoMm(fuse_in_lat, fuse_in_lon, corrected.latitude, corrected.longitude, corrected.altitude - fuse_in_alt);
+
     return;
   }
 
@@ -319,6 +381,8 @@ void SensorFusor::FuseInternal
     last_longitude = fix_in->longitude;
 
     *fix_out = corrected;
+
+    ConvertResultstoMm(fuse_in_lat, fuse_in_lon, corrected.latitude, corrected.longitude, corrected.altitude - fuse_in_alt);
   }
 }
 
@@ -333,6 +397,7 @@ SensorFusor::SensorFusor
   : last_latitude(InvalidLatitude)
   , last_longitude(InvalidLongitude)
 {
+  FuseAppliedCallback = NULL;
 }
 
 // combines GNSS fix and IMU into a corrected gnss_location_t
@@ -352,6 +417,9 @@ void SensorFusor::Fuse
   fix_in.rtk                       = plocation->RtkStatus;
   fix_in.last_fix_time_valid       = plocation->LastFixTimeValid;
   fix_in.last_fix_time_ms          = plocation->LastFixTimeMs;
+
+  // fixme - remove
+  fix_in.rtk = GNSS_RTK_FIX;
 
   FusionImuValue imu_val;
   imu_val.pitch    = (double)imu.Pitch;
@@ -376,4 +444,13 @@ void SensorFusor::Fuse
   plocation->RtkStatus        = fix_out.rtk;
   plocation->LastFixTimeValid = fix_out.last_fix_time_valid;
   plocation->LastFixTimeMs    = fix_out.last_fix_time_ms;
+}
+
+// sets the callback functions
+void SensorFusor::SetCallbacks
+  ( 
+  sensorfusor_fuse_applied_t _FuseAppliedCallback
+  )
+{
+  FuseAppliedCallback = _FuseAppliedCallback;
 }
