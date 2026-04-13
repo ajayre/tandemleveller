@@ -58,6 +58,28 @@ class IMU
 
   private:
     imu_changed_callback_t IMUChanged;
+
+    // Prototype IMU low-pass (EMA) before fusion; tune alphas in IMU.cpp. Move to IMU node later.
+    struct ImuLpState
+    {
+      bool  init = false;
+      float roll = 0.0f;
+      float pitch = 0.0f;
+      float yaw_rate = 0.0f;
+      float h_cos = 1.0f;
+      float h_sin = 0.0f;
+    };
+
+    ImuLpState imu_lp_[NUM_BLADES + 1];
+
+    void ApplyInputLowPass
+      (
+      uint8_t Index,
+      float Heading,
+      float Pitch,
+      float Roll,
+      float YawRate
+      );
 };
 
 #endif // _IMUH_

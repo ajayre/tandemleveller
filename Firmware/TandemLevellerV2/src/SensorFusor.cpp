@@ -143,6 +143,219 @@ void SensorFusor::MoveDistanceBearing
   *lon_deg = new_lon * RadToDeg;
 }
 
+double SensorFusor::HorizontalMeasVarianceM2
+  (
+  const FusionGnssFix *fix
+  ) const
+{
+  double sigma_m = 1.0;
+  if (fix->rtk == GNSS_RTK_FIX)
+  {
+    sigma_m = 0.05;
+  }
+  else if (fix->rtk == GNSS_RTK_FLOAT)
+  {
+    sigma_m = 0.12;
+  }
+  else if (fix->fix_quality == 0)
+  {
+    sigma_m = 5.0;
+  }
+  else if (fix->fix_quality == 1)
+  {
+    sigma_m = 1.0;
+  }
+  else if (fix->fix_quality == 2)
+  {
+    sigma_m = 0.5;
+  }
+  else
+  {
+    sigma_m = 1.5;
+  }
+
+  if (fix->hdop > 0.0)
+  {
+    sigma_m *= (0.5 + 0.5 * fix->hdop);
+  }
+  if (sigma_m < HorizKfMinMeasSigmaM)
+  {
+    sigma_m = HorizKfMinMeasSigmaM;
+  }
+  return sigma_m * sigma_m;
+}
+
+void SensorFusor::GeodeticDeltaToNeM
+  (
+  double lat0_deg,
+  double lon0_deg,
+  double lat_deg,
+  double lon_deg,
+  double *north_m,
+  double *east_m
+  ) const
+{
+  const double dlat_rad = (lat_deg - lat0_deg) * DegToRad;
+  const double dlon_rad = (lon_deg - lon0_deg) * DegToRad;
+  const double lat0_rad = lat0_deg * DegToRad;
+  *north_m = dlat_rad * EarthRadiusM;
+  *east_m = dlon_rad * EarthRadiusM * cos(lat0_rad);
+}
+
+void SensorFusor::NeMToGeodetic
+  (
+  double lat0_deg,
+  double lon0_deg,
+  double north_m,
+  double east_m,
+  double *lat_deg,
+  double *lon_deg
+  ) const
+{
+  const double lat0_rad = lat0_deg * DegToRad;
+  *lat_deg = lat0_deg + (north_m / EarthRadiusM) * RadToDeg;
+  *lon_deg = lon0_deg
+    + (east_m / (EarthRadiusM * cos(lat0_rad))) * RadToDeg;
+}
+
+void SensorFusor::ApplyFusedHorizontalKalman
+  (
+  double *lat_deg,
+  double *lon_deg,
+  const FusionGnssFix *fix_meta,
+  bool measurement_valid
+  )
+{
+  if (!horiz_kf_init)
+  {
+    if (!measurement_valid)
+    {
+      return;
+    }
+    kf_origin_lat_deg = *lat_deg;
+    kf_origin_lon_deg = *lon_deg;
+    kf_n_m = 0.0;
+    kf_e_m = 0.0;
+    kf_P_nn = 25.0;
+    kf_P_ne = 0.0;
+    kf_P_en = 0.0;
+    kf_P_ee = 25.0;
+    kf_last_fix_ms = fix_meta->last_fix_time_ms;
+    horiz_kf_init = true;
+    return;
+  }
+
+  double dt = 0.1;
+  if (fix_meta->last_fix_time_valid
+    && kf_last_fix_ms > 0
+    && fix_meta->last_fix_time_ms >= kf_last_fix_ms)
+  {
+    const double d =
+      (double)(fix_meta->last_fix_time_ms - kf_last_fix_ms) / 1000.0;
+    if (d > 1e-3 && d < 5.0)
+    {
+      dt = d;
+    }
+  }
+  kf_last_fix_ms = fix_meta->last_fix_time_ms;
+
+  double q_scale = 1.0;
+  if (fix_meta->vector.speed_kph > HorizKfSpeedBlendKph)
+  {
+    q_scale = 1.0
+      + (fix_meta->vector.speed_kph - HorizKfSpeedBlendKph) * 1.0;
+  }
+  const double q = HorizKfProcessNoiseM2PerS * dt * q_scale;
+  kf_P_nn += q;
+  kf_P_ee += q;
+
+  if (!measurement_valid)
+  {
+    NeMToGeodetic(
+      kf_origin_lat_deg,
+      kf_origin_lon_deg,
+      kf_n_m,
+      kf_e_m,
+      lat_deg,
+      lon_deg);
+    return;
+  }
+
+  double R = HorizontalMeasVarianceM2(fix_meta);
+  if (fix_meta->vector.speed_kph < HorizKfSpeedBlendKph)
+  {
+    R *= 1.5
+      + (HorizKfSpeedBlendKph - fix_meta->vector.speed_kph) * 0.15;
+  }
+
+  double north_m = 0.0;
+  double east_m = 0.0;
+  GeodeticDeltaToNeM(
+    kf_origin_lat_deg,
+    kf_origin_lon_deg,
+    *lat_deg,
+    *lon_deg,
+    &north_m,
+    &east_m);
+
+  const double y_n = north_m - kf_n_m;
+  const double y_e = east_m - kf_e_m;
+
+  const double S_nn = kf_P_nn + R;
+  const double S_ne = kf_P_ne;
+  const double S_en = kf_P_en;
+  const double S_ee = kf_P_ee + R;
+
+  const double det = S_nn * S_ee - S_ne * S_en;
+  if (fabs(det) < 1e-18)
+  {
+    NeMToGeodetic(
+      kf_origin_lat_deg,
+      kf_origin_lon_deg,
+      kf_n_m,
+      kf_e_m,
+      lat_deg,
+      lon_deg);
+    return;
+  }
+
+  const double inv_det = 1.0 / det;
+  const double Sinv_nn = S_ee * inv_det;
+  const double Sinv_ne = -S_ne * inv_det;
+  const double Sinv_en = -S_en * inv_det;
+  const double Sinv_ee = S_nn * inv_det;
+
+  const double K_nn = kf_P_nn * Sinv_nn + kf_P_ne * Sinv_en;
+  const double K_ne = kf_P_nn * Sinv_ne + kf_P_ne * Sinv_ee;
+  const double K_en = kf_P_en * Sinv_nn + kf_P_ee * Sinv_en;
+  const double K_ee = kf_P_en * Sinv_ne + kf_P_ee * Sinv_ee;
+
+  kf_n_m += K_nn * y_n + K_ne * y_e;
+  kf_e_m += K_en * y_n + K_ee * y_e;
+
+  const double P_nn_new =
+    (1.0 - K_nn) * kf_P_nn - K_ne * kf_P_en;
+  const double P_ne_new =
+    (1.0 - K_nn) * kf_P_ne - K_ne * kf_P_ee;
+  const double P_en_new =
+    -K_en * kf_P_nn + (1.0 - K_ee) * kf_P_en;
+  const double P_ee_new =
+    -K_en * kf_P_ne + (1.0 - K_ee) * kf_P_ee;
+
+  kf_P_nn = P_nn_new;
+  kf_P_ne = P_ne_new;
+  kf_P_en = P_en_new;
+  kf_P_ee = P_ee_new;
+
+  NeMToGeodetic(
+    kf_origin_lat_deg,
+    kf_origin_lon_deg,
+    kf_n_m,
+    kf_e_m,
+    lat_deg,
+    lon_deg);
+}
+
 // core fusion: heading blend, tilt and antenna lever-arm, updates last_* and fix_out
 void SensorFusor::FuseInternal
   (
@@ -162,7 +375,14 @@ void SensorFusor::FuseInternal
   const double imu_yaw_rate = imu->yaw_rate;
   double heading = InvalidHeading;
 
-  const double imu_heading = imu->heading;
+  // Horizontal lever-arm requires heading calibrated from GNSS and low yaw rate.
+  // When uncalibrated, raw magnetometer heading may be 20-40 deg off due to hard iron,
+  // which pushes the lever-arm correction in the wrong direction.
+  const bool heading_calibrated = (imu_gyro_offset != InvalidGyro);
+  const bool yaw_rate_ok_for_horiz_lever =
+    heading_calibrated && fabs(imu_yaw_rate) < YawRateThreshold;
+
+  const double imu_heading = imu->heading + MagneticDeclinationDeg;
   double latitude = fix_in->latitude;
   double longitude = fix_in->longitude;
   double altitude = fix_in->altitude;
@@ -178,6 +398,7 @@ void SensorFusor::FuseInternal
       && FixHasRtk(fix_in))
     {
       heading = fix_in->vector.track_magnetic_deg;
+      imu_gyro_offset = heading - imu_heading;
     }
     else
     {
@@ -206,12 +427,12 @@ void SensorFusor::FuseInternal
       }
     }
 
-    // No GNSS course or displacement bearing yet: use IMU heading so tilt / lever-arm
-    // corrections work while stationary; offset 0 until GNSS can calibrate.
+    // No GNSS course or displacement bearing yet: use raw IMU heading for altitude
+    // correction (heading-independent) but leave offset uncalibrated so horizontal
+    // lever-arm stays disabled until GNSS can provide a reference.
     if (heading == InvalidHeading)
     {
       heading = NormalizeHeadingDeg(imu_heading);
-      imu_gyro_offset = 0.0;
     }
   }
   else
@@ -229,7 +450,7 @@ void SensorFusor::FuseInternal
 
     if (FixHasRtk(fix_in)
       && fix_in->vector.speed_kph > SpeedThresholdKph
-      && imu_yaw_rate < YawRateThreshold)
+      && fabs(imu_yaw_rate) < YawRateThreshold)
     {
       heading = fix_in->vector.track_magnetic_deg * 0.6
         + gyro_heading * 0.4;
@@ -261,9 +482,9 @@ void SensorFusor::FuseInternal
     }
 
     const double roll_tilt_offset =
-      sin(imu->roll * DegToRad) * antenna_height_m;
+      -sin(imu->roll * DegToRad) * antenna_height_m;
     const double pitch_tilt_offset =
-      sin(imu->pitch * DegToRad) * antenna_height_m;
+      -sin(imu->pitch * DegToRad) * antenna_height_m;
     const double alt_offset1 =
       cos(imu->roll * DegToRad)
       * cos(imu->pitch * DegToRad)
@@ -273,11 +494,13 @@ void SensorFusor::FuseInternal
     corrected.latitude            = latitude;
     corrected.longitude           = longitude;
     corrected.vector              = fix_in->vector;
+    corrected.fix_quality         = fix_in->fix_quality;
+    corrected.hdop                = fix_in->hdop;
     corrected.rtk                 = fix_in->rtk;
     corrected.last_fix_time_valid = 0;
     corrected.last_fix_time_ms    = 0;
 
-    if (imu->roll != 0.0)
+    if (yaw_rate_ok_for_horiz_lever && imu->roll != 0.0)
     {
       MoveDistanceBearing(
         &corrected.latitude,
@@ -286,7 +509,7 @@ void SensorFusor::FuseInternal
         roll_tilt_offset + center_offset);
     }
 
-    if (imu->pitch != 0.0)
+    if (yaw_rate_ok_for_horiz_lever && imu->pitch != 0.0)
     {
       MoveDistanceBearing(
         &corrected.latitude,
@@ -297,7 +520,7 @@ void SensorFusor::FuseInternal
 
     altitude -= (alt_offset1 - alt_offset2);
 
-    if (antenna_forward_m != 0.0)
+    if (yaw_rate_ok_for_horiz_lever && antenna_forward_m != 0.0)
     {
       MoveDistanceBearing(
         &corrected.latitude,
@@ -310,6 +533,8 @@ void SensorFusor::FuseInternal
 
     last_latitude  = latitude;
     last_longitude = longitude;
+
+    ApplyFusedHorizontalKalman(&corrected.latitude, &corrected.longitude, fix_in, yaw_rate_ok_for_horiz_lever);
 
     *fix_out = corrected;
 
@@ -340,13 +565,15 @@ void SensorFusor::FuseInternal
     corrected.latitude            = latitude;
     corrected.longitude           = longitude;
     corrected.vector              = fix_in->vector;
+    corrected.fix_quality         = fix_in->fix_quality;
+    corrected.hdop                = fix_in->hdop;
     corrected.rtk                 = fix_in->rtk;
     corrected.last_fix_time_valid = fix_in->last_fix_time_valid;
     corrected.last_fix_time_ms    = fix_in->last_fix_time_ms;
 
     altitude -= (alt_offset1 - alt_offset2);
 
-    if (antenna_forward_m != 0.0)
+    if (yaw_rate_ok_for_horiz_lever && antenna_forward_m != 0.0)
     {
       MoveDistanceBearing(
         &corrected.latitude,
@@ -359,6 +586,8 @@ void SensorFusor::FuseInternal
 
     last_latitude  = latitude;
     last_longitude = longitude;
+
+    ApplyFusedHorizontalKalman(&corrected.latitude, &corrected.longitude, fix_in, yaw_rate_ok_for_horiz_lever);
 
     *fix_out = corrected;
 
@@ -373,12 +602,16 @@ void SensorFusor::FuseInternal
     corrected.longitude           = fix_in->longitude;
     corrected.altitude            = altitude;
     corrected.vector              = fix_in->vector;
+    corrected.fix_quality         = fix_in->fix_quality;
+    corrected.hdop                = fix_in->hdop;
     corrected.rtk                 = fix_in->rtk;
     corrected.last_fix_time_valid = fix_in->last_fix_time_valid;
     corrected.last_fix_time_ms    = fix_in->last_fix_time_ms;
 
     last_latitude  = fix_in->latitude;
     last_longitude = fix_in->longitude;
+
+    ApplyFusedHorizontalKalman(&corrected.latitude, &corrected.longitude, fix_in, yaw_rate_ok_for_horiz_lever);
 
     *fix_out = corrected;
 
@@ -414,12 +647,11 @@ void SensorFusor::Fuse
   fix_in.altitude                  = plocation->Altitude;
   fix_in.vector.track_magnetic_deg = plocation->TrackMagneticDeg;
   fix_in.vector.speed_kph          = plocation->SpeedKph;
+  fix_in.fix_quality               = plocation->FixQuality;
+  fix_in.hdop                      = plocation->Hdop;
   fix_in.rtk                       = plocation->RtkStatus;
   fix_in.last_fix_time_valid       = plocation->LastFixTimeValid;
   fix_in.last_fix_time_ms          = plocation->LastFixTimeMs;
-
-  // fixme - remove
-  fix_in.rtk = GNSS_RTK_FIX;
 
   FusionImuValue imu_val;
   imu_val.pitch    = (double)imu.Pitch;

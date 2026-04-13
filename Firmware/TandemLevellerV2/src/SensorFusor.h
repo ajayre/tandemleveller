@@ -42,6 +42,17 @@ class SensorFusor
     double last_longitude;
     sensorfusor_fuse_applied_t FuseAppliedCallback;
 
+    bool   horiz_kf_init = false;
+    double kf_origin_lat_deg = InvalidLatitude;
+    double kf_origin_lon_deg = InvalidLongitude;
+    uint32_t kf_last_fix_ms = 0;
+    double kf_n_m = 0.0;
+    double kf_e_m = 0.0;
+    double kf_P_nn = 1.0;
+    double kf_P_ne = 0.0;
+    double kf_P_en = 0.0;
+    double kf_P_ee = 1.0;
+
     struct FusionGnssVector
     {
       double track_magnetic_deg;
@@ -54,6 +65,8 @@ class SensorFusor
       double longitude;
       double altitude;
       FusionGnssVector vector;
+      int fix_quality;
+      double hdop;
       gnss_rtk_status_t rtk;
       int last_fix_time_valid;
       uint32_t last_fix_time_ms;
@@ -67,9 +80,20 @@ class SensorFusor
       double yaw_rate;
     };
 
-    static constexpr double SpeedThresholdKph    = 3.0;
+    // Magnetic declination (degrees, positive = East). true = magnetic + declination
+    static constexpr double MagneticDeclinationDeg = 10.48;
+
+    static constexpr double SpeedThresholdKph    = 5.0;
     static constexpr double FixHeadingMinM       = 1.0;
+    // |yaw_rate| below: allow GNSS/gyro track blend (when speed high) and horizontal
+    // tilt / lever-arm; at or above: gyro-only heading, horizontal lat/lon lever-arm off.
     static constexpr double YawRateThreshold     = 6.0;
+
+    // Horizontal output: 2-state Kalman (north/east m) with process noise q (m^2/s) and
+    // measurement variance from fix quality, HDOP, and RTK status.
+    static constexpr double HorizKfProcessNoiseM2PerS = 0.0002;
+    static constexpr double HorizKfMinMeasSigmaM      = 0.04;
+    static constexpr double HorizKfSpeedBlendKph      = 3.0;
 
     static constexpr double EarthRadiusM           = 6378137.0;
     static constexpr double Pi                     = 3.14159265358979323846;
@@ -128,6 +152,43 @@ class SensorFusor
       double heading_deg,                    // bearing clockwise from north (degrees)
       double distance_m                      // distance to move (meters)
       ) const;
+
+    // Measurement variance (m^2) for horizontal position from GGA quality / HDOP / RTK.
+    double HorizontalMeasVarianceM2
+      (
+      const FusionGnssFix *fix
+      ) const;
+
+    void GeodeticDeltaToNeM
+      (
+      double lat0_deg,
+      double lon0_deg,
+      double lat_deg,
+      double lon_deg,
+      double *north_m,
+      double *east_m
+      ) const;
+
+    void NeMToGeodetic
+      (
+      double lat0_deg,
+      double lon0_deg,
+      double north_m,
+      double east_m,
+      double *lat_deg,
+      double *lon_deg
+      ) const;
+
+    // 2-state Kalman on fused horizontal position (lever-arm corrected) before publishing.
+    // When measurement_valid is false (e.g. yaw-gated), skips the measurement update
+    // (P still grows via process noise) and outputs the held Kalman state.
+    void ApplyFusedHorizontalKalman
+      (
+      double *lat_deg,
+      double *lon_deg,
+      const FusionGnssFix *fix_meta,
+      bool measurement_valid
+      );
 
     // core fusion: updates last_latitude/longitude and writes corrected fix_out
     void FuseInternal

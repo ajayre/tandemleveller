@@ -7,6 +7,7 @@
 #include "Arduino.h"
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
 #include "Blades.h"
+#include "GNSS.h"
 
 // number of nodes to monitor
 #define NUM_NODES 0x7F
@@ -80,7 +81,8 @@ class CANopen
     // transmit TPDO4
     void TxTPDO4
       (
-      double Altitude                    // current tractor altitude
+      double Altitude,                   // current tractor altitude
+      gnss_rtk_status_t RtkStatus        // current tractor RTK status
       );
 
     // transmit TPDO5
@@ -89,6 +91,13 @@ class CANopen
       int EastingMm,                     // fusor correction in easting in mm
       int NorthingMm,                    // fusor correction in northing in mm
       int AltitudeMm                     // fusor correction in altitude in mm
+      );
+
+    // transmit TPDO6
+    void TxTPDO6
+      (
+      double Latitude,                   // current tractor latitude (raw)
+      double Longitude                   // current tractor longitude (raw)
       );
 
     // transmits an emergency message

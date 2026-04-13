@@ -56,6 +56,12 @@ void GNSS::ProcessGNSSByte
       // sentence too long - must be mangled, discard
       else if (pReader->NextWritePos == MAX_NMEA_LENGTH)
       {
+        // fixme - remove
+        Serial.println("Mangled NMEA");
+        pReader->Buffer[pReader->NextWritePos++] = NULL;
+        Serial.print("  ");
+        Serial.print(pReader->Buffer);
+
         pReader->Synced = false;
       }
     }
@@ -236,9 +242,9 @@ int GNSS::NMEAFormatLongitude
   return NMEAAppendMinutes(dmOut, dmLen, (size_t)n, min);
 }
 
-// Handles three paths: (1) unknown sentences — pass through unchanged;
-// (2) VTG — checksum, fill TractorLocation speed/track, pass through;
-// (3) GGA — checksum, fill TractorLocation fix, rebuild GGA with formatted lat/lon for callback.
+// Handles paths: (1) unknown sentences — pass through unchanged;
+// (2) VTG / RMC — checksum, fill speed/track; pass through;
+// (3) GGA — checksum, fill fix, quality, HDOP, rebuild GGA with formatted lat/lon for callback.
 void GNSS::ProcessNMEASentence
   (
   pgn_t PGN,
@@ -259,9 +265,11 @@ void GNSS::ProcessNMEASentence
                (strncmp(sentence, "$GNGGA,", 7) == 0);
   bool isVtg = (strncmp(sentence, "$GPVTG,", 7) == 0) ||
                (strncmp(sentence, "$GNVTG,", 7) == 0);
+  bool isRmc = (strncmp(sentence, "$GPRMC,", 7) == 0) ||
+               (strncmp(sentence, "$GNRMC,", 7) == 0);
 
-  // (1) Not GGA or VTG: no parsing, forward raw sentence
-  if (!isGga && !isVtg)
+  // (1) Not GGA, VTG, or RMC: no parsing, forward raw sentence
+  if (!isGga && !isVtg && !isRmc)
   {
     if (GNSSReceivedNMEACallback != NULL)
     {
@@ -271,7 +279,7 @@ void GNSS::ProcessNMEASentence
     return;
   }
 
-  // GGA and VTG share: verify checksum and split comma fields (different field layouts below).
+  // GGA, VTG, and RMC share: verify checksum and split comma fields (different field layouts below).
   const char *star = strchr(sentence, '*');
   if (star == NULL || star[1] == '\0' || star[2] == '\0')
   {
@@ -348,6 +356,30 @@ void GNSS::ProcessNMEASentence
     return;
   }
 
+  // RMC: speed (knots) and course (true) when VTG not present or for redundancy
+  if (isRmc)
+  {
+    // $--RMC,time,status,lat,N,lon,W,sogKn,cogT,date,magvar* — need status A and sog/cog
+    if (nfields > 8 && fields[2][0] == 'A')
+    {
+      if (fields[7][0] != '\0')
+      {
+        pLoc->SpeedKph = strtod(fields[7], NULL) * (double)NMEA_KNOTS_TO_KPH;
+      }
+      if (fields[8][0] != '\0')
+      {
+        pLoc->TrackMagneticDeg = strtod(fields[8], NULL);
+      }
+    }
+
+    if (GNSSReceivedNMEACallback != NULL)
+    {
+      GNSSReceivedNMEACallback(PGN, (char *)sentence, length);
+    }
+
+    return;
+  }
+
   // (3) GGA only: fields[] are GGA columns (lat/lon/quality/altitude, etc.)
   if (nfields < 6)
   {
@@ -364,6 +396,12 @@ void GNSS::ProcessNMEASentence
   if (nfields > 6 && fields[6][0] != '\0')
   {
     qual = atoi(fields[6]);
+  }
+  pLoc->FixQuality = qual;
+  pLoc->Hdop = 0.0;
+  if (nfields > 8 && fields[8][0] != '\0')
+  {
+    pLoc->Hdop = strtod(fields[8], NULL);
   }
   switch (qual)
   {
@@ -386,6 +424,18 @@ void GNSS::ProcessNMEASentence
 
   pLoc->LastFixTimeValid = 1;
   pLoc->LastFixTimeMs = millis();
+
+  // if tractor then store values before fusing
+  if (PGN == PGN_TRACTOR_NMEA)
+  {
+    RawTractorLocation.Latitude        = pLoc->Latitude;
+    RawTractorLocation.Longitude       = pLoc->Longitude;
+    RawTractorLocation.Altitude        = pLoc->Altitude;
+    RawTractorLocation.SpeedKph        = pLoc->SpeedKph;
+    RawTractorLocation.TrackMagneticDeg = pLoc->TrackMagneticDeg;
+    RawTractorLocation.FixQuality      = pLoc->FixQuality;
+    RawTractorLocation.Hdop            = pLoc->Hdop;
+  }
 
   if (GNSSRequestFuseCallback != NULL)
   {
