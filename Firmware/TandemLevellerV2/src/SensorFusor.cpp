@@ -7,6 +7,15 @@
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
 
+// sets the magnetic declination to use
+void SensorFusor::SetMagneticDeclination
+  (
+  uint32_t Declination               // declination in degrees x 100
+  )
+{
+  MagneticDeclinationDeg = Declination / 100;
+}
+
 // Local tangent plane: North/East displacement (mm) and altitude delta (mm, up +).
 // delta_alt_m is (fused altitude - input GNSS altitude), not ellipsoid height.
 void SensorFusor::ConvertResultstoMm
@@ -356,6 +365,97 @@ void SensorFusor::ApplyFusedHorizontalKalman
     lon_deg);
 }
 
+double SensorFusor::VerticalMeasVarianceM2
+  (
+  const FusionGnssFix *fix
+  ) const
+{
+  double sigma_m = 2.0;
+  if (fix->rtk == GNSS_RTK_FIX)
+  {
+    sigma_m = 0.10;
+  }
+  else if (fix->rtk == GNSS_RTK_FLOAT)
+  {
+    sigma_m = 0.24;
+  }
+  else if (fix->fix_quality == 0)
+  {
+    sigma_m = 10.0;
+  }
+  else if (fix->fix_quality == 1)
+  {
+    sigma_m = 2.0;
+  }
+  else if (fix->fix_quality == 2)
+  {
+    sigma_m = 1.0;
+  }
+  else
+  {
+    sigma_m = 3.0;
+  }
+
+  if (fix->hdop > 0.0)
+  {
+    sigma_m *= (0.5 + 0.5 * fix->hdop);
+  }
+  if (sigma_m < AltKfMinMeasSigmaM)
+  {
+    sigma_m = AltKfMinMeasSigmaM;
+  }
+  return sigma_m * sigma_m;
+}
+
+void SensorFusor::ApplyFusedAltitudeKalman
+  (
+  double *altitude_m,
+  const FusionGnssFix *fix_meta
+  )
+{
+  if (!alt_kf_init)
+  {
+    kf_alt_m = *altitude_m;
+    kf_P_alt = 25.0;
+    kf_alt_last_fix_ms = fix_meta->last_fix_time_ms;
+    alt_kf_init = true;
+    return;
+  }
+
+  double dt = 0.1;
+  if (fix_meta->last_fix_time_valid
+    && kf_alt_last_fix_ms > 0
+    && fix_meta->last_fix_time_ms >= kf_alt_last_fix_ms)
+  {
+    const double d =
+      (double)(fix_meta->last_fix_time_ms - kf_alt_last_fix_ms) / 1000.0;
+    if (d > 1e-3 && d < 5.0)
+    {
+      dt = d;
+    }
+  }
+  kf_alt_last_fix_ms = fix_meta->last_fix_time_ms;
+
+  double q_scale = 1.0;
+  if (fix_meta->vector.speed_kph > HorizKfSpeedBlendKph)
+  {
+    q_scale = 1.0
+      + (fix_meta->vector.speed_kph - HorizKfSpeedBlendKph) * 1.0;
+  }
+  const double q = AltKfProcessNoiseM2PerS * dt * q_scale;
+  kf_P_alt += q;
+
+  const double R = VerticalMeasVarianceM2(fix_meta);
+  const double y = *altitude_m - kf_alt_m;
+  const double S = kf_P_alt + R;
+  const double K = kf_P_alt / S;
+
+  kf_alt_m += K * y;
+  kf_P_alt *= (1.0 - K);
+
+  *altitude_m = kf_alt_m;
+}
+
 // core fusion: heading blend, tilt and antenna lever-arm, updates last_* and fix_out
 void SensorFusor::FuseInternal
   (
@@ -484,7 +584,7 @@ void SensorFusor::FuseInternal
     const double roll_tilt_offset =
       -sin(imu->roll * DegToRad) * antenna_height_m;
     const double pitch_tilt_offset =
-      -sin(imu->pitch * DegToRad) * antenna_height_m;
+      sin(imu->pitch * DegToRad) * antenna_height_m;
     const double alt_offset1 =
       cos(imu->roll * DegToRad)
       * cos(imu->pitch * DegToRad)
@@ -534,6 +634,7 @@ void SensorFusor::FuseInternal
     last_latitude  = latitude;
     last_longitude = longitude;
 
+    ApplyFusedAltitudeKalman(&corrected.altitude, fix_in);
     ApplyFusedHorizontalKalman(&corrected.latitude, &corrected.longitude, fix_in, yaw_rate_ok_for_horiz_lever);
 
     *fix_out = corrected;
@@ -587,6 +688,7 @@ void SensorFusor::FuseInternal
     last_latitude  = latitude;
     last_longitude = longitude;
 
+    ApplyFusedAltitudeKalman(&corrected.altitude, fix_in);
     ApplyFusedHorizontalKalman(&corrected.latitude, &corrected.longitude, fix_in, yaw_rate_ok_for_horiz_lever);
 
     *fix_out = corrected;
@@ -597,10 +699,35 @@ void SensorFusor::FuseInternal
   }
 
   {
+    double heading90 = heading + 90.0;
+    if (heading90 >= 360.0)
+    {
+      heading90 -= 360.0;
+    }
+
+    double center_offset = 0.0;
+    double alt_offset2 = 0.0;
+
+    if (antenna_left_m != 0.0)
+    {
+      center_offset = cos(imu->roll * DegToRad) * antenna_left_m;
+      alt_offset2 = sin(imu->roll * DegToRad) * center_offset;
+    }
+
+    const double roll_tilt_offset =
+      -sin(imu->roll * DegToRad) * antenna_height_m;
+    const double pitch_tilt_offset =
+      sin(imu->pitch * DegToRad) * antenna_height_m;
+    const double alt_offset1 =
+      cos(imu->roll * DegToRad)
+      * cos(imu->pitch * DegToRad)
+      * antenna_height_m;
+
+    altitude -= (alt_offset1 - alt_offset2);
+
     FusionGnssFix corrected;
-    corrected.latitude            = fix_in->latitude;
-    corrected.longitude           = fix_in->longitude;
-    corrected.altitude            = altitude;
+    corrected.latitude            = latitude;
+    corrected.longitude           = longitude;
     corrected.vector              = fix_in->vector;
     corrected.fix_quality         = fix_in->fix_quality;
     corrected.hdop                = fix_in->hdop;
@@ -608,10 +735,40 @@ void SensorFusor::FuseInternal
     corrected.last_fix_time_valid = fix_in->last_fix_time_valid;
     corrected.last_fix_time_ms    = fix_in->last_fix_time_ms;
 
-    last_latitude  = fix_in->latitude;
-    last_longitude = fix_in->longitude;
+    if (imu->roll != 0.0)
+    {
+      MoveDistanceBearing(
+        &corrected.latitude,
+        &corrected.longitude,
+        heading90,
+        roll_tilt_offset + center_offset);
+    }
 
-    ApplyFusedHorizontalKalman(&corrected.latitude, &corrected.longitude, fix_in, yaw_rate_ok_for_horiz_lever);
+    if (imu->pitch != 0.0)
+    {
+      MoveDistanceBearing(
+        &corrected.latitude,
+        &corrected.longitude,
+        heading,
+        pitch_tilt_offset);
+    }
+
+    if (antenna_forward_m != 0.0)
+    {
+      MoveDistanceBearing(
+        &corrected.latitude,
+        &corrected.longitude,
+        heading,
+        -antenna_forward_m);
+    }
+
+    corrected.altitude = altitude;
+
+    last_latitude  = latitude;
+    last_longitude = longitude;
+
+    alt_kf_init   = false;
+    horiz_kf_init = false;
 
     *fix_out = corrected;
 
