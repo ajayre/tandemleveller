@@ -36,6 +36,12 @@ class SensorFusor
       sensorfusor_fuse_applied_t FuseAppliedCallback
       );
 
+    // sets the magnetic declination to use
+    void SetMagneticDeclination
+      (
+      uint32_t Declination               // declination in degrees x 100
+      );
+
   private:
     double imu_gyro_offset = InvalidGyro;
     double last_latitude;
@@ -52,6 +58,11 @@ class SensorFusor
     double kf_P_ne = 0.0;
     double kf_P_en = 0.0;
     double kf_P_ee = 1.0;
+
+    bool   alt_kf_init = false;
+    uint32_t kf_alt_last_fix_ms = 0;
+    double kf_alt_m = 0.0;
+    double kf_P_alt = 1.0;
 
     struct FusionGnssVector
     {
@@ -81,7 +92,7 @@ class SensorFusor
     };
 
     // Magnetic declination (degrees, positive = East). true = magnetic + declination
-    static constexpr double MagneticDeclinationDeg = 10.48;
+    double MagneticDeclinationDeg = 10.48;
 
     static constexpr double SpeedThresholdKph    = 5.0;
     static constexpr double FixHeadingMinM       = 1.0;
@@ -94,6 +105,12 @@ class SensorFusor
     static constexpr double HorizKfProcessNoiseM2PerS = 0.0002;
     static constexpr double HorizKfMinMeasSigmaM      = 0.04;
     static constexpr double HorizKfSpeedBlendKph      = 3.0;
+
+    // Altitude output: 1-state Kalman (m) with process noise and vertical meas variance.
+    // Vertical GNSS noise is typically 2-3x horizontal; speed scaling allows tracking
+    // genuine terrain changes while smoothing when stationary.
+    static constexpr double AltKfProcessNoiseM2PerS   = 0.0001;
+    static constexpr double AltKfMinMeasSigmaM        = 0.008;
 
     static constexpr double EarthRadiusM           = 6378137.0;
     static constexpr double Pi                     = 3.14159265358979323846;
@@ -188,6 +205,20 @@ class SensorFusor
       double *lon_deg,
       const FusionGnssFix *fix_meta,
       bool measurement_valid
+      );
+
+    // Measurement variance (m^2) for vertical position from GGA quality / HDOP / RTK.
+    double VerticalMeasVarianceM2
+      (
+      const FusionGnssFix *fix
+      ) const;
+
+    // 1-state Kalman on fused altitude (lever-arm corrected) before publishing.
+    // Only called when RTK is available; without RTK, altitude passes through raw.
+    void ApplyFusedAltitudeKalman
+      (
+      double *altitude_m,
+      const FusionGnssFix *fix_meta
       );
 
     // core fusion: updates last_latitude/longitude and writes corrected fix_out

@@ -27,16 +27,7 @@ typedef enum _pgn_t : uint16_t
   PGN_AGGRADE_STARTED            = 0x0002,
   PGN_PING                       = 0x0003,
   PGN_CLEAR_ESTOP                = 0x0004,
-  PGN_TRACTOR_IMU_FOUND          = 0x0005, // fixme - to do
-  PGN_TRACTOR_IMU_LOST           = 0x0006, // fixme - to do
-  PGN_FRONT_IMU_FOUND            = 0x0007, // fixme - to do
-  PGN_FRONT_IMU_LOST             = 0x0008, // fixme - to do
-  PGN_REAR_IMU_FOUND             = 0x0009, // fixme - to do
-  PGN_REAR_IMU_LOST              = 0x000A, // fixme - to do
-  PGN_FRONT_HEIGHT_FOUND         = 0x000B, // fixme - to do
-  PGN_FRONT_HEIGHT_LOST          = 0x000C, // fixme - to do
-  PGN_REAR_HEIGHT_FOUND          = 0x000D, // fixme - to do
-  PGN_REAR_HEIGHT_LOST           = 0x000E, // fixme - to do
+  PGN_YOU_ARE_SECONDARY          = 0x0005,  // fixme - to do
 
   // blade control
   PGN_FRONT_CUT_VALVE            = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX
@@ -80,10 +71,29 @@ typedef enum _pgn_t : uint16_t
   PGN_FRONT_DUMPING              = 0x500A, // fixme - to do
   PGN_REAR_DUMPING               = 0x500B, // fixme - to do
 
-  // IMU
+  // sensors
   PGN_TRACTOR_IMU                = 0x6000,
   PGN_FRONT_IMU                  = 0x6001,
   PGN_REAR_IMU                   = 0x6002,
+  PGN_FRONT_APRON_IMU            = 0x6003, // fixme - to do
+  PGN_FRONT_BUCKET_IMU           = 0x6004, // fixme - to do
+  PGN_REAR_BUCKET_IMU            = 0x6005, // fixme - to do
+  PGN_TRACTOR_IMU_FOUND          = 0x6006, // fixme - to do
+  PGN_TRACTOR_IMU_LOST           = 0x6007, // fixme - to do
+  PGN_FRONT_IMU_FOUND            = 0x6008, // fixme - to do
+  PGN_FRONT_IMU_LOST             = 0x6009, // fixme - to do
+  PGN_REAR_IMU_FOUND             = 0x600A, // fixme - to do
+  PGN_REAR_IMU_LOST              = 0x600B, // fixme - to do
+  PGN_FRONT_APRON_IMU_FOUND      = 0x600C, // fixme - to do
+  PGN_FRONT_APRON_IMU_LOST       = 0x600D, // fixme - to do
+  PGN_FRONT_BUCKET_IMU_FOUND     = 0x600E, // fixme - to do
+  PGN_FRONT_BUCKET_IMU_LOST      = 0x600F, // fixme - to do
+  PGN_REAR_BUCKET_IMU_FOUND      = 0x6010, // fixme - to do
+  PGN_REAR_BUCKET_IMU_LOST       = 0x6011, // fixme - to do
+  PGN_FRONT_HEIGHT_FOUND         = 0x6012, // fixme - to do
+  PGN_FRONT_HEIGHT_LOST          = 0x6013, // fixme - to do
+  PGN_REAR_HEIGHT_FOUND          = 0x6014, // fixme - to do
+  PGN_REAR_HEIGHT_LOST           = 0x6015, // fixme - to do
 
   // GNSS
   PGN_TRACTOR_NMEA               = 0x7000,
@@ -100,6 +110,7 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_ANTENNA_HEIGHT        = 0x8006,
   PGN_REAR_ANTENNA_LEFTOFF       = 0x8007,
   PGN_REAR_ANTENNA_FORWARDOFF    = 0x8008,
+  PGN_MAGNETIC_DECLINATION       = 0x8009,
 } pgn_t;
 
 // information that is transmitted to/from AgGrade

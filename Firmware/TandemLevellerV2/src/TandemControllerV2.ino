@@ -661,6 +661,15 @@ void loop
         AntennaLocations[REAR_BLADE_IDX].ForwardMm = agGrade.GetPGNPacketUInt32(&Command);
         break;
 
+      case PGN_MAGNETIC_DECLINATION:
+        {
+          for (int i = 0; i < NUM_BLADES + 1; i++)
+          {
+            Fusors[i].SetMagneticDeclination(agGrade.GetPGNPacketUInt32(&Command));
+          }
+        }
+        break;
+
       default:
         Serial.print("Unknown PGN: 0x");
         Serial.println(Command.PGN, HEX);

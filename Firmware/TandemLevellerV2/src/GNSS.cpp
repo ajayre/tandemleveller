@@ -428,13 +428,13 @@ void GNSS::ProcessNMEASentence
   // if tractor then store values before fusing
   if (PGN == PGN_TRACTOR_NMEA)
   {
-    RawTractorLocation.Latitude        = pLoc->Latitude;
-    RawTractorLocation.Longitude       = pLoc->Longitude;
-    RawTractorLocation.Altitude        = pLoc->Altitude;
-    RawTractorLocation.SpeedKph        = pLoc->SpeedKph;
+    RawTractorLocation.Latitude         = pLoc->Latitude;
+    RawTractorLocation.Longitude        = pLoc->Longitude;
+    RawTractorLocation.Altitude         = pLoc->Altitude;
+    RawTractorLocation.SpeedKph         = pLoc->SpeedKph;
     RawTractorLocation.TrackMagneticDeg = pLoc->TrackMagneticDeg;
-    RawTractorLocation.FixQuality      = pLoc->FixQuality;
-    RawTractorLocation.Hdop            = pLoc->Hdop;
+    RawTractorLocation.FixQuality       = pLoc->FixQuality;
+    RawTractorLocation.Hdop             = pLoc->Hdop;
   }
 
   if (GNSSRequestFuseCallback != NULL)
