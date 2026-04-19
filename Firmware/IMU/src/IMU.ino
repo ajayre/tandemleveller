@@ -10,10 +10,13 @@
 // "CANopen" node id
 #if TRACTOR == 1
   #define NODE_ID 0x02
+  #define TPDO_TX_PERIOD_MS 10
 #elif FRONTSCRAPER == 1
   #define NODE_ID 0x03
+  #define TPDO_TX_PERIOD_MS 10
 #else
   #define NODE_ID 0x04
+#define TPDO_TX_PERIOD_MS 10
 #endif
 
 // BNO08x GPIO pins
@@ -32,9 +35,6 @@
 
 // time between heartbeats in millseconds
 #define HB_PRODUCER_TIME_MS 100
-
-// time between transmission of TPDOs in milliseconds
-#define TPDO_TX_PERIOD_MS 50
 
 struct euler_t
 {
