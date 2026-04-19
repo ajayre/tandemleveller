@@ -94,8 +94,12 @@ class SensorFusor
     // Magnetic declination (degrees, positive = East). true = magnetic + declination
     double MagneticDeclinationDeg = 10.48;
 
+    // IMU mounting calibration offsets (degrees). Subtracted from raw IMU readings
+    // so that a physically vertical pole reads roll=0, pitch=0.
+    static constexpr double IMU_ROLL_CALIBRATION_DEG  = 6.0;
+    static constexpr double IMU_PITCH_CALIBRATION_DEG = -2.0;
+
     static constexpr double SpeedThresholdKph    = 5.0;
-    static constexpr double FixHeadingMinM       = 1.0;
     // |yaw_rate| below: allow GNSS/gyro track blend (when speed high) and horizontal
     // tilt / lever-arm; at or above: gyro-only heading, horizontal lat/lon lever-arm off.
     static constexpr double YawRateThreshold     = 6.0;
@@ -109,7 +113,7 @@ class SensorFusor
     // Altitude output: 1-state Kalman (m) with process noise and vertical meas variance.
     // Vertical GNSS noise is typically 2-3x horizontal; speed scaling allows tracking
     // genuine terrain changes while smoothing when stationary.
-    static constexpr double AltKfProcessNoiseM2PerS   = 0.0001;
+    static constexpr double AltKfProcessNoiseM2PerS   = 0.0005;
     static constexpr double AltKfMinMeasSigmaM        = 0.008;
 
     static constexpr double EarthRadiusM           = 6378137.0;

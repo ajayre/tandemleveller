@@ -373,11 +373,11 @@ double SensorFusor::VerticalMeasVarianceM2
   double sigma_m = 2.0;
   if (fix->rtk == GNSS_RTK_FIX)
   {
-    sigma_m = 0.10;
+    sigma_m = 0.06;
   }
   else if (fix->rtk == GNSS_RTK_FLOAT)
   {
-    sigma_m = 0.24;
+    sigma_m = 0.16;
   }
   else if (fix->fix_quality == 0)
   {
@@ -475,12 +475,8 @@ void SensorFusor::FuseInternal
   const double imu_yaw_rate = imu->yaw_rate;
   double heading = InvalidHeading;
 
-  // Horizontal lever-arm requires heading calibrated from GNSS and low yaw rate.
-  // When uncalibrated, raw magnetometer heading may be 20-40 deg off due to hard iron,
-  // which pushes the lever-arm correction in the wrong direction.
-  const bool heading_calibrated = (imu_gyro_offset != InvalidGyro);
   const bool yaw_rate_ok_for_horiz_lever =
-    heading_calibrated && fabs(imu_yaw_rate) < YawRateThreshold;
+    fabs(imu_yaw_rate) < YawRateThreshold;
 
   const double imu_heading = imu->heading + MagneticDeclinationDeg;
   double latitude = fix_in->latitude;
@@ -491,7 +487,10 @@ void SensorFusor::FuseInternal
   const double fuse_in_lon = fix_in->longitude;
   const double fuse_in_alt = fix_in->altitude;
 
-  // we haven't calculated the offset between the GNSS heading and the IMU heading yet
+  // Base heading is always IMU + magnetic declination.
+  // When moving at speed with RTK, blend with GNSS COG for better accuracy.
+  heading = NormalizeHeadingDeg(imu_heading);
+
   if (imu_gyro_offset == InvalidGyro)
   {
     if (fix_in->vector.speed_kph > SpeedThresholdKph
@@ -499,40 +498,6 @@ void SensorFusor::FuseInternal
     {
       heading = fix_in->vector.track_magnetic_deg;
       imu_gyro_offset = heading - imu_heading;
-    }
-    else
-    {
-      if (last_latitude == InvalidLatitude)
-      {
-        last_latitude = latitude;
-        last_longitude = longitude;
-      }
-      else if (HaversineDistanceM(
-                 last_latitude,
-                 last_longitude,
-                 latitude,
-                 longitude)
-        > FixHeadingMinM)
-      {
-        heading = BearingDegrees(
-          last_latitude,
-          last_longitude,
-          latitude,
-          longitude);
-      }
-
-      if (heading != InvalidHeading)
-      {
-        imu_gyro_offset = heading - imu_heading;
-      }
-    }
-
-    // No GNSS course or displacement bearing yet: use raw IMU heading for altitude
-    // correction (heading-independent) but leave offset uncalibrated so horizontal
-    // lever-arm stays disabled until GNSS can provide a reference.
-    if (heading == InvalidHeading)
-    {
-      heading = NormalizeHeadingDeg(imu_heading);
     }
   }
   else
@@ -811,9 +776,9 @@ void SensorFusor::Fuse
   fix_in.last_fix_time_ms          = plocation->LastFixTimeMs;
 
   FusionImuValue imu_val;
-  imu_val.pitch    = (double)imu.Pitch;
+  imu_val.pitch    = (double)imu.Pitch - IMU_PITCH_CALIBRATION_DEG;
   imu_val.heading  = (double)imu.Heading;
-  imu_val.roll     = (double)imu.Roll;
+  imu_val.roll     = (double)imu.Roll - IMU_ROLL_CALIBRATION_DEG;
   imu_val.yaw_rate = (double)imu.YawRate;
 
   FusionGnssFix fix_out;
