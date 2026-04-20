@@ -759,7 +759,8 @@ SensorFusor::SensorFusor
 void SensorFusor::Fuse
   (
   gnss_location_t *plocation,           // GNSS fix, speed, RTK, antenna offsets (mm)
-  const imu_t &imu,                     // roll, pitch, heading, yaw rate
+  const IMU &ImuHandler,                // IMU handler (for timestamped buffer lookup)
+  uint8_t ImuIndex,                     // which IMU (TRACTOR_IDX, FRONT_BLADE_IDX, etc.)
   const antenna_location_t &Antenna     // location of antenna 
   )
 {
@@ -774,6 +775,12 @@ void SensorFusor::Fuse
   fix_in.rtk                       = plocation->RtkStatus;
   fix_in.last_fix_time_valid       = plocation->LastFixTimeValid;
   fix_in.last_fix_time_ms          = plocation->LastFixTimeMs;
+
+  imu_t imu;
+  if (!ImuHandler.GetSampleAtTime(ImuIndex, plocation->FixEpochMs, &imu))
+  {
+    imu = ImuHandler.IMUValues[ImuIndex];
+  }
 
   FusionImuValue imu_val;
   imu_val.pitch    = (double)imu.Pitch - IMU_PITCH_CALIBRATION_DEG;

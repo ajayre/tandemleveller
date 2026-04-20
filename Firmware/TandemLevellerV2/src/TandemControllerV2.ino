@@ -319,15 +319,15 @@ static void GNSS_RequestFuse
   {
     default:
     case PGN_TRACTOR_NMEA:
-        Fusors[TRACTOR_IDX].Fuse(pLocation, IMUHandler.IMUValues[TRACTOR_IDX], AntennaLocations[TRACTOR_IDX]);
+        Fusors[TRACTOR_IDX].Fuse(pLocation, IMUHandler, TRACTOR_IDX, AntennaLocations[TRACTOR_IDX]);
         break;
 
     case PGN_FRONT_NMEA:
-        Fusors[FRONT_BLADE_IDX].Fuse(pLocation, IMUHandler.IMUValues[FRONT_BLADE_IDX], AntennaLocations[FRONT_BLADE_IDX]);
+        Fusors[FRONT_BLADE_IDX].Fuse(pLocation, IMUHandler, FRONT_BLADE_IDX, AntennaLocations[FRONT_BLADE_IDX]);
         break;
 
     case PGN_REAR_NMEA:
-        Fusors[REAR_BLADE_IDX].Fuse(pLocation, IMUHandler.IMUValues[REAR_BLADE_IDX], AntennaLocations[REAR_BLADE_IDX]);
+        Fusors[REAR_BLADE_IDX].Fuse(pLocation, IMUHandler, REAR_BLADE_IDX, AntennaLocations[REAR_BLADE_IDX]);
         break;
   }
 }

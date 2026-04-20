@@ -10,7 +10,7 @@
 // "CANopen" node id
 #if TRACTOR == 1
   #define NODE_ID 0x02
-  #define TPDO_TX_PERIOD_MS 10
+  #define TPDO_TX_PERIOD_MS 2
 #elif FRONTSCRAPER == 1
   #define NODE_ID 0x03
   #define TPDO_TX_PERIOD_MS 10

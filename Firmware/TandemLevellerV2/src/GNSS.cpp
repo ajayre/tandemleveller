@@ -425,6 +425,26 @@ void GNSS::ProcessNMEASentence
   pLoc->LastFixTimeValid = 1;
   pLoc->LastFixTimeMs = millis();
 
+  uint32_t utc_ms = ParseGgaUtcTimeMs(fields[1]);
+  if (utc_ms > 0)
+  {
+    int32_t new_offset = (int32_t)(pLoc->LastFixTimeMs - utc_ms);
+    if (!UtcOffsetValid)
+    {
+      UtcToMillisOffset = new_offset;
+      UtcOffsetValid = true;
+    }
+    else
+    {
+      UtcToMillisOffset += (int32_t)((double)(new_offset - UtcToMillisOffset) * 0.1);
+    }
+    pLoc->FixEpochMs = (uint32_t)((int32_t)utc_ms + UtcToMillisOffset);
+  }
+  else
+  {
+    pLoc->FixEpochMs = pLoc->LastFixTimeMs;
+  }
+
   // if tractor then store values before fusing
   if (PGN == PGN_TRACTOR_NMEA)
   {
@@ -500,11 +520,39 @@ void GNSS::ProcessNMEASentence
 ///////////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS
 
+// parses GGA UTC time field (hhmmss.ss) to milliseconds since midnight
+uint32_t GNSS::ParseGgaUtcTimeMs
+  (
+  const char *field           // GGA field 1 contents
+  ) const
+{
+  if (field == NULL || field[0] == '\0')
+  {
+    return 0;
+  }
+  double raw = strtod(field, NULL);
+  if (raw < 0.001)
+  {
+    return 0;
+  }
+  int hms = (int)raw;
+  int h = hms / 10000;
+  int m = (hms / 100) % 100;
+  int s = hms % 100;
+  double frac = raw - (double)hms;
+  return (uint32_t)((uint32_t)h * 3600000UL
+    + (uint32_t)m * 60000UL
+    + (uint32_t)s * 1000UL
+    + (uint32_t)(frac * 1000.0));
+}
+
 // constructor
 GNSS::GNSS
   (
   void
   )
+  : UtcToMillisOffset(0)
+  , UtcOffsetValid(false)
 {
 }
 
