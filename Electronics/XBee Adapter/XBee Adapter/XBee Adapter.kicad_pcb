@@ -189,7 +189,7 @@
       (stroke (width 0.1) (type solid)) (layer "F.Fab") (tstamp e819a759-2ae4-4ee6-bfcc-646bed910fb5))
     (fp_line (start 3.95 2.8) (end 3.95 -1.7)
       (stroke (width 0.1) (type solid)) (layer "F.Fab") (tstamp 7df2a35f-5df3-43b2-a08e-d3b5f578262f))
-    (pad "1" thru_hole roundrect (at 0 0) (size 1.2 1.75) (drill 0.75) (layers "*.Cu" "*.Mask") (roundrect_rratio 0.208333)
+    (pad "1" thru_hole roundrect (at 0 0) (size 1.2 1.75) (drill 0.75) (layers "*.Cu" "*.Mask") (roundrect_rratio 0.2083333333)
       (net 2 "/UART_XBEE_OUT") (pinfunction "Pin_1") (pintype "passive") (tstamp 4f9f82f2-ea5e-4365-a5a4-0d0697b0bb7c))
     (pad "2" thru_hole oval (at 2 0) (size 1.2 1.75) (drill 0.75) (layers "*.Cu" "*.Mask")
       (net 10 "/GND") (pinfunction "Pin_2") (pintype "passive") (tstamp 1c5428f5-fd58-4366-8c7c-effcbb4d77c9))
