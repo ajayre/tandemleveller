@@ -98,7 +98,52 @@ void IMU::Init
   {
     memset(&IMUValues[i], 0, sizeof(imu_t));
     imu_lp_[i].init = false;
+    memset(ImuBuffer[i], 0, sizeof(ImuBuffer[i]));
+    ImuBufferHead[i] = 0;
+    ImuBufferCount[i] = 0;
   }
+}
+
+// retrieves the buffered sample closest to target_ms
+bool IMU::GetSampleAtTime
+  (
+  uint8_t Index,                  // blade/tractor index
+  uint32_t TargetMs,              // millis() timestamp to match
+  imu_t *pResult                  // output: closest sample
+  ) const
+{
+  if (Index >= NUM_BLADES + 1 || ImuBufferCount[Index] == 0)
+  {
+    return false;
+  }
+
+  int count = ImuBufferCount[Index];
+  if (count > IMU_BUFFER_SIZE)
+  {
+    count = IMU_BUFFER_SIZE;
+  }
+
+  uint32_t best_diff = UINT32_MAX;
+  int best_idx = -1;
+
+  for (int i = 0; i < count; i++)
+  {
+    int slot = (ImuBufferHead[Index] - 1 - i + IMU_BUFFER_SIZE) % IMU_BUFFER_SIZE;
+    uint32_t ts = ImuBuffer[Index][slot].timestamp_ms;
+    uint32_t diff = (TargetMs >= ts) ? (TargetMs - ts) : (ts - TargetMs);
+    if (diff < best_diff)
+    {
+      best_diff = diff;
+      best_idx = slot;
+    }
+  }
+
+  if (best_idx >= 0)
+  {
+    *pResult = ImuBuffer[Index][best_idx].values;
+    return true;
+  }
+  return false;
 }
 
 // Sets the callback functions
@@ -125,22 +170,36 @@ void IMU::ProcessIMUTPDO1
     float Roll    = ((int16_t)(pData[4] | ((uint16_t)pData[5] << 8))) / 100.0;
     float YawRate = ((int16_t)(pData[6] | ((uint16_t)pData[7] << 8))) / 100.0;
 
+    uint8_t idx = 0xFF;
     switch (NodeId)
     {
       case TRACTOR_IMU_NODE_ID:
-        ApplyInputLowPass(TRACTOR_IDX, Heading, Pitch, Roll, YawRate);
-        if (IMUChanged != NULL) IMUChanged(TRACTOR_IDX, &IMUValues[TRACTOR_IDX]);
+        idx = TRACTOR_IDX;
         break;
-
       case FRONTSCRAPER_IMU_NODE_ID:
-        ApplyInputLowPass(FRONT_BLADE_IDX, Heading, Pitch, Roll, YawRate);
-        if (IMUChanged != NULL) IMUChanged(FRONT_BLADE_IDX, &IMUValues[FRONT_BLADE_IDX]);
+        idx = FRONT_BLADE_IDX;
         break;
-
       case REARSCRAPER_IMU_NODE_ID:
-        ApplyInputLowPass(REAR_BLADE_IDX, Heading, Pitch, Roll, YawRate);
-        if (IMUChanged != NULL) IMUChanged(REAR_BLADE_IDX, &IMUValues[REAR_BLADE_IDX]);
+        idx = REAR_BLADE_IDX;
         break;
+    }
+
+    if (idx != 0xFF)
+    {
+      ApplyInputLowPass(idx, Heading, Pitch, Roll, YawRate);
+
+      ImuBuffer[idx][ImuBufferHead[idx]].values = IMUValues[idx];
+      ImuBuffer[idx][ImuBufferHead[idx]].timestamp_ms = millis();
+      ImuBufferHead[idx] = (ImuBufferHead[idx] + 1) % IMU_BUFFER_SIZE;
+      if (ImuBufferCount[idx] < IMU_BUFFER_SIZE)
+      {
+        ImuBufferCount[idx]++;
+      }
+
+      if (IMUChanged != NULL)
+      {
+        IMUChanged(idx, &IMUValues[idx]);
+      }
     }
   }
 }

@@ -22,11 +22,13 @@ class SensorFusor
       void
       );
 
-    // combines GNSS fix and IMU attitude into a lever-arm / tilt corrected location
+    // combines GNSS fix and IMU attitude into a lever-arm / tilt corrected location.
+    // Looks up the IMU circular buffer for the sample closest to the GNSS fix epoch.
     void Fuse
       (
       gnss_location_t *plocation,           // GNSS fix, speed, RTK, antenna offsets (mm)
-      const imu_t &imu,                     // roll, pitch, heading, yaw rate
+      const IMU &ImuHandler,                // IMU handler (for timestamped buffer lookup)
+      uint8_t ImuIndex,                     // which IMU (TRACTOR_IDX, FRONT_BLADE_IDX, etc.)
       const antenna_location_t &Antenna     // location of antenna 
       );
 

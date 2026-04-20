@@ -37,6 +37,9 @@ typedef struct _gnss_location_t
   gnss_rtk_status_t RtkStatus;
   int LastFixTimeValid;
   uint32_t LastFixTimeMs;
+  // Estimated millis() at GNSS measurement epoch, derived from
+  // GGA UTC timestamp with smoothed UTC-to-millis offset.
+  uint32_t FixEpochMs;
 } gnss_location_t;
 
 // callback function type for receiving NMEA sentences
@@ -153,6 +156,19 @@ class GNSS
       gnss_reader_t *pReader,     // reader to use
       pgn_t PGN                   // PGN to use when sending
       );
+
+    // parses GGA UTC time field (hhmmss.ss) to milliseconds since midnight
+    uint32_t ParseGgaUtcTimeMs
+      (
+      const char *field           // GGA field 1 contents
+      ) const;
+
+    // UTC-to-millis() offset, EMA-smoothed across GGA fixes to remove
+    // per-sentence parse-time jitter. The offset includes the constant GNSS
+    // output latency so that FixEpochMs is a jitter-free estimate of when the
+    // measurement was taken in millis() terms.
+    int32_t UtcToMillisOffset;
+    bool UtcOffsetValid;
 };
 
 #endif // _GNSSH_
