@@ -98,8 +98,8 @@ class SensorFusor
 
     // IMU mounting calibration offsets (degrees). Subtracted from raw IMU readings
     // so that a physically vertical pole reads roll=0, pitch=0.
-    static constexpr double IMU_ROLL_CALIBRATION_DEG  = 6.0;
-    static constexpr double IMU_PITCH_CALIBRATION_DEG = -2.0;
+    static constexpr double IMU_ROLL_CALIBRATION_DEG  = -2;
+    static constexpr double IMU_PITCH_CALIBRATION_DEG = -6;
 
     static constexpr double SpeedThresholdKph    = 5.0;
     // |yaw_rate| below: allow GNSS/gyro track blend (when speed high) and horizontal
