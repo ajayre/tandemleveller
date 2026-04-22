@@ -98,13 +98,15 @@ class SensorFusor
 
     // IMU mounting calibration offsets (degrees). Subtracted from raw IMU readings
     // so that a physically vertical pole reads roll=0, pitch=0.
-    static constexpr double IMU_ROLL_CALIBRATION_DEG  = -2;
-    static constexpr double IMU_PITCH_CALIBRATION_DEG = -6;
+    static constexpr double IMU_ROLL_CALIBRATION_DEG  = 0.70;
+    static constexpr double IMU_PITCH_CALIBRATION_DEG = -4.37;
 
     static constexpr double SpeedThresholdKph    = 5.0;
     // |yaw_rate| below: allow GNSS/gyro track blend (when speed high) and horizontal
-    // tilt / lever-arm; at or above: gyro-only heading, horizontal lat/lon lever-arm off.
-    static constexpr double YawRateThreshold     = 6.0;
+    // tilt / lever-arm + horizontal KF measurement updates; at or above: gyro-only heading,
+    // horizontal lever-arm moves skipped and horizontal KF holds (no meas update).
+    // Tuned for driving: lower values gate horizontal fusion often and cut corners on the map.
+    static constexpr double YawRateThreshold     = 35.0;
 
     // Horizontal output: 2-state Kalman (north/east m) with process noise q (m^2/s) and
     // measurement variance from fix quality, HDOP, and RTK status.
