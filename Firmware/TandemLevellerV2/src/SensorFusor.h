@@ -106,7 +106,7 @@ class SensorFusor
     // tilt / lever-arm + horizontal KF measurement updates; at or above: gyro-only heading,
     // horizontal lever-arm moves skipped and horizontal KF holds (no meas update).
     // Tuned for driving: lower values gate horizontal fusion often and cut corners on the map.
-    static constexpr double YawRateThreshold     = 35.0;
+    static constexpr double YawRateThreshold     = 50.0;
 
     // Horizontal output: 2-state Kalman (north/east m) with process noise q (m^2/s) and
     // measurement variance from fix quality, HDOP, and RTK status.
