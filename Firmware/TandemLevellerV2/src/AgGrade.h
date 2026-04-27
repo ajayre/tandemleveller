@@ -95,6 +95,19 @@ typedef enum _pgn_t : uint16_t
   PGN_REAR_HEIGHT_FOUND          = 0x6014, // fixme - to do
   PGN_REAR_HEIGHT_LOST           = 0x6015, // fixme - to do
 
+  PGN_TRACTOR_IMU_LEVEL          = 0x6016, // fixme - to do
+  PGN_FRONT_IMU_LEVEL            = 0x6017, // fixme - to do
+  PGN_REAR_IMU_LEVEL             = 0x6018, // fixme - to do
+  PGN_FRONT_APRON_IMU_LEVEL      = 0x6019, // fixme - to do
+  PGN_FRONT_BUCKET_IMU_LEVEL     = 0x601A, // fixme - to do
+  PGN_REAR_BUCKET_IMU_LEVEL      = 0x601B, // fixme - to do
+  PGN_TRACTOR_IMU_ORIENT         = 0x601C, // fixme - to do
+  PGN_FRONT_IMU_ORIENT           = 0x601D, // fixme - to do
+  PGN_REAR_IMU_ORIENT            = 0x601E, // fixme - to do
+  PGN_FRONT_APRON_IMU_ORIENT     = 0x601F, // fixme - to do
+  PGN_FRONT_BUCKET_IMU_ORIENT    = 0x6020, // fixme - to do
+  PGN_REAR_BUCKET_IMU_ORIENT     = 0x6021, // fixme - to do
+
   // GNSS
   PGN_TRACTOR_NMEA               = 0x7000,
   PGN_FRONT_NMEA                 = 0x7001,
