@@ -36,6 +36,19 @@
 // time between heartbeats in millseconds
 #define HB_PRODUCER_TIME_MS 100
 
+// Mount / output frame selection. Reference fix is applied in firmware on the fused quaternion
+// (not via sh2_setReorientation — that uses a different convention and scrambles YPR).
+// Both modes use application +X = magnetic north; they differ in which chip axis is "up".
+typedef enum orientation_t
+{
+  // PCB flat: application +Z is up (out of the board). Matches the legacy firmware convention
+  // that used a -90 deg yaw correction so +X points north instead of fusion default +Y north.
+  ORIENTATION_HORIZONTAL_A = 0,
+  // Board edge-on (chip +Y toward world up, +X along north). Fusion quaternion already includes
+  // this physical attitude — do not apply an extra +90 deg X quaternion in software.
+  ORIENTATION_VERTICAL_A   = 1
+} orientation_t;
+
 struct euler_t
 {
   float yaw;
@@ -55,6 +68,16 @@ elapsedMillis HBTime;
 elapsedMillis TPDOTxTime;
 static WDT_T4<WDT1> wdt;
 static uint8_t CalibrationStatus;
+
+// Last orientation applied via SetOrientation (re-applied after hub reset).
+static orientation_t CurrentOrientation;
+
+// Rotation matrix R: gyro in calibrated sensor frame -> application frame (rad/s).
+// Both mounts use identity here; vertical vs horizontal only changes which gyro axis is "yaw rate".
+static float GyrRot[3][3];
+
+// Unit vector in application frame: axis for "yaw rate" = dot(GyrRot * ω, YawRateAxis).
+static float YawRateAxis[3];
 
 // reboot the device
 void Reboot
@@ -169,6 +192,62 @@ static float FindHeading
   return yaw;
 }
 
+// Wrap angle in degrees to [-180, +180] (e.g. 190 -> -170; -190 -> 170).
+static void wrapDegrees180
+  (
+  float *a_deg
+  )
+{
+  float x = *a_deg;
+  x = fmodf(x + 180.0f, 360.0f);
+  if (x < 0.0f)
+  {
+    x += 360.0f;
+  }
+  *a_deg = x - 180.0f;
+}
+
+// Fused quaternion -> ypr. Fusion already encodes physical mount; yaw -= 90 matches +X north.
+// HORIZONTAL_A: nominal level pose can report roll = -180 deg; add 180 so level reads 0.
+// VERTICAL_A: nominal pose reports ~+90 deg roll; subtract 90 so level reads 0.
+// Pitch/roll are wrapped to [-180,+180] after sign/yaw fixes in loop (all orientations).
+static void fusedQuaternionToYpr
+  (
+  float qi,
+  float qj,
+  float qk,
+  float qr,
+  euler_t *outYpr,
+  bool degrees
+  )
+{
+  quaternionToEuler(qr, qi, qj, qk, outYpr, degrees);
+  if (degrees)
+  {
+    outYpr->yaw -= 90.0f;
+    if (CurrentOrientation == ORIENTATION_VERTICAL_A)
+    {
+      outYpr->roll -= 90.0f;
+    }
+    else
+    {
+      outYpr->roll += 180.0f;
+    }
+  }
+  else
+  {
+    outYpr->yaw -= (float)(PI / 2.0);
+    if (CurrentOrientation == ORIENTATION_VERTICAL_A)
+    {
+      outYpr->roll -= (float)(PI / 2.0);
+    }
+    else
+    {
+      outYpr->roll += (float)PI;
+    }
+  }
+}
+
 // transmits a CAN message
 static void TxCANMessage
   (
@@ -275,6 +354,51 @@ static void CANReceiveHandler
   }
 }
 
+// Select gyro yaw-rate axis; clear hub reorientation (identity only — see earlier notes).
+static void SetOrientation
+  (
+  orientation_t Orientation
+  )
+{
+  CurrentOrientation = Orientation;
+
+  GyrRot[0][0] = 1.0f;
+  GyrRot[0][1] = 0.0f;
+  GyrRot[0][2] = 0.0f;
+  GyrRot[1][0] = 0.0f;
+  GyrRot[1][1] = 1.0f;
+  GyrRot[1][2] = 0.0f;
+  GyrRot[2][0] = 0.0f;
+  GyrRot[2][1] = 0.0f;
+  GyrRot[2][2] = 1.0f;
+
+  if (Orientation == ORIENTATION_VERTICAL_A)
+  {
+    // Package +Y toward world up: heading rate is mostly rotation about body Y (rad/s -> deg/s below).
+    YawRateAxis[0] = 0.0f;
+    YawRateAxis[1] = 1.0f;
+    YawRateAxis[2] = 0.0f;
+  }
+  else
+  {
+    // Flat board: spin about package Z when level.
+    YawRateAxis[0] = 0.0f;
+    YawRateAxis[1] = 0.0f;
+    YawRateAxis[2] = 1.0f;
+  }
+
+  // Undo any prior hub tare/reorientation so roll/pitch/yaw stay consistent with our math.
+  sh2_Quaternion_t qId;
+  qId.x = 0.0;
+  qId.y = 0.0;
+  qId.z = 0.0;
+  qId.w = 1.0;
+  if (sh2_setReorientation(&qId) != SH2_OK)
+  {
+    Serial.println(F("sh2_setReorientation(identity) failed"));
+  }
+}
+
 // initialize the hardware
 void setup()
 {
@@ -303,10 +427,14 @@ void setup()
 
   CalibrationStatus = 0;
 
+  CurrentOrientation = ORIENTATION_HORIZONTAL_A;
+
   // find sensor
   if (bno08x.begin_SPI(BNO08X_CS, BNO08X_INT))
   {
     SensorFound = true;
+    // Hub must be open: apply mount quaternion before enabling reports.
+    SetOrientation(CurrentOrientation);
     setReports(reportType, reportIntervalUs);
     setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
     setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
@@ -328,6 +456,8 @@ void loop
     if (bno08x.wasReset())
     {
       Serial.println("Sensor was reset");
+      // Reset clears hub tare/reorientation; restore mount then re-enable reports.
+      SetOrientation(CurrentOrientation);
       setReports(reportType, reportIntervalUs);
       setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
       setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
@@ -341,7 +471,16 @@ void loop
         switch (sensorValue.sensorId)
         {
           case SH2_GYROSCOPE_CALIBRATED:
-            ypr.yawrate = sensorValue.un.gyroscope.z * 180.0 / PI;
+            {
+              // Gyro is always in package frame; GyrRot is identity for horizontal, full R for vertical.
+              float wx = sensorValue.un.gyroscope.x;
+              float wy = sensorValue.un.gyroscope.y;
+              float wz = sensorValue.un.gyroscope.z;
+              float ox = GyrRot[0][0] * wx + GyrRot[0][1] * wy + GyrRot[0][2] * wz;
+              float oy = GyrRot[1][0] * wx + GyrRot[1][1] * wy + GyrRot[1][2] * wz;
+              float oz = GyrRot[2][0] * wx + GyrRot[2][1] * wy + GyrRot[2][2] * wz;
+              ypr.yawrate = (ox * YawRateAxis[0] + oy * YawRateAxis[1] + oz * YawRateAxis[2]) * 180.0f / PI;
+            }
             break;
 
           case SH2_GEOMAGNETIC_ROTATION_VECTOR:
@@ -350,17 +489,25 @@ void loop
             break;
 
           case SH2_ARVR_STABILIZED_RV:     
-            quaternionToEulerRV(&sensorValue.un.arvrStabilizedRV, &ypr, true);
+            fusedQuaternionToYpr(
+              sensorValue.un.arvrStabilizedRV.i,
+              sensorValue.un.arvrStabilizedRV.j,
+              sensorValue.un.arvrStabilizedRV.k,
+              sensorValue.un.arvrStabilizedRV.real,
+              &ypr,
+              true);
             CalibrationStatus = sensorValue.status & 0x03;
-            // Y axis points to magnetic north but we need to change so X axis points to north to match silkscreen
-            ypr.yaw -= 90;
             orientationUpdated = true;
             break;
           
           case SH2_GYRO_INTEGRATED_RV:
-            quaternionToEulerGI(&sensorValue.un.gyroIntegratedRV, &ypr, true);
-            // Y axis points to magnetic north but we need to change so X axis points to north to match silkscreen
-            ypr.yaw -= 90;
+            fusedQuaternionToYpr(
+              sensorValue.un.gyroIntegratedRV.i,
+              sensorValue.un.gyroIntegratedRV.j,
+              sensorValue.un.gyroIntegratedRV.k,
+              sensorValue.un.gyroIntegratedRV.real,
+              &ypr,
+              true);
             orientationUpdated = true;
             break;
         }
@@ -374,6 +521,10 @@ void loop
 
           // perform corrections so that downhill travel is a positive pitch
           ypr.pitch = -ypr.pitch;
+
+          // Pitch and roll on CAN: [-180, +180] deg (both orientations). Yaw stays 0..360 below.
+          wrapDegrees180(&ypr.pitch);
+          wrapDegrees180(&ypr.roll);
         }
 
         /*static long last = 0;
