@@ -36,6 +36,12 @@
 // time between heartbeats in millseconds
 #define HB_PRODUCER_TIME_MS 100
 
+// password to set the zero point, must be present in the RPDO
+#define SET_ZERO_PASSWORD 0x23D4EE20
+
+// password to set the orientation, must be present in the RPDO
+#define SET_ORIENTATION_PASSWORD 0x739EAC22
+
 // Mount / output frame selection. Reference fix is applied in firmware on the fused quaternion
 // (not via sh2_setReorientation — that uses a different convention and scrambles YPR).
 // Both modes use application +X = magnetic north; they differ in which chip axis is "up".
@@ -69,6 +75,13 @@ elapsedMillis TPDOTxTime;
 static WDT_T4<WDT1> wdt;
 static uint8_t CalibrationStatus;
 
+// Stored in degrees: total subtracted from processed pitch/roll before CAN (see SetCalibration).
+static double ZeroPitch;
+static double ZeroRoll;
+
+// Set by CAN RPDO; applied in loop after full pitch/roll pipeline (avoids reading partial ypr).
+static volatile bool PendingCalibrateRequest;
+
 // Last orientation applied via SetOrientation (re-applied after hub reset).
 static orientation_t CurrentOrientation;
 
@@ -78,6 +91,9 @@ static float GyrRot[3][3];
 
 // Unit vector in application frame: axis for "yaw rate" = dot(GyrRot * ω, YawRateAxis).
 static float YawRateAxis[3];
+
+static void ApplyOrientationMode(orientation_t Orientation);
+static void SetOrientation(orientation_t Orientation);
 
 // reboot the device
 void Reboot
@@ -333,6 +349,42 @@ static void TxPDOs
   TxCANMessage(0x280 + NODE_ID, 1, Data);
 }
 
+// clears the current pith and roll calibration
+static void ClearCalibration
+  (
+  void 
+  )
+{
+  ZeroPitch = 0;
+  ZeroRoll = 0;
+
+  // fixme - to do - store in EEPROM
+}
+
+// Calibrate so current attitude reads pitch = 0, roll = 0 on CAN (any orientation).
+// Call with ypr.pitch/roll = measured values after frame fixes and wrap, before subtracting Zero*.
+// CAN output uses (measured − Zero); we need Zero = measured so the current pose reads zero.
+// Zero += measured would double-count once a trim is already applied (second 0x202 adds error).
+static void SetCalibration
+  (
+  void
+  )
+{
+  ZeroPitch = (double)ypr.pitch;
+  ZeroRoll = (double)ypr.roll;
+
+  // fixme - to do - store in EEPROM, overwriting current settings
+}
+
+// gets the stored calibration
+static void GetCalibration
+  (
+  void
+  )
+{
+  // fixme - to do - get from EEPROM, if exists, otherwise set to zero
+}
+
 // called when a CAN message is received
 static void CANReceiveHandler
   (
@@ -352,10 +404,50 @@ static void CANReceiveHandler
       }
     }
   }
+  // process RPDO1 (DLC may be 8; only first 4 bytes are the password, little-endian)
+  else if ((msg.id == 0x200 + NODE_ID) && !msg.flags.extended && (msg.len >= 4))
+  {
+    if ((msg.buf[0] == (SET_ZERO_PASSWORD & 0xFF)) &&
+        (msg.buf[1] == ((SET_ZERO_PASSWORD >> 8) & 0xFF)) &&
+        (msg.buf[2] == ((SET_ZERO_PASSWORD >> 16) & 0xFF)) &&
+        (msg.buf[3] == ((SET_ZERO_PASSWORD >> 24) & 0xFF)))
+    {
+      PendingCalibrateRequest = true;
+    }
+  }
+  // process RPDO2
+  else if ((msg.id == 0x300 + NODE_ID) && !msg.flags.extended && (msg.len >= 5))
+  {
+    // if password is correct
+    if ((msg.buf[0] == (SET_ORIENTATION_PASSWORD & 0xFF)) &&
+        (msg.buf[1] == ((SET_ORIENTATION_PASSWORD >> 8) & 0xFF)) &&
+        (msg.buf[2] == ((SET_ORIENTATION_PASSWORD >> 16) & 0xFF)) &&
+        (msg.buf[3] == ((SET_ORIENTATION_PASSWORD >> 24) & 0xFF)))
+    {
+      orientation_t o = (orientation_t)msg.buf[4];
+      if (o > ORIENTATION_VERTICAL_A)
+      {
+        o = ORIENTATION_HORIZONTAL_A;
+      }
+      SetOrientation(o);
+      ClearCalibration();
+    }
+  }
 }
 
-// Select gyro yaw-rate axis; clear hub reorientation (identity only — see earlier notes).
-static void SetOrientation
+// gets the stored orientation setting
+static orientation_t GetOrientation
+  (
+  void
+  )
+{
+  // fixme - get from EEPROM if exists, otherwise use horizontal A
+
+  return ORIENTATION_HORIZONTAL_A;
+}
+
+// Apply mount mode to hub + gyro axes only (does not change ZeroPitch/ZeroRoll). Safe from wasReset.
+static void ApplyOrientationMode
   (
   orientation_t Orientation
   )
@@ -399,11 +491,30 @@ static void SetOrientation
   }
 }
 
+// User/CAN: change mount mode, clear pitch/roll trim in RAM, persist orientation
+// Do not call from wasReset — that would erase calibration every hub reset.
+static void SetOrientation
+  (
+  orientation_t Orientation
+  )
+{
+  ZeroPitch = 0;
+  ZeroRoll = 0;
+
+  ApplyOrientationMode(Orientation);
+
+  // fixme - to do - store orientation in EEPROM
+}
+
 // initialize the hardware
 void setup()
 {
   Serial.begin(115200);
   Serial.println("Tandem Leveller IMU");
+  Serial.print(F("CAN NODE_ID=0x"));
+  Serial.print(NODE_ID, HEX);
+  Serial.print(F("  RPDO2 orientation COB-ID=0x"));
+  Serial.println(0x300u + NODE_ID, HEX);
 
   // set up watchdog
   WDT_timings_t config;
@@ -418,7 +529,13 @@ void setup()
   CANBus.onReceive(FIFO, CANReceiveHandler);
   CANBus.enableFIFOInterrupt();
   CANBus.setFIFOFilter(0, 0x000, STD);
+  CANBus.setFIFOFilter(1, 0x200 + NODE_ID, STD);
+  CANBus.setFIFOFilter(2, 0x300 + NODE_ID, STD);
   CANBus.setMB(MB63, TX); // Set mailbox as transmit
+
+  // FlexCAN_T4: until events() runs once, RX invokes onReceive from the CAN ISR (see
+  // struct2queueRx isEventsUsed). RPDO2 calls sh2_setReorientation (SPI) — must not run in ISR.
+  CANBus.events();
 
   TxBootup();
   HBTime = 0;
@@ -427,14 +544,15 @@ void setup()
 
   CalibrationStatus = 0;
 
-  CurrentOrientation = ORIENTATION_HORIZONTAL_A;
-
   // find sensor
   if (bno08x.begin_SPI(BNO08X_CS, BNO08X_INT))
   {
     SensorFound = true;
-    // Hub must be open: apply mount quaternion before enabling reports.
-    SetOrientation(CurrentOrientation);
+    // Hub open: apply mount from EEPROM, then load calibration — do not use SetOrientation
+    // here or we clear RAM before GetCalibration can load from EEPROM.
+    CurrentOrientation = GetOrientation();
+    ApplyOrientationMode(CurrentOrientation);
+    GetCalibration();
     setReports(reportType, reportIntervalUs);
     setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
     setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
@@ -448,16 +566,20 @@ void loop
   void
   )
 {
-  // process can module
-  CANBus.events();
+  // FlexCAN_T4 queues RX in software; events() pops one frame per call. Drain the
+  // whole queue each pass so RPDOs are not dropped when loop() runs slower than bus traffic.
+  while (CANBus.getRXQueueCount() > 0)
+  {
+    CANBus.events();
+  }
 
   if (SensorFound)
   {
     if (bno08x.wasReset())
     {
       Serial.println("Sensor was reset");
-      // Reset clears hub tare/reorientation; restore mount then re-enable reports.
-      SetOrientation(CurrentOrientation);
+      // Restore hub + gyro axes only; keep ZeroPitch/ZeroRoll (and reload from EEPROM when implemented).
+      ApplyOrientationMode(CurrentOrientation);
       setReports(reportType, reportIntervalUs);
       setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
       setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
@@ -525,6 +647,22 @@ void loop
           // Pitch and roll on CAN: [-180, +180] deg (both orientations). Yaw stays 0..360 below.
           wrapDegrees180(&ypr.pitch);
           wrapDegrees180(&ypr.roll);
+
+          if (PendingCalibrateRequest)
+          {
+            PendingCalibrateRequest = false;
+            SetCalibration();
+            ypr.pitch = 0.0f;
+            ypr.roll = 0.0f;
+          }
+          else
+          {
+            // Level zero: CAN = measured - Zero (when measured == Zero*, bus pitch/roll are 0).
+            ypr.pitch -= (float)ZeroPitch;
+            ypr.roll -= (float)ZeroRoll;
+            wrapDegrees180(&ypr.pitch);
+            wrapDegrees180(&ypr.roll);
+          }
         }
 
         /*static long last = 0;
