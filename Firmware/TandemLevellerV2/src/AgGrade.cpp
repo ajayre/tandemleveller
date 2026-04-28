@@ -200,10 +200,18 @@ void AgGrade::SendIMUState
     case REAR_BLADE_IDX:  Status.PGN = PGN_REAR_IMU;    break;
   }
 
-  SetPGNPacketUInt32AtOffset(&Status, 0,  (uint32_t)(pIMUValue->Pitch   * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 4,  (uint32_t)(pIMUValue->Roll    * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 8,  (uint32_t)(pIMUValue->Heading * 100));
-  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)(pIMUValue->YawRate * 100));
+  int32_t pitchCenti = (int32_t)lrintf(pIMUValue->Pitch * 100.0f);
+  SetPGNPacketUInt32AtOffset(&Status, 0, (uint32_t)pitchCenti);
+
+  int32_t rollCenti = (int32_t)lrintf(pIMUValue->Roll * 100.0f);
+  SetPGNPacketUInt32AtOffset(&Status, 4, (uint32_t)rollCenti);
+
+  int32_t headingCenti = (int32_t)lrintf(pIMUValue->Heading * 100.0f);
+  SetPGNPacketUInt32AtOffset(&Status, 8, (uint32_t)headingCenti);
+
+  int32_t yawRateCenti = (int32_t)lrintf(pIMUValue->YawRate * 100.0f);
+  SetPGNPacketUInt32AtOffset(&Status, 12, (uint32_t)yawRateCenti);
+
   Status.Data[16] = pIMUValue->CalibrationStatus;
   Send(&Status);
 }

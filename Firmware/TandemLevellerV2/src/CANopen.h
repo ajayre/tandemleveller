@@ -20,6 +20,8 @@
 #define PENDANT_NODE_ID          0x05
 #define FRONT_ANGLE_NODE_ID      0x10
 #define REAR_ANGLE_NODE_ID       0x11
+#define FRONT_BUCKET_IMU_NODE_ID 0x20
+#define REAR_BUCKET_IMU_NODE_ID  0x21
 
 // received PDO callback type
 typedef void (*canopen_process_pdo_callback_t)(uint8_t NodeId, uint16_t PDONumber, size_t DataLength, const uint8_t *pData);
