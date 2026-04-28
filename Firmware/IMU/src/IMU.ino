@@ -2,6 +2,7 @@
 #include "FlexCAN_T4-master/FlexCAN_T4.h"
 #include "WDT_T4-master/Watchdog_t4.h"
 #include <Adafruit_BNO08x.h>
+#include "EepromConfig.h"
 
 // roll left = negative, roll right = positive
 // pitch forwards = positive, pitch backwards = negative
@@ -358,7 +359,7 @@ static void ClearCalibration
   ZeroPitch = 0;
   ZeroRoll = 0;
 
-  // fixme - to do - store in EEPROM
+  EepromConfigSave(ZeroPitch, ZeroRoll, (uint8_t)CurrentOrientation);
 }
 
 // Calibrate so current attitude reads pitch = 0, roll = 0 on CAN (any orientation).
@@ -373,16 +374,7 @@ static void SetCalibration
   ZeroPitch = (double)ypr.pitch;
   ZeroRoll = (double)ypr.roll;
 
-  // fixme - to do - store in EEPROM, overwriting current settings
-}
-
-// gets the stored calibration
-static void GetCalibration
-  (
-  void
-  )
-{
-  // fixme - to do - get from EEPROM, if exists, otherwise set to zero
+  EepromConfigSave(ZeroPitch, ZeroRoll, (uint8_t)CurrentOrientation);
 }
 
 // called when a CAN message is received
@@ -433,17 +425,6 @@ static void CANReceiveHandler
       ClearCalibration();
     }
   }
-}
-
-// gets the stored orientation setting
-static orientation_t GetOrientation
-  (
-  void
-  )
-{
-  // fixme - get from EEPROM if exists, otherwise use horizontal A
-
-  return ORIENTATION_HORIZONTAL_A;
 }
 
 // Apply mount mode to hub + gyro axes only (does not change ZeroPitch/ZeroRoll). Safe from wasReset.
@@ -503,7 +484,7 @@ static void SetOrientation
 
   ApplyOrientationMode(Orientation);
 
-  // fixme - to do - store orientation in EEPROM
+  EepromConfigSave(ZeroPitch, ZeroRoll, (uint8_t)Orientation);
 }
 
 // initialize the hardware
@@ -548,11 +529,15 @@ void setup()
   if (bno08x.begin_SPI(BNO08X_CS, BNO08X_INT))
   {
     SensorFound = true;
-    // Hub open: apply mount from EEPROM, then load calibration — do not use SetOrientation
-    // here or we clear RAM before GetCalibration can load from EEPROM.
-    CurrentOrientation = GetOrientation();
+    // Hub open: apply mount + trim from EEPROM; do not call SetOrientation here or we clear calibration.
+    uint8_t OriStored = EEPROMCONFIG_DEFAULT_ORIENTATION;
+    EepromConfigLoad(&ZeroPitch, &ZeroRoll, &OriStored);
+    if (OriStored > ORIENTATION_VERTICAL_A)
+    {
+      OriStored = ORIENTATION_HORIZONTAL_A;
+    }
+    CurrentOrientation = (orientation_t)OriStored;
     ApplyOrientationMode(CurrentOrientation);
-    GetCalibration();
     setReports(reportType, reportIntervalUs);
     setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
     setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
@@ -578,7 +563,7 @@ void loop
     if (bno08x.wasReset())
     {
       Serial.println("Sensor was reset");
-      // Restore hub + gyro axes only; keep ZeroPitch/ZeroRoll (and reload from EEPROM when implemented).
+      // Restore hub + gyro axes only; keep ZeroPitch/ZeroRoll in RAM (same as EEPROM when last saved).
       ApplyOrientationMode(CurrentOrientation);
       setReports(reportType, reportIntervalUs);
       setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
