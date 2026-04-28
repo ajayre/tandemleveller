@@ -15,7 +15,16 @@ typedef struct _imu_t
   uint8_t CalibrationStatus;
 } imu_t;
 
+// supported orientations
+typedef enum _imu_orientation_t
+{
+  IMU_ORIENTATION_HORIZONTAL_A = 0,
+  IMU_ORIENTATION_VERTICAL_A   = 1
+} imu_orientation_t;
+
+// callback types
 typedef void (*imu_changed_callback_t)(uint8_t Index, imu_t *pimu);
+typedef void (*imu_txcanmessage_callback_t)(uint16_t Id, uint8_t Length, uint8_t Data[]);
 
 // Timestamped IMU sample for circular buffer
 typedef struct _imu_timestamped_t
@@ -72,11 +81,26 @@ class IMU
     // Sets the callback functions
     void SetCallbacks
       (
-      imu_changed_callback_t _IMUChanged     // called when an IMU has changed
+      imu_changed_callback_t _IMUChanged,        // called when an IMU has changed
+      imu_txcanmessage_callback_t _TxCANMessage  // called when IMU module wants to send a CAN message
+      );
+
+    // sets the pitch and roll to zero
+    void SetZero
+      (
+      uint8_t NodeId             // node to zero
+      );
+
+    // sets the orientation
+    void SetOrientation
+      (
+      uint8_t NodeId,                 // node to set orientation
+      imu_orientation_t Orientation   // orientation to use
       );
 
   private:
     imu_changed_callback_t IMUChanged;
+    imu_txcanmessage_callback_t TxCANMessage;
 
     // Prototype IMU low-pass (EMA) before fusion; tune alphas in IMU.cpp. Move to IMU node later.
     struct ImuLpState

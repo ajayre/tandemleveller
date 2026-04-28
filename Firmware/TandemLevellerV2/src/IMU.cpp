@@ -8,6 +8,12 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// password to set the zero point, must be present in the RPDO
+#define SET_ZERO_PASSWORD 0x23D4EE20
+
+// password to set the orientation, must be present in the RPDO
+#define SET_ORIENTATION_PASSWORD 0x739EAC22
+
 // EMA on IMU samples (0..1, higher = trust new sample more). Prototype — tune for field.
 static constexpr float kImuLpAlphaRollPitch = 0.30f;
 static constexpr float kImuLpAlphaHeading  = 0.22f;
@@ -85,6 +91,7 @@ IMU::IMU
   )
 {
   IMUChanged = NULL;
+  TxCANMessage = NULL;
 }
 
 // initializes the module
@@ -149,10 +156,12 @@ bool IMU::GetSampleAtTime
 // Sets the callback functions
 void IMU::SetCallbacks
   (
-  imu_changed_callback_t _IMUChanged     // called when an IMU has changed
+  imu_changed_callback_t _IMUChanged,        // called when an IMU has changed
+  imu_txcanmessage_callback_t _TxCANMessage  // called when IMU module wants to send a CAN message
   )
 {
-  IMUChanged = _IMUChanged;
+  IMUChanged   = _IMUChanged;
+  TxCANMessage = _TxCANMessage;
 }
 
 // process TPDO1 from IMU
@@ -226,5 +235,45 @@ void IMU::ProcessIMUTPDO2
         IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
         break;
     }
+  }
+}
+
+// sets the pitch and roll to zero
+void IMU::SetZero
+  (
+  uint8_t NodeId             // node to zero
+  )
+{
+  uint8_t Data[4];
+
+  Data[0] =  SET_ZERO_PASSWORD        & 0xFF;
+  Data[1] = (SET_ZERO_PASSWORD >> 8)  & 0xFF;
+  Data[2] = (SET_ZERO_PASSWORD >> 16) & 0xFF;
+  Data[3] = (SET_ZERO_PASSWORD >> 24) & 0xFF;
+
+  if (TxCANMessage != NULL)
+  {
+    TxCANMessage(0x200 + NodeId, 4, Data);
+  }
+}
+
+// sets the orientation
+void IMU::SetOrientation
+  (
+  uint8_t NodeId,                 // node to set orientation
+  imu_orientation_t Orientation   // orientation to use
+  )
+{
+  uint8_t Data[5];
+
+  Data[0] =  SET_ORIENTATION_PASSWORD        & 0xFF;
+  Data[1] = (SET_ORIENTATION_PASSWORD >> 8)  & 0xFF;
+  Data[2] = (SET_ORIENTATION_PASSWORD >> 16) & 0xFF;
+  Data[3] = (SET_ORIENTATION_PASSWORD >> 24) & 0xFF;
+  Data[4] = (uint8_t)Orientation;
+
+  if (TxCANMessage != NULL)
+  {
+    TxCANMessage(0x300 + NodeId, 5, Data);
   }
 }

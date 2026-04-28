@@ -175,6 +175,17 @@ static void IMU_IMUChanged
   agGrade.SendIMUState(Index, pIMUValue);
 }
 
+// called when IMU module wants to transmit a CAN message
+static void IMU_TxCANMessage
+  (
+  uint16_t Id,               // id of message to send
+  uint8_t Length,            // length of message to send
+  uint8_t Data[]             // message data to send
+  )
+{
+  CANopn.TxCANMessage(Id, Length, Data);
+}
+
 // process TPDO from pendant
 static void ProcessPendantTPDO
   (
@@ -463,7 +474,7 @@ void setup
   Pend.Init();
 
   IMUHandler.Init();
-  IMUHandler.SetCallbacks(IMU_IMUChanged);
+  IMUHandler.SetCallbacks(IMU_IMUChanged, IMU_TxCANMessage);
 
   BladeControlTimestamp = 0;
   PingTimestamp = 0;
@@ -667,6 +678,54 @@ void loop
           {
             Fusors[i].SetMagneticDeclination(agGrade.GetPGNPacketUInt32(&Command));
           }
+        }
+        break;
+
+      // IMUs
+      case PGN_TRACTOR_IMU_LEVEL:
+        IMUHandler.SetZero(TRACTOR_IMU_NODE_ID);
+        break;
+      case PGN_FRONT_IMU_LEVEL:
+        IMUHandler.SetZero(FRONTSCRAPER_IMU_NODE_ID);
+        break;
+      case PGN_REAR_IMU_LEVEL:
+        IMUHandler.SetZero(FRONTSCRAPER_IMU_NODE_ID);
+        break;
+      case PGN_FRONT_BUCKET_IMU_LEVEL:
+        IMUHandler.SetZero(FRONT_BUCKET_IMU_NODE_ID);
+        break;
+      case PGN_REAR_BUCKET_IMU_LEVEL:
+        IMUHandler.SetZero(REAR_BUCKET_IMU_NODE_ID);
+        break;
+
+      case PGN_TRACTOR_IMU_ORIENT:
+        {
+          uint32_t Orientation = agGrade.GetPGNPacketUInt32(&Command);
+          IMUHandler.SetOrientation(TRACTOR_IMU_NODE_ID, (imu_orientation_t)Orientation);
+        }
+        break;
+      case PGN_FRONT_IMU_ORIENT:
+        {
+          uint32_t Orientation = agGrade.GetPGNPacketUInt32(&Command);
+          IMUHandler.SetOrientation(FRONTSCRAPER_IMU_NODE_ID, (imu_orientation_t)Orientation);
+        }
+        break;
+      case PGN_REAR_IMU_ORIENT:
+        {
+          uint32_t Orientation = agGrade.GetPGNPacketUInt32(&Command);
+          IMUHandler.SetOrientation(REARSCRAPER_IMU_NODE_ID, (imu_orientation_t)Orientation);
+        }
+        break;
+      case PGN_FRONT_BUCKET_IMU_ORIENT:
+        {
+          uint32_t Orientation = agGrade.GetPGNPacketUInt32(&Command);
+          IMUHandler.SetOrientation(FRONT_BUCKET_IMU_NODE_ID, (imu_orientation_t)Orientation);
+        }
+        break;
+      case PGN_REAR_BUCKET_IMU_ORIENT:
+        {
+          uint32_t Orientation = agGrade.GetPGNPacketUInt32(&Command);
+          IMUHandler.SetOrientation(REAR_BUCKET_IMU_NODE_ID, (imu_orientation_t)Orientation);
         }
         break;
 
