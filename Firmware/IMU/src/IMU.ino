@@ -65,7 +65,7 @@ struct euler_t
 
 static Adafruit_BNO08x bno08x(BNO08X_RESET);
 static sh2_SensorValue_t sensorValue;
-static sh2_SensorId_t reportType = SH2_ARVR_STABILIZED_RV;
+static sh2_SensorId_t reportType = SH2_ROTATION_VECTOR;
 static long reportIntervalUs = 50000;
 static FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> CANBus;
 static bool SensorFound = false;
@@ -582,8 +582,7 @@ void loop
       ApplyOrientationMode(CurrentOrientation);
       setReports(reportType, reportIntervalUs);
       setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
-      //setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
-      setReports(SH2_ROTATION_VECTOR, reportIntervalUs);
+      setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
     }
 
     if (SensorEnabled)
@@ -594,7 +593,13 @@ void loop
         switch (sensorValue.sensorId)
         {
           case SH2_ROTATION_VECTOR:
-            quaternionToEulerRV(&sensorValue.un.rotationVector, &ypr, true);
+            fusedQuaternionToYpr(
+              sensorValue.un.rotationVector.i,
+              sensorValue.un.rotationVector.j,
+              sensorValue.un.rotationVector.k,
+              sensorValue.un.rotationVector.real,
+              &ypr,
+              true);
             CalibrationStatus = sensorValue.status & 0x03;
             orientationUpdated = true;
             break;
