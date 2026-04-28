@@ -582,7 +582,8 @@ void loop
       ApplyOrientationMode(CurrentOrientation);
       setReports(reportType, reportIntervalUs);
       setReports(SH2_GYROSCOPE_CALIBRATED, reportIntervalUs);
-      setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
+      //setReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, reportIntervalUs);
+      setReports(SH2_ROTATION_VECTOR, reportIntervalUs);
     }
 
     if (SensorEnabled)
@@ -592,6 +593,12 @@ void loop
         bool orientationUpdated = false;
         switch (sensorValue.sensorId)
         {
+          case SH2_ROTATION_VECTOR:
+            quaternionToEulerRV(&sensorValue.un.rotationVector, &ypr, true);
+            CalibrationStatus = sensorValue.status & 0x03;
+            orientationUpdated = true;
+            break;
+
           case SH2_GYROSCOPE_CALIBRATED:
             {
               // Gyro is always in package frame; GyrRot is identity for horizontal, full R for vertical.
@@ -611,7 +618,7 @@ void loop
             break;
 
           case SH2_ARVR_STABILIZED_RV:     
-            fusedQuaternionToYpr(
+            /*fusedQuaternionToYpr(
               sensorValue.un.arvrStabilizedRV.i,
               sensorValue.un.arvrStabilizedRV.j,
               sensorValue.un.arvrStabilizedRV.k,
@@ -619,18 +626,18 @@ void loop
               &ypr,
               true);
             CalibrationStatus = sensorValue.status & 0x03;
-            orientationUpdated = true;
+            orientationUpdated = true;*/
             break;
           
           case SH2_GYRO_INTEGRATED_RV:
-            fusedQuaternionToYpr(
+            /*fusedQuaternionToYpr(
               sensorValue.un.gyroIntegratedRV.i,
               sensorValue.un.gyroIntegratedRV.j,
               sensorValue.un.gyroIntegratedRV.k,
               sensorValue.un.gyroIntegratedRV.real,
               &ypr,
               true);
-            orientationUpdated = true;
+            orientationUpdated = true;*/
             break;
         }
 
