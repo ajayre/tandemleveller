@@ -11,13 +11,20 @@
 // "CANopen" node id
 #if TRACTOR == 1
   #define NODE_ID 0x02
-  #define TPDO_TX_PERIOD_MS 2
+  #define TPDO_TX_PERIOD_MS 5
 #elif FRONTSCRAPER == 1
   #define NODE_ID 0x03
-  #define TPDO_TX_PERIOD_MS 10
+  #define TPDO_TX_PERIOD_MS 5
+#elif FRONTBUCKET == 1
+  #define NODE_ID 0x20
+  #define TPDO_TX_PERIOD_MS 5
+#elif REARBUCKET == 1
+  #define NODE_ID 0x21
+  #define TPDO_TX_PERIOD_MS 5
 #else
+  // rear scraper
   #define NODE_ID 0x04
-#define TPDO_TX_PERIOD_MS 10
+#define TPDO_TX_PERIOD_MS 5
 #endif
 
 // BNO08x GPIO pins

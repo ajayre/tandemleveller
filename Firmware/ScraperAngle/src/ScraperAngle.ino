@@ -5,6 +5,14 @@
 // "CANopen" node id base
 #define BASE_NODE_ID 0x10
 
+// "CANopen" node id
+#if FRONT == 1
+  #define NODE_ID 0x10
+#else
+  // rear
+  #define NODE_ID 0x11
+#endif
+
 #define NMT_STATE_BOOTUP      0x00
 #define NMT_STATE_OPERATIONAL 0x05
 
@@ -23,6 +31,7 @@
 #define SENSOR_PIN A2
 #define NODE_ID_PIN1 0
 #define NODE_ID_PIN2 1
+#define LED_PIN 13
 
 // range of measurement of sensor
 #define ANGLE_RANGE_DEG 65
@@ -168,6 +177,10 @@ void setup()
   pinMode(SENSOR_PIN, INPUT);
   pinMode(NODE_ID_PIN1, INPUT);
   pinMode(NODE_ID_PIN2, INPUT);
+  pinMode(LED_PIN, OUTPUT); 
+
+  // turn LED on
+  digitalWrite(LED_PIN, HIGH);
 
   // get node id based on jumpers
   NodeId = BASE_NODE_ID;
