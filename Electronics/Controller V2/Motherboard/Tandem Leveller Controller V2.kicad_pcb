@@ -1927,9 +1927,19 @@
     (pad "7" thru_hole circle (at 0 17.78) (size 1.7 1.7) (drill 1.1) (layers "*.Cu" "*.Mask")
       (net 132 "/VALVE_A_MB") (pinfunction "MB") (pintype "output") (tstamp 1d8c0c30-02bd-46e3-a33f-41ca4754ee65))
     (model "D:/Personal/Dropbox/Dropbox (Personal)/KiCAD Library/3D Models/MD13S-SUMO.step"
-      (offset (xyz 28 -9 2.6))
+      (offset (xyz 28 -9 9.6))
       (scale (xyz 1 1 1))
       (rotate (xyz -90 0 0))
+    )
+    (model ":KICAD7_3DMODEL_DIR:Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x08_P2.54mm_Vertical.step"
+      (offset (xyz 0 0 0))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 0 0 0))
+    )
+    (model ":KICAD7_3DMODEL_DIR:Connector_PinSocket_2.54mm.3dshapes/PinSocket_1x03_P2.54mm_Vertical.step"
+      (offset (xyz 56 -2.5 0))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 0 0 0))
     )
   )
 
