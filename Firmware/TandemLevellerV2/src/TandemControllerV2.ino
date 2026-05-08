@@ -133,8 +133,10 @@ static void EmergencyStop
     CANopn.TxTPDO4(NavData.TractorLocation.Altitude, NavData.TractorLocation.RtkStatus);
     CANopn.TxTPDO6(NavData.RawTractorLocation.Latitude, NavData.RawTractorLocation.Longitude);
 
-    agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
-    agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
+    BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = false;
+    agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
+    BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = false;
+    agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
   }
 }
 
@@ -206,46 +208,46 @@ static void ProcessPendantTPDO
       // toggle auto mode for front blade
       if (Pend.IsButton1Pressed())
       {
-        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
         {
-          BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
+          BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = false;
         }
         else
         {
-          BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = true;
+          BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = true;
         }
-        agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
+        agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
       }
 
       // toggle auto mode for rear blade
       if (Pend.IsButton2Pressed())
       {
-        if (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
         {
-          BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
+          BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = false;
         }
         else
         {
-          BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = true;
+          BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = true;
         }
-        agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
+        agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
       }
 
       // if joystick 1 is moved up or down in auto mode then exit auto mode
-      if (Pend.IsJoystick1UpOrDown() && BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+      if (Pend.IsJoystick1UpOrDown() && BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
       {
-        BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
-        agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
+        BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = false;
+        agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
       }
 
       // if joystick 2 is moved up or down in auto mode then exit auto mode
-      if (Pend.IsJoystick2UpOrDown() && BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
+      if (Pend.IsJoystick2UpOrDown() && BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
       {
-        BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto = false;
-        agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
+        BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = false;
+        agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
       }
 
-      if (!BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+      if (!BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
       {
         // jog front blade (joystick button not pressed)
         if (Pend.IsJoystick1Up() && !Pend.IsJoystick1Pressed())
@@ -273,7 +275,7 @@ static void ProcessPendantTPDO
         }
       }
 
-      if (!BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
+      if (!BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
       {
         // jog rear blade (joystick button not pressed)
         if (Pend.IsJoystick2Up() && !Pend.IsJoystick2Pressed())
@@ -492,8 +494,8 @@ void setup
   agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
   agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
 
-  agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
-  agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
+  agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
+  agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
 
   agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
   agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
@@ -543,8 +545,8 @@ void loop
 
       case PGN_AGGRADE_STARTED:
         // send current states
-        agGrade.SendFrontBladeAuto(BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto);
-        agGrade.SendRearBladeAuto(BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto);
+        agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
+        agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
         agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
         agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
         break;
@@ -625,7 +627,7 @@ void loop
         
       // front blade commands
       case PGN_FRONT_CUT_VALVE:
-        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
         {
           // store for use on next calculation pass
           BladeControl.BladeCommand[FRONT_BLADE_IDX].CutValve = agGrade.GetPGNPacketUInt32(&Command);
@@ -634,11 +636,21 @@ void loop
 
       // rear blade commands
       case PGN_REAR_CUT_VALVE:
-        if (BladeControl.BladeStatus[REAR_BLADE_IDX].BladeAuto)
+        if (BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
         {
           // store for use on next calculation pass
           BladeControl.BladeCommand[REAR_BLADE_IDX].CutValve = agGrade.GetPGNPacketUInt32(&Command);
         }
+        break;
+
+      // front blade status
+      case PGN_FRONT_STATE:
+        // fixme - to do - put onto CAN bus
+        break;
+
+      // rear blade status
+      case PGN_REAR_STATE:
+        // fixme - to do - put onto CAN bus
         break;
 
       // antenna locations

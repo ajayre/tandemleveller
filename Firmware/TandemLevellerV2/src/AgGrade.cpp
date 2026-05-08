@@ -242,29 +242,29 @@ void AgGrade::TxRearBladeSlaveOffset
   Send(&Status);
 }
 
-// sends front blade auto state to AgGrade
-void AgGrade::SendFrontBladeAuto
+// sends front blade cutting request to AgGrade
+void AgGrade::SendFrontBladeCuttingRequest
   (
-  bool Auto
+  bool StartCutting
   )
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_FRONT_AUTO;
-  Status.Data[0] = Auto;
+  Status.PGN = PGN_FRONT_CUTTING_REQUEST;
+  Status.Data[0] = StartCutting;
   Send(&Status);
 }
 
-// sends rear blade auto state to AgGrade
-void AgGrade::SendRearBladeAuto
+// sends rear blade cutting request to AgGrade
+void AgGrade::SendRearBladeCuttingRequest
   (
-  bool Auto
+  bool StartCutting
   )
 {
   pgnpacket_t Status;
 
-  Status.PGN = PGN_REAR_AUTO;
-  Status.Data[0] = Auto;
+  Status.PGN = PGN_REAR_CUTTING_REQUEST;
+  Status.Data[0] = StartCutting;
   Send(&Status);
 }
 

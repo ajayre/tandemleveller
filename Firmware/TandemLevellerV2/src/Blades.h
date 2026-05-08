@@ -31,7 +31,7 @@ typedef struct _blade_status_t
   int BladePWM;
   int BladeCommand;
   blade_direction_t BladeDirection;
-  bool BladeAuto;
+  bool Cutting;
   int16_t SlaveOffset;
 } blade_status_t;
 

@@ -71,15 +71,20 @@ typedef enum _pgn_t : uint16_t
   PGN_FRONT_BLADE_OFFSET_SLAVE   = 0x5000,
   PGN_FRONT_BLADE_PWMVALUE       = 0x5001,
   PGN_FRONT_BLADE_DIRECTION      = 0x5002,
-  PGN_FRONT_AUTO                 = 0x5003,
+  PGN_FRONT_CUTTING_REQUEST      = 0x5003,
   PGN_REAR_BLADE_OFFSET_SLAVE    = 0x5004,
   PGN_REAR_BLADE_PWMVALUE        = 0x5005,
   PGN_REAR_BLADE_DIRECTION       = 0x5006,
-  PGN_REAR_AUTO                  = 0x5007,
+  PGN_REAR_CUTTING_REQUEST       = 0x5007,
   PGN_FRONT_BLADE_HEIGHT         = 0x5008,
   PGN_REAR_BLADE_HEIGHT          = 0x5009,
   PGN_FRONT_DUMPING              = 0x500A, // fixme - to do
   PGN_REAR_DUMPING               = 0x500B, // fixme - to do
+  PGN_FRONT_APRON_ANGLE          = 0x500C, // fixme - to do
+  PGN_FRONT_BUCKET_ANGLE         = 0x500D, // fixme - to do
+  PGN_REAR_BUCKET_ANGLE          = 0x500E, // fixme - to do
+  PGN_FRONT_STATE                = 0x500F, // fixme - to do
+  PGN_REAR_STATE                 = 0x500A, // fixme - to do
 
   // sensors
   PGN_TRACTOR_IMU                = 0x6000,

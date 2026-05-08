@@ -97,16 +97,16 @@ class AgGrade
       int16_t Offset
       );
 
-    // sends front blade auto state to AgGrade
-    void SendFrontBladeAuto
+    // sends front blade cutting request to AgGrade
+    void SendFrontBladeCuttingRequest
       (
-      bool Auto
+      bool StartCutting
       );
 
-    // sends rear blade auto state to AgGrade
-    void SendRearBladeAuto
+    // sends rear blade cutting request to AgGrade
+    void SendRearBladeCuttingRequest
       (
-      bool Auto
+      bool StartCutting
       );
 
     // sends an emergency stop notification to AgGrade

@@ -145,12 +145,12 @@ void CANopen::TxTPDO1
   Data[0] = pFrontBladeStatus->BladePWM & 0xFF;
   Data[1] = (pFrontBladeStatus->BladePWM >> 8) & 0xFF;
   Data[2] = pFrontBladeStatus->BladeCommand;
-  Data[3] = (pFrontBladeStatus->BladeDirection & 0x01) | ((pFrontBladeStatus->BladeAuto & 0x01) << 1);
+  Data[3] = (pFrontBladeStatus->BladeDirection & 0x01) | ((pFrontBladeStatus->Cutting & 0x01) << 1);
 
   Data[4] = pRearBladeStatus->BladePWM & 0xFF;
   Data[5] = (pRearBladeStatus->BladePWM >> 8) & 0xFF;
   Data[6] = pRearBladeStatus->BladeCommand;
-  Data[7] = (pRearBladeStatus->BladeDirection & 0x01) | ((pRearBladeStatus->BladeAuto & 0x01) << 1);
+  Data[7] = (pRearBladeStatus->BladeDirection & 0x01) | ((pRearBladeStatus->Cutting & 0x01) << 1);
 
   TxCANMessage(0x180 + CONTROLLER_NODE_ID, 8, Data);
 }

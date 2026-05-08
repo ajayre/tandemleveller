@@ -107,8 +107,8 @@ Blades::Blades
 
   // initial blade status
   memset(&BladeStatus, 0, sizeof(blade_status_t));
-  BladeStatus[FRONT_BLADE_IDX].BladeAuto = false;
-  BladeStatus[REAR_BLADE_IDX].BladeAuto  = false;
+  BladeStatus[FRONT_BLADE_IDX].Cutting = false;
+  BladeStatus[REAR_BLADE_IDX].Cutting  = false;
 
   // initial state is no movement
   BladeCommand[FRONT_BLADE_IDX].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
@@ -228,7 +228,7 @@ void Blades::EmergencyStop
   // switch to manual control, stop movement
   for (int b = 0; b < NUM_BLADES; b++)
   {
-    BladeStatus[b].BladeAuto = false;
+    BladeStatus[b].Cutting = false;
     BladeCommand[b].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
   }
 
