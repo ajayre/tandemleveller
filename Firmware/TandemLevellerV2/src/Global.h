@@ -28,6 +28,16 @@ typedef struct _antenna_location_t
   int32_t ForwardMm;
 } antenna_location_t;
 
+// These values are not arbitrary. If they are changed, then change AgGrade to match!
+typedef enum _blade_modes_t
+{
+  BLADE_MODE_RAISED      = 0,
+  BLADE_MODE_MANUAL      = 1,
+  BLADE_MODE_AUTOCUTTING = 2,
+  BLADE_MODE_AUTOFILLING = 3,
+  BLADE_MODE_FLOATING    = 4
+} blade_modes_t;
+
 // supported PGNs
 typedef enum _pgn_t : uint16_t
 {

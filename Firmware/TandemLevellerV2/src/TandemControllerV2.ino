@@ -205,48 +205,33 @@ static void ProcessPendantTPDO
 
     if (State == STATE_RUN)
     {
-      // toggle auto mode for front blade
+      // toggle cutting mode for front blade
       if (Pend.IsButton1Pressed())
       {
-        if (BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
-        {
-          BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = false;
-        }
-        else
-        {
-          BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = true;
-        }
-        agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
+        agGrade.SendFrontBladeCuttingRequest(!BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
       }
 
-      // toggle auto mode for rear blade
+      // toggle cutting mode for rear blade
       if (Pend.IsButton2Pressed())
       {
-        if (BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
-        {
-          BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = false;
-        }
-        else
-        {
-          BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = true;
-        }
-        agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
+        agGrade.SendRearBladeCuttingRequest(!BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
       }
 
-      // if joystick 1 is moved up or down in auto mode then exit auto mode
+      // if joystick 1 is moved up or down in cutting mode then exit cutting mode
       if (Pend.IsJoystick1UpOrDown() && BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
       {
         BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = false;
         agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
       }
 
-      // if joystick 2 is moved up or down in auto mode then exit auto mode
+      // if joystick 2 is moved up or down in cutting mode then exit cutting mode
       if (Pend.IsJoystick2UpOrDown() && BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
       {
         BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = false;
         agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
       }
 
+      // if not cutting then jog blade if joystick is moved
       if (!BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting)
       {
         // jog front blade (joystick button not pressed)
@@ -275,6 +260,7 @@ static void ProcessPendantTPDO
         }
       }
 
+      // if not cutting then jog blade if joystick is moved
       if (!BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting)
       {
         // jog rear blade (joystick button not pressed)
@@ -494,9 +480,6 @@ void setup
   agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
   agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
 
-  agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
-  agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
-
   agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
   agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
 
@@ -545,8 +528,6 @@ void loop
 
       case PGN_AGGRADE_STARTED:
         // send current states
-        agGrade.SendFrontBladeCuttingRequest(BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting);
-        agGrade.SendRearBladeCuttingRequest(BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting);
         agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
         agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
         break;
@@ -645,12 +626,26 @@ void loop
 
       // front blade status
       case PGN_FRONT_STATE:
-        // fixme - to do - put onto CAN bus
+        {
+          blade_modes_t Mode = (blade_modes_t)Command.Data[0];
+
+          if (Mode == BLADE_MODE_AUTOCUTTING)
+            BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = true;
+          else
+            BladeControl.BladeStatus[FRONT_BLADE_IDX].Cutting = false;
+        }
         break;
 
       // rear blade status
       case PGN_REAR_STATE:
-        // fixme - to do - put onto CAN bus
+        {
+          blade_modes_t Mode = (blade_modes_t)Command.Data[0];
+
+          if (Mode == BLADE_MODE_AUTOCUTTING)
+            BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = true;
+          else
+            BladeControl.BladeStatus[REAR_BLADE_IDX].Cutting = false;
+        }
         break;
 
       // antenna locations
