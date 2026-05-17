@@ -3,10 +3,14 @@
 #include <math.h>
 #include "IMU.h"
 #include "CANopen.h"
+#include "BNO085.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+// time between reads of the on board IMU, in milliseconds
+#define ONBOARD_IMU_READ_TIME_MS 50
 
 // password to set the zero point, must be present in the RPDO
 #define SET_ZERO_PASSWORD 0x23D4EE20
@@ -16,7 +20,7 @@
 
 // EMA on IMU samples (0..1, higher = trust new sample more). Prototype — tune for field.
 static constexpr float kImuLpAlphaRollPitch = 0.30f;
-static constexpr float kImuLpAlphaHeading  = 0.22f;
+static constexpr float kImuLpAlphaHeading   = 0.22f;
 static constexpr float kImuLpAlphaYawRate   = 0.28f;
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +84,35 @@ void IMU::ApplyInputLowPass
   IMUValues[Index].YawRate = st->yaw_rate;
 }
 
+// stores a set of IMU readings
+void IMU::StoreReadings
+  (
+  uint8_t idx,       // idx for readings (TRACTOR_IDX, etc)
+  float Heading,     // current heading
+  float Pitch,       // current pitch
+  float Roll,        // current roll
+  float YawRate      // current yaw rate
+  )
+{
+  if (idx <= NUM_BLADES)
+  {
+    ApplyInputLowPass(idx, Heading, Pitch, Roll, YawRate);
+
+    ImuBuffer[idx][ImuBufferHead[idx]].values = IMUValues[idx];
+    ImuBuffer[idx][ImuBufferHead[idx]].timestamp_ms = millis();
+    ImuBufferHead[idx] = (ImuBufferHead[idx] + 1) % IMU_BUFFER_SIZE;
+    if (ImuBufferCount[idx] < IMU_BUFFER_SIZE)
+    {
+      ImuBufferCount[idx]++;
+    }
+
+    if (IMUChanged != NULL)
+    {
+      IMUChanged(idx, &IMUValues[idx]);
+    }
+  }
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS
@@ -109,7 +142,31 @@ void IMU::Init
     ImuBufferHead[i] = 0;
     ImuBufferCount[i] = 0;
   }
+
+  OnboardIMUReadTimestamp = 0;
+
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+  bno085.Init();
+#endif
 }
+
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+// get the IMU reading from the on-board tractor IMU
+void IMU::ReadOnboardIMU
+  (
+  void
+  )
+{
+   float Heading = 0;
+   float Pitch   = 0;
+   float Roll    = 0;
+   float YawRate = 0;
+
+   bno085.Read(&Heading, &Pitch, &Roll, &YawRate, &IMUValues[TRACTOR_IDX].CalibrationStatus);
+
+   StoreReadings(TRACTOR_IDX, Heading, Pitch, Roll, YawRate);
+}
+#endif // USE_INTEGRATED_TRACTOR_IMU
 
 // retrieves the buffered sample closest to target_ms
 bool IMU::GetSampleAtTime
@@ -164,6 +221,23 @@ void IMU::SetCallbacks
   TxCANMessage = _TxCANMessage;
 }
 
+// perform periodic processing
+void IMU::Process
+  (
+  void  
+  )
+{
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+  // time to read the onboard IMU
+  if (OnboardIMUReadTimestamp >= ONBOARD_IMU_READ_TIME_MS)
+  {
+    OnboardIMUReadTimestamp = 0;
+
+    ReadOnboardIMU();
+  }
+#endif // USE_INTEGRATED_TRACTOR_IMU
+}
+
 // process TPDO1 from IMU
 void IMU::ProcessIMUTPDO1
   (
@@ -172,6 +246,14 @@ void IMU::ProcessIMUTPDO1
   const uint8_t *pData       // PDO data
   )
 {
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+  // ignore tractor IMU on CAN bus
+  if (NodeId == TRACTOR_IMU_NODE_ID)
+  {
+    return;
+  }
+#endif // USE_INTEGRATED_TRACTOR_IMU
+
   if (Length == 8)
   {
     float Heading = ((uint16_t)(pData[0] | ((uint16_t)pData[1] << 8))) / 100.0;
@@ -193,23 +275,7 @@ void IMU::ProcessIMUTPDO1
         break;
     }
 
-    if (idx != 0xFF)
-    {
-      ApplyInputLowPass(idx, Heading, Pitch, Roll, YawRate);
-
-      ImuBuffer[idx][ImuBufferHead[idx]].values = IMUValues[idx];
-      ImuBuffer[idx][ImuBufferHead[idx]].timestamp_ms = millis();
-      ImuBufferHead[idx] = (ImuBufferHead[idx] + 1) % IMU_BUFFER_SIZE;
-      if (ImuBufferCount[idx] < IMU_BUFFER_SIZE)
-      {
-        ImuBufferCount[idx]++;
-      }
-
-      if (IMUChanged != NULL)
-      {
-        IMUChanged(idx, &IMUValues[idx]);
-      }
-    }
+    StoreReadings(idx, Heading, Pitch, Roll, YawRate);
   }
 }
 
@@ -221,6 +287,14 @@ void IMU::ProcessIMUTPDO2
   const uint8_t *pData       // PDO data
   )
 {
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+  // ignore tractor IMU on CAN bus
+  if (NodeId == TRACTOR_IMU_NODE_ID)
+  {
+    return;
+  }
+#endif // USE_INTEGRATED_TRACTOR_IMU
+
   if (Length == 1)
   {
     switch (NodeId)
@@ -246,6 +320,14 @@ void IMU::SetZero
 {
   uint8_t Data[4];
 
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+  if (NodeId == TRACTOR_IMU_NODE_ID)
+  {
+    bno085.SetZero();
+    return;
+  }
+#endif // USE_INTEGRATED_TRACTOR_IMU
+
   Data[0] =  SET_ZERO_PASSWORD        & 0xFF;
   Data[1] = (SET_ZERO_PASSWORD >> 8)  & 0xFF;
   Data[2] = (SET_ZERO_PASSWORD >> 16) & 0xFF;
@@ -265,6 +347,15 @@ void IMU::SetOrientation
   )
 {
   uint8_t Data[5];
+
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+  if (NodeId == TRACTOR_IMU_NODE_ID)
+  {
+    bno085.SetOrientation((bno085_orientation_t)Orientation);
+
+    return;
+  }
+#endif // USE_INTEGRATED_TRACTOR_IMU
 
   Data[0] =  SET_ORIENTATION_PASSWORD        & 0xFF;
   Data[1] = (SET_ORIENTATION_PASSWORD >> 8)  & 0xFF;

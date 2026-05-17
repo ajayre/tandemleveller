@@ -5,6 +5,11 @@
 
 #include <Arduino.h>
 #include "Global.h"
+#include "BNO085.h"
+
+// define to 1 to use on-board IMU for tractor
+// define to 0 to use CAN bus IMU for tractor
+#define USE_INTEGRATED_TRACTOR_IMU 1
 
 typedef struct _imu_t
 {
@@ -98,9 +103,19 @@ class IMU
       imu_orientation_t Orientation   // orientation to use
       );
 
+    // perform periodic processing
+    void Process
+      (
+      void  
+      );
+
   private:
     imu_changed_callback_t IMUChanged;
     imu_txcanmessage_callback_t TxCANMessage;
+    elapsedMillis OnboardIMUReadTimestamp;
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+    BNO085 bno085;  
+#endif
 
     // Prototype IMU low-pass (EMA) before fusion; tune alphas in IMU.cpp. Move to IMU node later.
     struct ImuLpState
@@ -127,6 +142,24 @@ class IMU
       float Roll,
       float YawRate
       );
+
+    // stores a set of IMU readings
+    void StoreReadings
+      (
+      uint8_t idx,       // idx for readings (TRACTOR_IDX, etc)
+      float Heading,     // current heading
+      float Pitch,       // current pitch
+      float Roll,        // current roll
+      float YawRate      // current yaw rate
+      );
+
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+    // get the IMU reading from the on-board tractor IMU
+    void ReadOnboardIMU
+      (
+      void
+      );
+#endif // USE_INTEGRATED_TRACTOR_IMU
 };
 
 #endif // _IMUH_

@@ -152,7 +152,8 @@ void Blades::ControlBlade
   // this is currently open-loop
   BladeHeight[BladeIndex] = BladeStatus[BladeIndex].BladeCommand;
 
-  // lower the blade
+  // fixme - replace with closed-loop control system
+  /*// lower the blade
   if (BladeCommand[BladeIndex].CutValve >= (BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband))
   {
     // PWM value is negative
@@ -216,7 +217,7 @@ void Blades::ControlBlade
     case REAR_BLADE_IDX:
       SetRearValvePWM(abs(PWMValue));
       break;
-  }
+  }*/
 }
 
 // sets blades into emergency stop state
@@ -229,7 +230,7 @@ void Blades::EmergencyStop
   for (int b = 0; b < NUM_BLADES; b++)
   {
     BladeStatus[b].Cutting = false;
-    BladeCommand[b].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
+    BladeStatus[b].BladeCommand = BladeCommand[b].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
   }
 
   SetFrontValvePWM(0);

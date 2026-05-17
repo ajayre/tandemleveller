@@ -142,14 +142,18 @@ void CANopen::TxTPDO1
 {
   uint8_t Data[8];
 
-  Data[0] = pFrontBladeStatus->BladePWM & 0xFF;
-  Data[1] = (pFrontBladeStatus->BladePWM >> 8) & 0xFF;
-  Data[2] = pFrontBladeStatus->BladeCommand;
+  int16_t BladeHeightMm = pFrontBladeStatus->BladeCommand - BLADE_HEIGHT_GROUND_LEVEL;
+
+  Data[0] = (uint16_t)BladeHeightMm & 0xFF;
+  Data[1] = ((uint16_t)BladeHeightMm >> 8) & 0xFF;
+  Data[2] = 0x00;
   Data[3] = (pFrontBladeStatus->BladeDirection & 0x01) | ((pFrontBladeStatus->Cutting & 0x01) << 1);
 
-  Data[4] = pRearBladeStatus->BladePWM & 0xFF;
-  Data[5] = (pRearBladeStatus->BladePWM >> 8) & 0xFF;
-  Data[6] = pRearBladeStatus->BladeCommand;
+  BladeHeightMm = pFrontBladeStatus->BladeCommand - BLADE_HEIGHT_GROUND_LEVEL;
+
+  Data[4] = (uint16_t)BladeHeightMm & 0xFF;
+  Data[5] = ((uint16_t)BladeHeightMm >> 8) & 0xFF;
+  Data[6] = 0x00;
   Data[7] = (pRearBladeStatus->BladeDirection & 0x01) | ((pRearBladeStatus->Cutting & 0x01) << 1);
 
   TxCANMessage(0x180 + CONTROLLER_NODE_ID, 8, Data);

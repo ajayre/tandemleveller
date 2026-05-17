@@ -509,6 +509,7 @@ void loop
   }
 
   CANopn.Process();
+  IMUHandler.Process();
 
   // Check for incoming commands
   if (agGrade.IsCommandAvailable())
