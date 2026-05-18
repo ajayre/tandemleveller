@@ -15,15 +15,20 @@
 #include "SecondaryTablet.h"
 #include "SensorFusor.h"
 
+// Activity LED cannot share pin 13 when USE_INTEGRATED_TRACTOR_IMU uses SPI0 — Teensy SCK is GPIO13.
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+#define STATUS_LED_ENABLED 0
+#else
+#define STATUS_LED_ENABLED 1
+#define STATUS_LED_PIN     13
+#endif
+
 // front height:
 //  dir = low, PWM output on M1A
 //  dir = high, PWM output on M1B
 // rear height:
 //  dir = low, PWM output on M2A
 //  dir = high, PWM output on M2B
-
-// GPIO pins
-#define LED 13
 
 // how often to toggle the LED
 #define LED_FLASH_PERIOD_MS 1000
@@ -451,9 +456,10 @@ void setup
     Fusors[i].SetCallbacks(SensorFusor_FuseApplied);
   }
 
-  // set up LED
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, HIGH);
+#if STATUS_LED_ENABLED
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  digitalWrite(STATUS_LED_PIN, HIGH);
+#endif
 
   // start looking for pendant, we can't operate without it
   PendantSearchTimestamp = 0;
@@ -783,13 +789,14 @@ void loop
     }
   }
 
-  // flash LED
+#if STATUS_LED_ENABLED
   if (LEDFlashTimestamp >= LED_FLASH_PERIOD_MS)
   {
     LEDFlashTimestamp -= LED_FLASH_PERIOD_MS;
-    
-    digitalToggle(LED);
+
+    digitalToggle(STATUS_LED_PIN);
   }
+#endif
 
   // tell AgGrade we are alive
   if (PingTimestamp >= PING_PERIOD_MS)

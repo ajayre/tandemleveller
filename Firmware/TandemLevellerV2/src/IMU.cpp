@@ -3,14 +3,14 @@
 #include <math.h>
 #include "IMU.h"
 #include "CANopen.h"
-#include "BNO085.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-// time between reads of the on board IMU, in milliseconds
-#define ONBOARD_IMU_READ_TIME_MS 50
+// Publish tractor onboard IMU to buffer / IMU_IMUChanged this often (CAN-like cadence).
+// SPI service runs every IMU::Process() — see BNO085::Read INT gating — so INT pulses are not missed.
+#define ONBOARD_IMU_PUBLISH_PERIOD_MS 50
 
 // password to set the zero point, must be present in the RPDO
 #define SET_ZERO_PASSWORD 0x23D4EE20
@@ -150,24 +150,6 @@ void IMU::Init
 #endif
 }
 
-#if USE_INTEGRATED_TRACTOR_IMU == 1
-// get the IMU reading from the on-board tractor IMU
-void IMU::ReadOnboardIMU
-  (
-  void
-  )
-{
-   float Heading = 0;
-   float Pitch   = 0;
-   float Roll    = 0;
-   float YawRate = 0;
-
-   bno085.Read(&Heading, &Pitch, &Roll, &YawRate, &IMUValues[TRACTOR_IDX].CalibrationStatus);
-
-   StoreReadings(TRACTOR_IDX, Heading, Pitch, Roll, YawRate);
-}
-#endif // USE_INTEGRATED_TRACTOR_IMU
-
 // retrieves the buffered sample closest to target_ms
 bool IMU::GetSampleAtTime
   (
@@ -228,12 +210,19 @@ void IMU::Process
   )
 {
 #if USE_INTEGRATED_TRACTOR_IMU == 1
-  // time to read the onboard IMU
-  if (OnboardIMUReadTimestamp >= ONBOARD_IMU_READ_TIME_MS)
+  float heading = 0.0f;
+  float pitch = 0.0f;
+  float roll = 0.0f;
+  float yaw_rate = 0.0f;
+
+  bno085.Read(&heading, &pitch, &roll, &yaw_rate,
+      &IMUValues[TRACTOR_IDX].CalibrationStatus);
+
+  if (OnboardIMUReadTimestamp >= ONBOARD_IMU_PUBLISH_PERIOD_MS)
   {
     OnboardIMUReadTimestamp = 0;
 
-    ReadOnboardIMU();
+    StoreReadings(TRACTOR_IDX, heading, pitch, roll, yaw_rate);
   }
 #endif // USE_INTEGRATED_TRACTOR_IMU
 }

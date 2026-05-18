@@ -63,8 +63,7 @@ void BNO085::Init
   }
 }
 
-// Polls sh2 (via getSensorEvent), restores reports after hub reset, runs the
-// quaternion/trim pipeline, then fills outputs. All pointer parameters must be non-NULL.
+// Poll /INT from foreground (call often — e.g. each IMU::Process); copies buffered fuse state.
 void BNO085::Read
   (
   float *pHeading,
@@ -81,18 +80,7 @@ void BNO085::Read
 
   if (sensor_found_ && sensor_enabled_)
   {
-    if (bno08x_.wasReset())
-    {
-      ApplyOrientationMode(current_orientation_);
-      SetReports(kReportTypeRotation, kReportIntervalUs);
-      SetReports(SH2_GYROSCOPE_CALIBRATED, kReportIntervalUs);
-      SetReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, kReportIntervalUs);
-    }
-
-    while (bno08x_.getSensorEvent(&sensor_value_))
-    {
-      ProcessSensorValue(&sensor_value_);
-    }
+    DrainSensorTrafficForeground();
   }
 
   *pHeading = ypr_.yaw;
@@ -133,6 +121,37 @@ void BNO085::SetZero
 
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE
+
+// Hub reset handling plus bounded SH-2 decode. Never call getSensorEvent while /INT is idle
+// high — Adafruit SPI HAL busy-waits ~500 ms waiting for INT low per transaction.
+void BNO085::DrainSensorTrafficForeground
+  (
+  void
+  )
+{
+  if (bno08x_.wasReset())
+  {
+    ApplyOrientationMode(current_orientation_);
+    SetReports(kReportTypeRotation, kReportIntervalUs);
+    SetReports(SH2_GYROSCOPE_CALIBRATED, kReportIntervalUs);
+    SetReports(SH2_GEOMAGNETIC_ROTATION_VECTOR, kReportIntervalUs);
+  }
+
+  for (unsigned ev = 0; ev < 32u; ++ev)
+  {
+    if (digitalRead(kPinInt) != LOW)
+    {
+      break;
+    }
+
+    if (!bno08x_.getSensorEvent(&sensor_value_))
+    {
+      break;
+    }
+
+    ProcessSensorValue(&sensor_value_);
+  }
+}
 
 // Requests one SH-2 sensor report at the given interval. sensor_enabled_ reflects the
 // last enableReport result.
@@ -325,6 +344,14 @@ void BNO085::ProcessSensorValue
 
     WrapDegrees180(&ypr_.pitch);
     WrapDegrees180(&ypr_.roll);
+
+    // Integrated tractor IMU horizontal mount: fusion frame roll + legacy quaternion fix still
+    // reads 180° from product convention — extra half-turn aligns roll with field expectation.
+    if (current_orientation_ == BNO085_ORIENTATION_HORIZONTAL_A)
+    {
+      ypr_.roll += 180.0f;
+      WrapDegrees180(&ypr_.roll);
+    }
 
     if (pending_set_zero_)
     {

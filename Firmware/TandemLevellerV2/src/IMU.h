@@ -114,7 +114,7 @@ class IMU
     imu_txcanmessage_callback_t TxCANMessage;
     elapsedMillis OnboardIMUReadTimestamp;
 #if USE_INTEGRATED_TRACTOR_IMU == 1
-    BNO085 bno085;  
+    BNO085 bno085;
 #endif
 
     // Prototype IMU low-pass (EMA) before fusion; tune alphas in IMU.cpp. Move to IMU node later.
@@ -153,13 +153,6 @@ class IMU
       float YawRate      // current yaw rate
       );
 
-#if USE_INTEGRATED_TRACTOR_IMU == 1
-    // get the IMU reading from the on-board tractor IMU
-    void ReadOnboardIMU
-      (
-      void
-      );
-#endif // USE_INTEGRATED_TRACTOR_IMU
 };
 
 #endif // _IMUH_

@@ -37,11 +37,9 @@ class BNO085
       void
       );
 
-    // Services the BNO08x (hub reset recovery, sh2_service via getSensorEvent), runs the
-    // quaternion to heading/pitch/roll/yaw-rate pipeline, and writes: heading (degrees,
-    // 0..360 clockwise from above), pitch and roll (degrees, -180..+180), yaw rate
-    // (deg/s), fusion calibration status (low two bits of the report status nibble).
-    // All pointer parameters must be non-NULL.
+    // Polls SH-2 via Adafruit driver when /INT is low: drains up to 32 reports per call,
+    // checks INT before each getSensorEvent (HAL busy-waits ~500 ms if INT is idle high).
+    // Copies last fused ypr_/calibration_status_. All pointer parameters must be non-NULL.
     void Read
       (
       float *pHeading,
@@ -134,6 +132,12 @@ class BNO085
       sh2_SensorValue_t *p_val
       );
 
+    // Hub reset handling plus bounded getSensorEvent drain (poll /INT — never call HAL idle-high).
+    void DrainSensorTrafficForeground
+      (
+      void
+      );
+
     Adafruit_BNO08x      bno08x_;
     sh2_SensorValue_t    sensor_value_{};
 
@@ -151,8 +155,7 @@ class BNO085
     float                gyr_rot_[3][3]{};
     float                yaw_rate_axis_[3]{};
 
-    // When true, next rotation-vector pipeline uses measured pitch/roll as new EEPROM trim
-    // (clears displayed attitude to level for that report); matches PendingCalibrateRequest.
+    // Deferred SetZero — applied on next rotation-vector sample (legacy CAN parity).
     bool                 pending_set_zero_        = false;
 };
 
