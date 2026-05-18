@@ -5,6 +5,10 @@
 
 #include <Arduino.h>
 
+// define to 1 to use on-board IMU for tractor
+// define to 0 to use CAN bus IMU for tractor
+#define USE_INTEGRATED_TRACTOR_IMU 1
+
 // maximum length of an NMEA 0183 sentence
 #define MAX_NMEA_LENGTH 128
 
@@ -48,6 +52,7 @@ typedef enum _pgn_t : uint16_t
   PGN_PING                       = 0x0003,
   PGN_CLEAR_ESTOP                = 0x0004,
   PGN_YOU_ARE_SECONDARY          = 0x0005,  // fixme - to do
+  PGN_ONBOARD_TRACTOR_IMU        = 0x0006,
 
   // blade control
   PGN_FRONT_CUT_VALVE            = 0x1000,   // CUTVALVE_MIN -> CUTVALVE_MAX

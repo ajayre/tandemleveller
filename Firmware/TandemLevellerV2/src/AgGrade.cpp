@@ -158,6 +158,17 @@ void AgGrade::SendBladeState
     Send(&Status);
 }
 
+// tells AgGrade that the on-board tractor IMU is being used
+void AgGrade::SendUsingOnBoardTractorIMU
+  (
+  void  
+  )
+{
+  pgnpacket_t Status;
+  Status.PGN = PGN_ONBOARD_TRACTOR_IMU;
+  Send(&Status);
+}
+
 // sends the front blade height to AgGrade
 void AgGrade::SendFrontBladeHeight
   (

@@ -133,7 +133,7 @@ static void EmergencyStop
     BladeControl.EmergencyStop();
 
     CANopn.TxTPDO1(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
-    CANopn.TxTPDO2(&(BladeControl.BladeStatus[FRONT_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
+    CANopn.TxTPDO2(&(BladeControl.BladeStatus[REAR_BLADE_IDX]), &(BladeControl.BladeStatus[REAR_BLADE_IDX]));
     CANopn.TxTPDO3(NavData.TractorLocation.Latitude, NavData.TractorLocation.Longitude);
     CANopn.TxTPDO4(NavData.TractorLocation.Altitude, NavData.TractorLocation.RtkStatus);
     CANopn.TxTPDO6(NavData.RawTractorLocation.Latitude, NavData.RawTractorLocation.Longitude);
@@ -537,6 +537,9 @@ void loop
         // send current states
         agGrade.TxFrontBladeSlaveOffset(BladeControl.BladeStatus[FRONT_BLADE_IDX].SlaveOffset);
         agGrade.TxRearBladeSlaveOffset(BladeControl.BladeStatus[REAR_BLADE_IDX].SlaveOffset);
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+        agGrade.SendUsingOnBoardTractorIMU();
+#endif // USE_INTEGRATED_TRACTOR_IMU
         break;
 
       case PGN_PING:

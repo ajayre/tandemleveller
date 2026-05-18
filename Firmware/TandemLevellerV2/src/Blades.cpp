@@ -113,6 +113,8 @@ Blades::Blades
   // initial state is no movement
   BladeCommand[FRONT_BLADE_IDX].CutValve = BLADE_HEIGHT_GROUND_LEVEL;
   BladeCommand[REAR_BLADE_IDX].CutValve  = BLADE_HEIGHT_GROUND_LEVEL;
+  BladeStatus[FRONT_BLADE_IDX].BladeCommand = BLADE_HEIGHT_GROUND_LEVEL;
+  BladeStatus[REAR_BLADE_IDX].BladeCommand = BLADE_HEIGHT_GROUND_LEVEL;
 
   // default PWM configuruation
   for(int b = 0; b < NUM_BLADES; b++)
@@ -265,6 +267,7 @@ void Blades::JogBlade
       BladeCommand[BladeIndex].CutValve -= 1;
       if (BladeCommand[BladeIndex].CutValve < CUTVALVE_MIN) BladeCommand[BladeIndex].CutValve = CUTVALVE_MIN;
     }
+
     LastJogTime[BladeIndex] = 0;
   }
 }

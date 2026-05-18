@@ -97,6 +97,12 @@ class AgGrade
       int16_t Offset
       );
 
+    // tells AgGrade that the on-board tractor IMU is being used
+    void SendUsingOnBoardTractorIMU
+      (
+      void  
+      );
+
     // sends front blade cutting request to AgGrade
     void SendFrontBladeCuttingRequest
       (

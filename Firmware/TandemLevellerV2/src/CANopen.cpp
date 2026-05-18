@@ -149,7 +149,7 @@ void CANopen::TxTPDO1
   Data[2] = 0x00;
   Data[3] = (pFrontBladeStatus->BladeDirection & 0x01) | ((pFrontBladeStatus->Cutting & 0x01) << 1);
 
-  BladeHeightMm = pFrontBladeStatus->BladeCommand - BLADE_HEIGHT_GROUND_LEVEL;
+  BladeHeightMm = pRearBladeStatus->BladeCommand - BLADE_HEIGHT_GROUND_LEVEL;
 
   Data[4] = (uint16_t)BladeHeightMm & 0xFF;
   Data[5] = ((uint16_t)BladeHeightMm >> 8) & 0xFF;
