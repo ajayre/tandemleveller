@@ -42,6 +42,9 @@ class IMU
   public:
     imu_t IMUValues[NUM_BLADES + 1];
 
+    // Most recent CAN TPDO1 decode (no LPF) — for AgGrade display only; fusion uses IMUValues.
+    imu_t LatestCanRaw[NUM_BLADES + 1];
+
     // Retrieves the buffered sample closest to target_ms. Returns false if
     // the buffer is empty for the given index.
     bool GetSampleAtTime
@@ -104,6 +107,13 @@ class IMU
       (
       void  
       );
+
+    // Thread-safe copy of LatestCanRaw (updated from CAN RX service).
+    void SnapshotLatestCanRaw
+      (
+      uint8_t Index,
+      imu_t *pDest
+      ) const;
 
   private:
     imu_changed_callback_t IMUChanged;

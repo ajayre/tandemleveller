@@ -114,6 +114,12 @@ class CANopen
       void
       );
 
+    // Drain the FlexCAN software RX queue (call from main loop and CAN RX timer).
+    void ServiceRx
+      (
+      void
+      );
+
     // performs processing, call in the main loop
     void Process
       (

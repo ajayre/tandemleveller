@@ -29,6 +29,9 @@
 #define PACKET_POSTAMBLE_SIZE 2
 #define PACKET_MAX_PAYLOAD    0xFE
 
+// After PACKET_START_BYTE, discard the partial frame if not complete within this time (ms)
+#define PACKET_RX_TIMEOUT_MS  50
+
 // Status codes
 enum PacketStatus
 {
@@ -47,7 +50,7 @@ public:
     Packet();
     
     // Initialize the packet handler
-    void begin(uint32_t timeout = 50);
+    void begin(uint32_t timeout = PACKET_RX_TIMEOUT_MS);
     
     // --- Transmit Functions ---
     
@@ -88,6 +91,9 @@ public:
     // Parse a received byte
     // Returns bytes read when a complete packet is received
     uint8_t parse(uint8_t recChar, bool valid = true);
+
+    // If a partial frame has exceeded PACKET_RX_TIMEOUT_MS, discard it and return true
+    bool pollReceiveTimeout();
     
     // Get the RX buffer
     uint8_t* getRxBuff() { return _rxBuff; }
@@ -166,7 +172,8 @@ private:
     void calcOverhead(uint8_t* arr, uint8_t len);
     int16_t findLast(uint8_t* arr, uint8_t len);
     void stuffPacket(uint8_t* arr, uint8_t len);
-    void unpackPacket(uint8_t* arr);
+    bool unpackPacket(uint8_t* arr, uint8_t len);
+    void discardPartialPacket();
 };
 
 #endif // PACKET_H

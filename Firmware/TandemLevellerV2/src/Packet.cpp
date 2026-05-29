@@ -18,7 +18,7 @@ Packet::Packet()
     , _bytesRead(0)
     , _status(PACKET_NO_DATA)
     , _packetStart(0)
-    , _timeout(50)
+    , _timeout(PACKET_RX_TIMEOUT_MS)
 {
     // Initialize preamble with start byte
     _preamble[0] = PACKET_START_BYTE;
@@ -82,51 +82,119 @@ uint8_t Packet::constructPacket(uint16_t messageLen, uint8_t packetId)
     return processedLen;
 }
 
+void Packet::discardPartialPacket()
+{
+    _bytesRead = 0;
+    _state = FIND_START_BYTE;
+    _status = PACKET_STALE_ERROR;
+    _packetStart = 0;
+    _payIndex = 0;
+    _bytesToRec = 0;
+}
+
+bool Packet::pollReceiveTimeout()
+{
+    if (_packetStart == 0)
+    {
+        return false;
+    }
+
+    if ((millis() - _packetStart) < _timeout)
+    {
+        return false;
+    }
+
+    discardPartialPacket();
+    return true;
+}
+
 uint8_t Packet::parse(uint8_t recChar, bool valid)
 {
-    // Check for stale packet
-    bool packetFresh = (_packetStart == 0) || ((millis() - _packetStart) < _timeout);
-    
-    if (!packetFresh)
+    const bool timedOut = pollReceiveTimeout();
+
+    if (!valid)
     {
         _bytesRead = 0;
-        _state = FIND_START_BYTE;
-        _status = PACKET_STALE_ERROR;
-        _packetStart = 0;
-        
+        if (!timedOut)
+        {
+            _status = PACKET_NO_DATA;
+        }
         return _bytesRead;
     }
-    
-    if (valid)
+
+    switch (_state)
     {
-        switch (_state)
+        case FIND_START_BYTE:
+            if (recChar == PACKET_START_BYTE)
+            {
+                _state = FIND_ID_BYTE;
+                _packetStart = millis();
+            }
+            break;
+            
+        case FIND_ID_BYTE:
+            _idByte = recChar;
+            _state = FIND_OVERHEAD_BYTE;
+            break;
+            
+        case FIND_OVERHEAD_BYTE:
+            _recOverheadByte = recChar;
+            _state = FIND_PAYLOAD_LEN;
+            break;
+            
+        case FIND_PAYLOAD_LEN:
+            if (recChar > 0 && recChar <= PACKET_MAX_PAYLOAD)
+            {
+                _bytesToRec = recChar;
+                _payIndex = 0;
+                _state = FIND_PAYLOAD;
+            }
+            else
+            {
+                _bytesRead = 0;
+                _state = FIND_START_BYTE;
+                _status = PACKET_PAYLOAD_ERROR;
+                reset();
+                return _bytesRead;
+            }
+            break;
+            
+        case FIND_PAYLOAD:
+            if (_payIndex < _bytesToRec)
+            {
+                _rxBuff[_payIndex] = recChar;
+                _payIndex++;
+                
+                if (_payIndex == _bytesToRec)
+                    _state = FIND_CRC;
+            }
+            break;
+            
+        case FIND_CRC:
         {
-            case FIND_START_BYTE:
-                if (recChar == PACKET_START_BYTE)
-                {
-                    _state = FIND_ID_BYTE;
-                    _packetStart = millis();
-                }
-                break;
-                
-            case FIND_ID_BYTE:
-                _idByte = recChar;
-                _state = FIND_OVERHEAD_BYTE;
-                break;
-                
-            case FIND_OVERHEAD_BYTE:
-                _recOverheadByte = recChar;
-                _state = FIND_PAYLOAD_LEN;
-                break;
-                
-            case FIND_PAYLOAD_LEN:
-                if (recChar > 0 && recChar <= PACKET_MAX_PAYLOAD)
-                {
-                    _bytesToRec = recChar;
-                    _payIndex = 0;
-                    _state = FIND_PAYLOAD;
-                }
-                else
+            uint8_t calcCrc = _crc.calculate(_rxBuff, _bytesToRec);
+            
+            if (calcCrc == recChar)
+            {
+                _state = FIND_END_BYTE;
+            }
+            else
+            {
+                _bytesRead = 0;
+                _state = FIND_START_BYTE;
+                _status = PACKET_CRC_ERROR;
+                reset();
+                return _bytesRead;
+            }
+            break;
+        }
+            
+        case FIND_END_BYTE:
+            _state = FIND_START_BYTE;
+            
+            if (recChar == PACKET_STOP_BYTE)
+            {
+                if (!unpackPacket(_rxBuff, _bytesToRec))
                 {
                     _bytesRead = 0;
                     _state = FIND_START_BYTE;
@@ -134,74 +202,29 @@ uint8_t Packet::parse(uint8_t recChar, bool valid)
                     reset();
                     return _bytesRead;
                 }
-                break;
+
+                // Copy to public buffer
+                memcpy(rxBuff, _rxBuff, PACKET_MAX_PAYLOAD);
                 
-            case FIND_PAYLOAD:
-                if (_payIndex < _bytesToRec)
-                {
-                    _rxBuff[_payIndex] = recChar;
-                    _payIndex++;
-                    
-                    if (_payIndex == _bytesToRec)
-                        _state = FIND_CRC;
-                }
-                break;
+                _bytesRead = _bytesToRec;
+                _status = PACKET_NEW_DATA;
+                _packetStart = 0;
                 
-            case FIND_CRC:
-            {
-                uint8_t calcCrc = _crc.calculate(_rxBuff, _bytesToRec);
-                
-                if (calcCrc == recChar)
-                {
-                    _state = FIND_END_BYTE;
-                }
-                else
-                {
-                    _bytesRead = 0;
-                    _state = FIND_START_BYTE;
-                    _status = PACKET_CRC_ERROR;
-                    reset();
-                    return _bytesRead;
-                }
-                break;
-            }
-                
-            case FIND_END_BYTE:
-                _state = FIND_START_BYTE;
-                
-                if (recChar == PACKET_STOP_BYTE)
-                {
-                    unpackPacket(_rxBuff);
-                    
-                    // Copy to public buffer
-                    memcpy(rxBuff, _rxBuff, PACKET_MAX_PAYLOAD);
-                    
-                    _bytesRead = _bytesToRec;
-                    _status = PACKET_NEW_DATA;
-                    _packetStart = 0;
-                    
-                    return _bytesRead;
-                }
-                
-                _bytesRead = 0;
-                _status = PACKET_STOP_BYTE_ERROR;
-                reset();
                 return _bytesRead;
-                
-            default:
-                reset();
-                _bytesRead = 0;
-                _state = FIND_START_BYTE;
-                break;
-        }
+            }
+            
+            _bytesRead = 0;
+            _status = PACKET_STOP_BYTE_ERROR;
+            reset();
+            return _bytesRead;
+            
+        default:
+            reset();
+            _bytesRead = 0;
+            _state = FIND_START_BYTE;
+            break;
     }
-    else
-    {
-        _bytesRead = 0;
-        _status = PACKET_NO_DATA;
-        return _bytesRead;
-    }
-    
+
     _bytesRead = 0;
     _status = PACKET_CONTINUE;
     return _bytesRead;
@@ -261,19 +284,51 @@ void Packet::stuffPacket(uint8_t* arr, uint8_t len)
     }
 }
 
-void Packet::unpackPacket(uint8_t* arr)
+bool Packet::unpackPacket(uint8_t* arr, uint8_t len)
 {
-    uint8_t testIndex = _recOverheadByte;
-    uint8_t delta = 0;
-    
-    if (testIndex <= PACKET_MAX_PAYLOAD)
+    if (_recOverheadByte == 0xFF)
     {
-        while (arr[testIndex] != 0)
-        {
-            delta = arr[testIndex];
-            arr[testIndex] = PACKET_START_BYTE;
-            testIndex += delta;
-        }
-        arr[testIndex] = PACKET_START_BYTE;
+        return true;
     }
+
+    if (len == 0 || _recOverheadByte >= len)
+    {
+        return false;
+    }
+
+    uint8_t testIndex = _recOverheadByte;
+    uint8_t steps = 0;
+
+    while (arr[testIndex] != 0)
+    {
+        if (steps >= len)
+        {
+            return false;
+        }
+
+        const uint8_t delta = arr[testIndex];
+        if (delta == 0)
+        {
+            return false;
+        }
+
+        arr[testIndex] = PACKET_START_BYTE;
+
+        const uint16_t nextIndex = (uint16_t)testIndex + (uint16_t)delta;
+        if (nextIndex >= len)
+        {
+            return false;
+        }
+
+        testIndex = (uint8_t)nextIndex;
+        steps++;
+    }
+
+    if (testIndex >= len)
+    {
+        return false;
+    }
+
+    arr[testIndex] = PACKET_START_BYTE;
+    return true;
 }

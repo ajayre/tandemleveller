@@ -106,10 +106,6 @@ void IMU::StoreReadings
       ImuBufferCount[idx]++;
     }
 
-    if (IMUChanged != NULL)
-    {
-      IMUChanged(idx, &IMUValues[idx]);
-    }
   }
 }
 
@@ -141,6 +137,7 @@ void IMU::Init
     memset(ImuBuffer[i], 0, sizeof(ImuBuffer[i]));
     ImuBufferHead[i] = 0;
     ImuBufferCount[i] = 0;
+    memset(&LatestCanRaw[i], 0, sizeof(imu_t));
   }
 
   OnboardIMUReadTimestamp = 0;
@@ -227,6 +224,22 @@ void IMU::Process
 #endif // USE_INTEGRATED_TRACTOR_IMU
 }
 
+void IMU::SnapshotLatestCanRaw
+  (
+  uint8_t Index,
+  imu_t *pDest
+  ) const
+{
+  if (Index > NUM_BLADES || pDest == NULL)
+  {
+    return;
+  }
+
+  noInterrupts();
+  *pDest = LatestCanRaw[Index];
+  interrupts();
+}
+
 // process TPDO1 from IMU
 void IMU::ProcessIMUTPDO1
   (
@@ -264,7 +277,15 @@ void IMU::ProcessIMUTPDO1
         break;
     }
 
-    StoreReadings(idx, Heading, Pitch, Roll, YawRate);
+    if (idx != 0xFF)
+    {
+      LatestCanRaw[idx].Heading = Heading;
+      LatestCanRaw[idx].Pitch   = Pitch;
+      LatestCanRaw[idx].Roll    = Roll;
+      LatestCanRaw[idx].YawRate = YawRate;
+
+      StoreReadings(idx, Heading, Pitch, Roll, YawRate);
+    }
   }
 }
 
@@ -290,12 +311,15 @@ void IMU::ProcessIMUTPDO2
     {
       case TRACTOR_IMU_NODE_ID:
         IMUValues[TRACTOR_IDX].CalibrationStatus = pData[0];
+        LatestCanRaw[TRACTOR_IDX].CalibrationStatus = pData[0];
         break;
       case FRONTSCRAPER_IMU_NODE_ID:
         IMUValues[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
+        LatestCanRaw[FRONT_BLADE_IDX].CalibrationStatus = pData[0];
         break;
       case REARSCRAPER_IMU_NODE_ID:
         IMUValues[REAR_BLADE_IDX].CalibrationStatus = pData[0];
+        LatestCanRaw[REAR_BLADE_IDX].CalibrationStatus = pData[0];
         break;
     }
   }

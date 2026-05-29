@@ -346,11 +346,6 @@ static void TxPDOs
   Data[6] = ((uint16_t)Value) & 0xFF;
   Data[7] = (((uint16_t)Value) >> 8) & 0xFF;
 
-  char txt[50];
-  sprintf(txt, "%.2f %.2f %.2f %.2f %d", pMeasurements->pitch, pMeasurements->roll, pMeasurements->yaw, pMeasurements->yawrate, CalibrationStatus);
-  Serial.print(txt);
-  Serial.println();
-
   TxCANMessage(0x180 + NODE_ID, 8, Data);
 
   Data[0] = CalibrationStatus;

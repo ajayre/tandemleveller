@@ -253,7 +253,7 @@ void GNSS::ProcessNMEASentence
   )
 {
   // fixme - remove
-  Serial.print(sentence);
+  //Serial.print(sentence);
 
   // these messages are not forwarded because we use GGA instead
   if ((strncmp(sentence, "$GPGLL,", 7) == 0) || (strncmp(sentence, "$GNGLL,", 7) == 0))

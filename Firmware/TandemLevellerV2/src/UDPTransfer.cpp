@@ -96,26 +96,26 @@ uint8_t UDPTransfer::available()
         {
             _bytesRead = packet.parse(_udpBuffer[i], true);
             _status = packet.getStatus();
-            
-            // If we got a complete packet, return immediately
+
             if (_status == PACKET_NEW_DATA)
             {
                 return _bytesRead;
             }
-            
-            // If there was an error, stop processing
+
+            // Junk bad or timed-out frames and keep scanning this datagram
             if (_status < 0)
             {
-                reset();
-                return 0;
+                if (_status != PACKET_STALE_ERROR)
+                {
+                    reset();
+                }
             }
         }
     }
-    else
+    else if (packet.pollReceiveTimeout())
     {
-        // No data available - call parse with invalid flag to check for stale packets
-        _bytesRead = packet.parse(0, false);
-        _status = packet.getStatus();
+        _bytesRead = 0;
+        _status = PACKET_STALE_ERROR;
     }
     
     return 0;

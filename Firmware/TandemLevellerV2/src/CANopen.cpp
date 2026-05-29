@@ -92,6 +92,9 @@ void CANopen::Init
 
   ProcessPDOCallback = NULL;
   NodeLostCallback = NULL;
+
+  // Arm queued RX mode (see FlexCAN_T4: first events() switches off ISR callbacks).
+  CANBus.events();
 }
 
 // transmits a CAN message
@@ -317,14 +320,27 @@ void CANopen::ResetAllNodes
   CANBus.write(txmsg);
 }
 
+// drain the FlexCAN software RX queue
+void CANopen::ServiceRx
+  (
+  void
+  )
+{
+  noInterrupts();
+  while (CANBus.getRXQueueCount() > 0)
+  {
+    CANBus.events();
+  }
+  interrupts();
+}
+
 // performs processing, call in the main loop
 void CANopen::Process
   (
   void
   )
 {
-  // process can module
-  CANBus.events();
+  ServiceRx();
 
   CheckForMissingNodes();
 

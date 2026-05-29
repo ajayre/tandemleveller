@@ -1,6 +1,7 @@
 // AgGrade Controller
 
 #include <Arduino.h>
+#include <IntervalTimer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +48,9 @@
 
 // how often to transmit TPDOs
 #define TPDO_OUTPUT_PERIOD_MS 50
+
+// how often to send IMU state to AgGrade over UDP
+#define AGGRADE_IMU_PUBLISH_PERIOD_MS 200
 
 typedef enum _state_t
 {
@@ -101,8 +105,21 @@ static elapsedMillis PingTimestamp;
 static elapsedMillis LastPingRxTimestamp;
 static bool AgGradeFound = false;
 static elapsedMillis TPDOTimestamp;
+static elapsedMillis AgGradeImuPublishTimestamp;
 static bool SecTabletPresent;
+
+// Drains CAN RX outside the main loop so IMU TPDOs stay current even when loop() is slow.
+static IntervalTimer CanRxTimer;
+
 static antenna_location_t AntennaLocations[NUM_BLADES + 1]; // fixme - to do - get the values from AgGrade
+
+static void CanRxTimerService
+  (
+  void
+  )
+{
+  CANopn.ServiceRx();
+}
 
 // resets the controller
 static void Reset
@@ -165,21 +182,11 @@ static void ProcessAngleTPDO
   const uint8_t *pData
   )
 {
-  // fixme - to do
-
-  // send updated blade heights
-  agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
-  agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
-}
-
-// called when an IMU has changed
-static void IMU_IMUChanged
-  (
-  uint8_t Index,             // index of IMU xxx_IDX
-  imu_t *pIMUValue           // new IMU values
-  )
-{
-  agGrade.SendIMUState(Index, pIMUValue);
+  // fixme - parse pData into BladeControl.BladeHeight[] when defined.
+  // Never call agGrade from the CAN RX path — UDP/Ethernet send blocks and stalls draining.
+  (void)NodeId;
+  (void)Length;
+  (void)pData;
 }
 
 // called when IMU module wants to transmit a CAN message
@@ -451,6 +458,9 @@ void setup
   CANopn.Init();
   CANopn.SetCallbacks(CANopen_ProcessPDO, CANopen_NodeLost, CANopen_RequestReset);
 
+  // 2 ms: IMU nodes transmit TPDOs every 5 ms; keep RX drained even if loop() stalls.
+  CanRxTimer.begin(CanRxTimerService, 2000);
+
   for (int i = 0; i < NUM_BLADES + 1; i++)
   {
     Fusors[i].SetCallbacks(SensorFusor_FuseApplied);
@@ -468,9 +478,10 @@ void setup
   Pend.Init();
 
   IMUHandler.Init();
-  IMUHandler.SetCallbacks(IMU_IMUChanged, IMU_TxCANMessage);
+  IMUHandler.SetCallbacks(NULL, IMU_TxCANMessage);
 
   BladeControlTimestamp = 0;
+  AgGradeImuPublishTimestamp = 0;
   PingTimestamp = 0;
   LastPingRxTimestamp = 0;
 
@@ -497,12 +508,38 @@ void setup
   Serial.println("Ready");
 }
 
+// returns true if the IMU for this index should be reported to AgGrade
+static bool IsImuPresentForAgGrade
+  (
+  int ImuIndex
+  )
+{
+  switch (ImuIndex)
+  {
+    case TRACTOR_IDX:
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+      return true;
+#else
+      return CANopn.IsNodeFound(TRACTOR_IMU_NODE_ID);
+#endif
+
+    case FRONT_BLADE_IDX:
+      return CANopn.IsNodeFound(FRONTSCRAPER_IMU_NODE_ID);
+
+    case REAR_BLADE_IDX:
+      return CANopn.IsNodeFound(REARSCRAPER_IMU_NODE_ID);
+
+    default:
+      return false;
+  }
+}
+
 // continually executes
 void loop
   (
   )
-{  
-    // periodically transmit data onto the CAN bus
+{
+  // periodically transmit data onto the CAN bus
   if (TPDOTimestamp >= TPDO_OUTPUT_PERIOD_MS)
   {
     TPDOTimestamp = 0;
@@ -516,6 +553,30 @@ void loop
 
   CANopn.Process();
   IMUHandler.Process();
+
+  // publish IMU state to AgGrade (LatestCanRaw maintained by CanRxTimer)
+  if (AgGradeImuPublishTimestamp >= AGGRADE_IMU_PUBLISH_PERIOD_MS)
+  {
+    imu_t imu_snap;
+
+    AgGradeImuPublishTimestamp = 0;
+
+    if (IsImuPresentForAgGrade(TRACTOR_IDX))
+    {
+      IMUHandler.SnapshotLatestCanRaw(TRACTOR_IDX, &imu_snap);
+      agGrade.SendIMUState(TRACTOR_IDX, &imu_snap);
+    }
+    if (IsImuPresentForAgGrade(FRONT_BLADE_IDX))
+    {
+      IMUHandler.SnapshotLatestCanRaw(FRONT_BLADE_IDX, &imu_snap);
+      agGrade.SendIMUState(FRONT_BLADE_IDX, &imu_snap);
+    }
+    if (IsImuPresentForAgGrade(REAR_BLADE_IDX))
+    {
+      IMUHandler.SnapshotLatestCanRaw(REAR_BLADE_IDX, &imu_snap);
+      agGrade.SendIMUState(REAR_BLADE_IDX, &imu_snap);
+    }
+  }
 
   // Check for incoming commands
   if (agGrade.IsCommandAvailable())

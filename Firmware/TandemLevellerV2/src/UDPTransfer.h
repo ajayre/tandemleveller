@@ -29,7 +29,7 @@ public:
     UDPTransfer();
     
     // Initialize with UDP instance
-    void begin(EthernetUDP& udp, uint32_t timeout = 50);
+    void begin(EthernetUDP& udp, uint32_t timeout = PACKET_RX_TIMEOUT_MS);
     
     // Set the remote address and port for sending
     void setRemote(IPAddress ip, uint16_t port);

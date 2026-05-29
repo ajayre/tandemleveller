@@ -7,7 +7,7 @@
 
 // define to 1 to use on-board IMU for tractor
 // define to 0 to use CAN bus IMU for tractor
-#define USE_INTEGRATED_TRACTOR_IMU 1
+#define USE_INTEGRATED_TRACTOR_IMU 0
 
 // maximum length of an NMEA 0183 sentence
 #define MAX_NMEA_LENGTH 128
