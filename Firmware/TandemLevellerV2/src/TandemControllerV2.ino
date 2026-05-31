@@ -539,6 +539,8 @@ void loop
   (
   )
 {
+  agGrade.MaintainEthernet();
+
   // periodically transmit data onto the CAN bus
   if (TPDOTimestamp >= TPDO_OUTPUT_PERIOD_MS)
   {

@@ -20,8 +20,27 @@
 
 #include <Arduino.h>
 #include <fnet.h>
+#include "stack/fnet_eth_prv.h"
+#include "stack/fnet_netif_prv.h"
 #include "NativeEthernet.h"
 #include "utility/NativeW5100.h"
+
+#if defined(__IMXRT1062__) || defined(ARDUINO_TEENSY41)
+#include <imxrt.h>
+#endif
+
+enum LinkRecoveryState {
+  LINK_RECOVERY_NORMAL = 0,
+  LINK_RECOVERY_DOWN_PENDING,
+  LINK_RECOVERY_SOFT_WAIT,
+  LINK_RECOVERY_HARD_WAIT,
+  LINK_RECOVERY_FULL_WAIT
+};
+
+static const uint32_t LINK_RECOVERY_POLL_MS = 250;
+static const uint32_t LINK_DOWN_DEBOUNCE_MS = 1500;
+static const uint32_t LINK_SOFT_RECOVER_WAIT_MS = 4000;
+static const uint32_t LINK_HARD_RECOVER_WAIT_MS = 5000;
 
 IPAddress EthernetClass::_dnsServerAddress;
 uint8_t* EthernetClass::stack_heap_ptr = NULL;
@@ -30,6 +49,21 @@ ssize_t EthernetClass::socket_size = 0;
 uint8_t EthernetClass::socket_num = 0;
 IntervalTimer EthernetClass::_fnet_poll;
 volatile boolean EthernetClass::link_status = 0;
+
+static uint8_t recovery_mac[6];
+static IPAddress recovery_ip(0, 0, 0, 0);
+static IPAddress recovery_subnet(255, 255, 255, 0);
+static IPAddress recovery_gateway(0, 0, 0, 0);
+static IPAddress recovery_dns(0, 0, 0, 0);
+static bool recovery_enabled = false;
+static fnet_link_params_t stored_link_params;
+static fnet_link_desc_t link_desc = 0;
+static unsigned long link_dhcp_response_timeout = 4000;
+
+static LinkRecoveryState link_recovery_state = LINK_RECOVERY_NORMAL;
+static uint32_t link_recovery_phase_start_ms = 0;
+static uint32_t link_recovery_last_poll_ms = 0;
+static bool link_recovery_was_down = false;
 DMAMEM uint8_t** EthernetClass::socket_buf_receive;
 DMAMEM uint16_t* EthernetClass::socket_buf_index;
 DMAMEM uint8_t** EthernetClass::socket_buf_transmit;
@@ -134,9 +168,10 @@ int EthernetClass::begin(uint8_t *mac, unsigned long timeout, unsigned long resp
               fnet_link_params_t link_params;
               link_params.netif_desc = fnet_netif_get_default();
               link_params.callback = link_callback;
-              static unsigned long _responseTimeout = responseTimeout;
-              link_params.callback_param = &_responseTimeout;
-              fnet_link_init(&link_params);
+              link_dhcp_response_timeout = responseTimeout;
+              link_params.callback_param = &link_dhcp_response_timeout;
+              stored_link_params = link_params;
+              link_desc = fnet_link_init(&link_params);
               _fnet_poll.begin(fnet_poll, FNET_POLL_TIME);
             }
           }
@@ -266,7 +301,9 @@ void EthernetClass::begin(uint8_t *mac, IPAddress ip, IPAddress dns, IPAddress g
               fnet_link_params_t link_params;
               link_params.netif_desc = fnet_netif_get_default();
               link_params.callback = link_callback;
-              fnet_link_init(&link_params);
+              link_params.callback_param = &link_dhcp_response_timeout;
+              stored_link_params = link_params;
+              link_desc = fnet_link_init(&link_params);
               _fnet_poll.begin(fnet_poll, FNET_POLL_TIME);
             }
           }
@@ -315,7 +352,23 @@ EthernetHardwareStatus EthernetClass::hardwareStatus()
 
 int EthernetClass::maintain()
 {
-	return 0; //DHCP already maintained
+	return (int)maintainLinkRecovery();
+}
+
+void EthernetClass::enableLinkRecovery(const uint8_t *mac, IPAddress ip, IPAddress subnet,
+                                       IPAddress gateway, IPAddress dns)
+{
+  if (mac) {
+    memcpy(recovery_mac, mac, 6);
+  }
+  recovery_ip = ip;
+  recovery_subnet = subnet;
+  recovery_gateway = gateway;
+  recovery_dns = dns;
+  recovery_enabled = true;
+  link_recovery_state = LINK_RECOVERY_NORMAL;
+  link_recovery_phase_start_ms = 0;
+  link_recovery_was_down = false;
 }
 
 
@@ -403,34 +456,111 @@ fnet_time_t EthernetClass::timer_get_ms(void){ //Used for multi-thread version
     return result;
 }
 
+static void announceLinkUp(fnet_netif_desc_t netif)
+{
+  fnet_netif_t *netif_ptr = (fnet_netif_t *)netif;
+  if (netif_ptr && netif_ptr->netif_api && netif_ptr->netif_api->netif_change_addr_notify) {
+    netif_ptr->netif_api->netif_change_addr_notify(netif_ptr);
+  }
+}
+
+static int readPhyLinkDirect()
+{
+  fnet_netif_desc_t netif = fnet_netif_get_default();
+  fnet_uint16_t data;
+
+  if (!netif || !fnet_netif_is_initialized(netif)) {
+    return 0;
+  }
+
+  if (_fnet_eth_phy_read((fnet_netif_t *)netif, FNET_ETH_MII_REG_SR, &data) != FNET_OK) {
+    return -1;
+  }
+
+  return ((data & FNET_ETH_MII_REG_SR_LINK_STATUS) != 0u) ? 1 : 0;
+}
+
+static void phyHardwareReset(fnet_netif_t *netif)
+{
+#if defined(__IMXRT1062__) || defined(ARDUINO_TEENSY41)
+  GPIO7_DR_CLEAR = (1 << 14);
+  delayMicroseconds(2);
+  GPIO7_DR_SET = (1 << 14);
+  delayMicroseconds(5);
+  _fnet_eth_phy_write(netif, 0x18, 0x0280);
+  _fnet_eth_phy_write(netif, 0x17, 0x0081);
+#else
+  (void)netif;
+#endif
+}
+
+static bool phySoftReset(fnet_netif_t *netif)
+{
+  if (!netif) {
+    return false;
+  }
+  return (_fnet_eth_phy_init(netif) == FNET_OK);
+}
+
+static void reregisterLinkDetection(fnet_netif_desc_t netif)
+{
+  stored_link_params.netif_desc = netif;
+  if (link_desc) {
+    fnet_link_release(link_desc);
+    link_desc = 0;
+  }
+  link_desc = fnet_link_init(&stored_link_params);
+}
+
+bool EthernetClass::fullNetifReinit()
+{
+  fnet_netif_desc_t netif;
+
+  if (!recovery_enabled) {
+    return false;
+  }
+
+  netif = fnet_netif_get_default();
+  if (netif && fnet_netif_is_initialized(netif)) {
+    fnet_dhcp_cln_release(fnet_dhcp_cln_get_by_netif(netif));
+    fnet_netif_release(netif);
+  }
+
+  if (fnet_netif_init(FNET_CPU_ETH0_IF, recovery_mac, 6) != FNET_OK) {
+    return false;
+  }
+
+  netif = fnet_netif_get_default();
+  fnet_netif_set_default(netif);
+  fnet_netif_set_ip4_addr(netif, recovery_ip, recovery_subnet);
+  fnet_netif_set_ip4_gateway(netif, recovery_gateway);
+  fnet_netif_set_ip4_dns(netif, recovery_dns);
+
+  link_status = 0;
+  reregisterLinkDetection(netif);
+
+  fnet_netif_t *netif_ptr = (fnet_netif_t *)netif;
+  if (netif_ptr) {
+    netif_ptr->is_connected = FNET_FALSE;
+    netif_ptr->is_connected_timestamp_ms = 0;
+  }
+
+  return true;
+}
+
 void EthernetClass::link_callback(fnet_netif_desc_t netif, fnet_bool_t connected, void *callback_param){
-//  Serial.println(connected ? "Link Connected!" : "Link Disconnected!");
   link_status = connected;
   if(connected){
-//    Serial.println("Initialising Services!");
-//    init_services(netif);
+    announceLinkUp(netif);
     if(localIP() == IPAddress(0,0,0,0)){
-//       Serial.println("Initializing DHCP");
-    
-       static fnet_dhcp_cln_params_t dhcp_params; //DHCP intialization parameters
+       static fnet_dhcp_cln_params_t dhcp_params;
        dhcp_params.netif = netif;
-       // Enable DHCP client.
        if(fnet_dhcp_cln_init(&dhcp_params)){
          fnet_dhcp_cln_set_response_timeout(fnet_dhcp_cln_get_by_netif(netif), *(unsigned long*)callback_param);
-           /*Register DHCP event handler callbacks.*/
-//          fnet_dhcp_cln_set_callback_updated(fnet_dhcp_cln_get_by_netif(netif), dhcp_cln_callback_updated, NULL);
-//          fnet_dhcp_cln_set_callback_discover(fnet_dhcp_cln_get_by_netif(netif), dhcp_cln_callback_updated, NULL);
-//         Serial.println("DHCP initialization done!");
-       }
-       else{
-//         Serial.println("ERROR: DHCP initialization failed!");
        }
     }
-      
   }
   else{
-//    Serial.println("Releasing Services!");
-//    release_services(netif);
     fnet_dhcp_cln_release(fnet_dhcp_cln_get_by_netif(netif));
   }
 }
@@ -487,6 +617,120 @@ void EthernetClass::dhcp_cln_callback_updated(fnet_dhcp_cln_desc_t _dhcp_desc, f
 
   
 
+}
+
+EthernetLinkRecoveryResult EthernetClass::maintainLinkRecovery()
+{
+  uint32_t now_ms;
+  int phy_link;
+  fnet_netif_desc_t netif;
+  fnet_netif_t *netif_ptr;
+  EthernetLinkRecoveryResult result = EthernetLinkRecoveryIdle;
+
+  if (!recovery_enabled || !fnet_netif_is_initialized(fnet_netif_get_default())) {
+    return EthernetLinkRecoveryIdle;
+  }
+
+  now_ms = millis();
+  if ((now_ms - link_recovery_last_poll_ms) < LINK_RECOVERY_POLL_MS) {
+    return EthernetLinkRecoveryIdle;
+  }
+  link_recovery_last_poll_ms = now_ms;
+
+  phy_link = readPhyLinkDirect();
+  if (phy_link <= 0) {
+    link_status = 0;
+  }
+
+  switch (link_recovery_state) {
+    case LINK_RECOVERY_NORMAL:
+      if (phy_link <= 0) {
+        link_recovery_state = LINK_RECOVERY_DOWN_PENDING;
+        link_recovery_phase_start_ms = now_ms;
+        link_recovery_was_down = true;
+      }
+      break;
+
+    case LINK_RECOVERY_DOWN_PENDING:
+      if (phy_link > 0) {
+        link_recovery_state = LINK_RECOVERY_NORMAL;
+        if (link_recovery_was_down) {
+          link_recovery_was_down = false;
+          announceLinkUp(fnet_netif_get_default());
+          result = EthernetLinkRecoveryLinkRestored;
+        }
+        break;
+      }
+      if ((now_ms - link_recovery_phase_start_ms) >=
+          ((phy_link < 0) ? 500U : LINK_DOWN_DEBOUNCE_MS)) {
+        netif = fnet_netif_get_default();
+        netif_ptr = (fnet_netif_t *)netif;
+        if (netif_ptr && phySoftReset(netif_ptr)) {
+          link_recovery_state = LINK_RECOVERY_SOFT_WAIT;
+          link_recovery_phase_start_ms = now_ms;
+        }
+      }
+      break;
+
+    case LINK_RECOVERY_SOFT_WAIT:
+      if (phy_link > 0) {
+        link_recovery_state = LINK_RECOVERY_NORMAL;
+        link_recovery_was_down = false;
+        link_status = 1;
+        announceLinkUp(fnet_netif_get_default());
+        result = EthernetLinkRecoveryLinkRestored;
+        break;
+      }
+      if ((now_ms - link_recovery_phase_start_ms) >= LINK_SOFT_RECOVER_WAIT_MS) {
+        netif = fnet_netif_get_default();
+        netif_ptr = (fnet_netif_t *)netif;
+        if (netif_ptr) {
+          phyHardwareReset(netif_ptr);
+          phySoftReset(netif_ptr);
+        }
+        link_recovery_state = LINK_RECOVERY_HARD_WAIT;
+        link_recovery_phase_start_ms = now_ms;
+      }
+      break;
+
+    case LINK_RECOVERY_HARD_WAIT:
+      if (phy_link > 0) {
+        link_recovery_state = LINK_RECOVERY_NORMAL;
+        link_recovery_was_down = false;
+        link_status = 1;
+        announceLinkUp(fnet_netif_get_default());
+        result = EthernetLinkRecoveryLinkRestored;
+        break;
+      }
+      if ((now_ms - link_recovery_phase_start_ms) >= LINK_HARD_RECOVER_WAIT_MS) {
+        if (fullNetifReinit()) {
+          link_recovery_state = LINK_RECOVERY_FULL_WAIT;
+          link_recovery_phase_start_ms = now_ms;
+          result = EthernetLinkRecoveryNetifReinitialized;
+        } else {
+          link_recovery_state = LINK_RECOVERY_DOWN_PENDING;
+          link_recovery_phase_start_ms = now_ms;
+        }
+      }
+      break;
+
+    case LINK_RECOVERY_FULL_WAIT:
+      if (phy_link > 0) {
+        link_recovery_state = LINK_RECOVERY_NORMAL;
+        link_recovery_was_down = false;
+        link_status = 1;
+        announceLinkUp(fnet_netif_get_default());
+        result = EthernetLinkRecoveryLinkRestored;
+        break;
+      }
+      if ((now_ms - link_recovery_phase_start_ms) >= LINK_HARD_RECOVER_WAIT_MS) {
+        link_recovery_state = LINK_RECOVERY_DOWN_PENDING;
+        link_recovery_phase_start_ms = now_ms;
+      }
+      break;
+  }
+
+  return result;
 }
 
 

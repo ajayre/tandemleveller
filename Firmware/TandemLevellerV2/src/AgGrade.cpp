@@ -64,7 +64,18 @@ void AgGrade::Connect
   unsigned int RemotePort       // port that AgGrade is listening on
   )
 {
+  IPAddress gateway = LocalIPAddress;
+  IPAddress dns = LocalIPAddress;
+  IPAddress subnet(255, 255, 255, 0);
+
+  gateway[3] = 1;
+  dns[3] = 1;
+
   StartEthernet(MACAddress, LocalIPAddress);
+
+  Ethernet.enableLinkRecovery(MACAddress, LocalIPAddress, subnet, gateway, dns);
+
+  this->LocalPort = LocalPort;
 
   // start UDP
   Udp.begin(LocalPort);
@@ -72,6 +83,26 @@ void AgGrade::Connect
   // Initialize UDP Transfer for packet-based communication
   UdpTransfer.begin(Udp);
   UdpTransfer.setRemote(RemoteIPAddress, RemotePort);
+}
+
+void AgGrade::MaintainEthernet
+  (
+  void
+  )
+{
+  switch (Ethernet.maintainLinkRecovery())
+  {
+    case EthernetLinkRecoveryNetifReinitialized:
+      Udp.stop();
+      Udp.begin(LocalPort);
+      UdpTransfer.begin(Udp);
+      break;
+
+    case EthernetLinkRecoveryLinkRestored:
+    case EthernetLinkRecoveryIdle:
+    default:
+      break;
+  }
 }
 
 // sends status value over UDP using packet framing

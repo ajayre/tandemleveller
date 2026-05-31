@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <NativeEthernet.h>
-#include <NativeEthernetUdp.h>
+#include "nativeethernet/NativeEthernet.h"
+#include "nativeethernet/NativeEthernetUdp.h"
 #include "Global.h"
 #include "UDPTransfer.h"
 #include "Blades.h"
@@ -41,6 +41,12 @@ class AgGrade
       unsigned int LocalPort,       // port that we listen on
       IPAddress RemoteIPAddress,    // IP address of AgGrade
       unsigned int RemotePort       // port that AgGrade is listening on
+      );
+
+    // Monitor Ethernet link and recover PHY/FEC after link loss.
+    void MaintainEthernet
+      (
+      void
       );
 
     // checks if a command is waiting to be read
@@ -151,6 +157,7 @@ class AgGrade
     UDPTransfer UdpTransfer;
     // An EthernetUDP instance to let us send and receive packets over UDP
     EthernetUDP Udp;
+    unsigned int LocalPort = 0;
 
     // sends status value over UDP using packet framing
     void Send

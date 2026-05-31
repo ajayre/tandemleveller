@@ -70,6 +70,13 @@ enum EthernetHardwareStatus {
 	EthernetW5500
 };
 
+// Result of periodic link-recovery maintenance (see maintainLinkRecovery).
+enum EthernetLinkRecoveryResult {
+	EthernetLinkRecoveryIdle = 0,
+	EthernetLinkRecoveryLinkRestored,
+	EthernetLinkRecoveryNetifReinitialized
+};
+
 class EthernetUDP;
 class EthernetClient;
 class EthernetServer;
@@ -100,6 +107,11 @@ public:
     static void setSocketNum(uint8_t _socket_num); //Change allocated socket num
 	static int begin(uint8_t *mac, unsigned long timeout = 60000, unsigned long responseTimeout = 4000);
 	static int maintain();
+	// Store network settings for automatic link recovery (call after begin with static IP).
+	static void enableLinkRecovery(const uint8_t *mac, IPAddress ip, IPAddress subnet,
+	                               IPAddress gateway, IPAddress dns);
+	// Poll link health and recover PHY/FEC when link is lost. Call from loop().
+	static EthernetLinkRecoveryResult maintainLinkRecovery();
 	static EthernetLinkStatus linkStatus();
 	static EthernetHardwareStatus hardwareStatus();
 
@@ -171,6 +183,7 @@ private:
     static fnet_time_t timer_get_ms(void);
     static void link_callback(fnet_netif_desc_t netif, fnet_bool_t connected, void *callback_param);
     static void dhcp_cln_callback_updated(fnet_dhcp_cln_desc_t _dhcp_desc, fnet_netif_desc_t netif, void *p);
+    static bool fullNetifReinit();
 };
 
 extern EthernetClass Ethernet;
