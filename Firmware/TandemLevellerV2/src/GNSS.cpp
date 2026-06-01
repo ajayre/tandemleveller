@@ -1,6 +1,7 @@
 // GNSS interface and processing
 
 #include <Arduino.h>
+#include <math.h>
 #include <stdlib.h>
 #include "GNSS.h"
 
@@ -13,6 +14,22 @@
 
 // Nautical miles per hour (knots) to km/h
 #define NMEA_KNOTS_TO_KPH 1.852
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// Minimum speed to feed COG into the smoother (~0.3 MPH).
+static constexpr double MIN_COG_SAMPLE_KPH = 0.5;
+// Below this speed, reject COG samples that snap to 0° (typical when stopped).
+static constexpr double ZERO_COG_REJECT_KPH = 1.0;
+// Treat COG within this many degrees of 0/360 as a north / snap-to-zero reading.
+static constexpr double ZERO_COG_TOLERANCE_DEG = 0.5;
+// Reject low-speed COG outliers this far from the current smoothed heading.
+static constexpr double LOW_SPEED_OUTLIER_KPH = 5.0;
+static constexpr double LOW_SPEED_OUTLIER_DEG = 25.0;
+// Circular EMA on GNSS COG (lower = smoother; tuned for 1–3 MPH grading).
+static constexpr double kGnssLpAlphaHeading = 0.18;
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -242,8 +259,212 @@ int GNSS::NMEAFormatLongitude
   return NMEAAppendMinutes(dmOut, dmLen, (size_t)n, min);
 }
 
+// Wraps course_deg into [0, 360).
+double GNSS::NormalizeCourseDeg
+  (
+  double course_deg                 // raw course in degrees
+  ) const
+{
+  double h = course_deg;
+  while (h < 0.0)
+  {
+    h += 360.0;
+  }
+  while (h >= 360.0)
+  {
+    h -= 360.0;
+  }
+  return h;
+}
+
+// Returns true if a VTG/RMC COG sample should update the smoother.
+bool GNSS::CourseSampleAccepted
+  (
+  double speed_kph,                 // reported speed in km/h
+  bool speed_valid,                 // true when speed field was present
+  bool course_valid,                // true when course field was present
+  double course_deg,                // raw course in degrees
+  bool track_valid,                 // true once a smoothed COG exists
+  double smoothed_deg               // current smoothed COG in degrees
+  ) const
+{
+  if (!course_valid || !speed_valid || speed_kph < MIN_COG_SAMPLE_KPH)
+  {
+    return false;
+  }
+
+  const double course = NormalizeCourseDeg(course_deg);
+  const bool near_zero =
+    course < ZERO_COG_TOLERANCE_DEG
+    || course > (360.0 - ZERO_COG_TOLERANCE_DEG);
+
+  if (near_zero)
+  {
+    if (speed_kph < ZERO_COG_REJECT_KPH)
+    {
+      return false;
+    }
+    if (track_valid)
+    {
+      const double smoothed = NormalizeCourseDeg(smoothed_deg);
+      const bool smoothed_near_zero =
+        smoothed < ZERO_COG_TOLERANCE_DEG
+        || smoothed > (360.0 - ZERO_COG_TOLERANCE_DEG);
+      if (!smoothed_near_zero)
+      {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// Applies one accepted COG sample to the circular EMA; updates pLoc->TrackMagneticDeg.
+void GNSS::ApplySmoothedCourse
+  (
+  gnss_track_smooth_t *pSmooth,     // per-receiver smoother state
+  gnss_location_t *pLoc,            // location record to update
+  double course_deg                 // accepted raw course in degrees
+  )
+{
+  const double course = NormalizeCourseDeg(course_deg);
+  const double hr = course * (M_PI / 180.0);
+  const double cn = cos(hr);
+  const double sn = sin(hr);
+
+  if (!pSmooth->init)
+  {
+    pSmooth->h_cos = cn;
+    pSmooth->h_sin = sn;
+    pSmooth->init = true;
+    pLoc->TrackMagneticDeg = course;
+    pLoc->TrackValid = 1;
+    return;
+  }
+
+  pSmooth->h_cos = kGnssLpAlphaHeading * cn
+    + (1.0 - kGnssLpAlphaHeading) * pSmooth->h_cos;
+  pSmooth->h_sin = kGnssLpAlphaHeading * sn
+    + (1.0 - kGnssLpAlphaHeading) * pSmooth->h_sin;
+
+  double h_deg = atan2(pSmooth->h_sin, pSmooth->h_cos) * (180.0 / M_PI);
+  pLoc->TrackMagneticDeg = NormalizeCourseDeg(h_deg);
+  pLoc->TrackValid = 1;
+}
+
+// Returns the COG smoother state for the receiver identified by PGN.
+gnss_track_smooth_t *GNSS::TrackSmoothForPgn
+  (
+  pgn_t PGN                         // NMEA source PGN (tractor / front / rear)
+  )
+{
+  switch (PGN)
+  {
+    case PGN_FRONT_NMEA: return &FrontTrackSmooth;
+    case PGN_REAR_NMEA:  return &RearTrackSmooth;
+    default:             return &TractorTrackSmooth;
+  }
+}
+
+// Updates speed always; feeds accepted COG samples into the circular EMA smoother.
+void GNSS::UpdateSpeedAndSmoothedCourse
+  (
+  gnss_track_smooth_t *pSmooth,     // per-receiver smoother state
+  gnss_location_t *pLoc,            // location record to update
+  double speed_kph,                 // reported speed in km/h
+  bool speed_valid,                 // true when speed field was present
+  double course_deg,                // raw course in degrees
+  bool course_valid                 // true when course field was present
+  )
+{
+  if (speed_valid)
+  {
+    pLoc->SpeedKph = speed_kph;
+  }
+
+  if (!CourseSampleAccepted(
+        speed_kph,
+        speed_valid,
+        course_valid,
+        course_deg,
+        pLoc->TrackValid != 0,
+        pLoc->TrackMagneticDeg))
+  {
+    return;
+  }
+
+  const double course = NormalizeCourseDeg(course_deg);
+
+  if (pSmooth->init && speed_kph < LOW_SPEED_OUTLIER_KPH)
+  {
+    double diff = fabs(course - pLoc->TrackMagneticDeg);
+    if (diff > 180.0)
+    {
+      diff = 360.0 - diff;
+    }
+    if (diff > LOW_SPEED_OUTLIER_DEG)
+    {
+      return;
+    }
+  }
+
+  ApplySmoothedCourse(pSmooth, pLoc, course);
+}
+
+// Rebuilds a VTG sentence from smoothed speed/course in pLoc; returns length or -1 on error.
+int GNSS::FormatVtgSentence
+  (
+  char *out,                        // output buffer for rebuilt sentence
+  size_t outLen,                    // size of out in bytes
+  const char *talker,               // VTG talker id field (e.g. "GNVTG")
+  const gnss_location_t *pLoc,      // location with smoothed speed/course
+  const char *fields[],             // parsed fields from the original VTG
+  int nfields                       // number of parsed fields
+  ) const
+{
+  const double sogKn = pLoc->SpeedKph / (double)NMEA_KNOTS_TO_KPH;
+  int o;
+
+  if (pLoc->TrackValid)
+  {
+    const double cog = pLoc->TrackMagneticDeg;
+    o = snprintf(out, outLen, "$%s,%.2f,T,%.2f,M,%.2f,N,%.2f,K",
+      talker, cog, cog, sogKn, pLoc->SpeedKph);
+  }
+  else
+  {
+    o = snprintf(out, outLen, "$%s,,T,,M,%.2f,N,%.2f,K",
+      talker, sogKn, pLoc->SpeedKph);
+  }
+
+  if (o < 0 || (size_t)o >= outLen)
+  {
+    return -1;
+  }
+
+  if (nfields > 9 && fields[9][0] != '\0')
+  {
+    const int add = snprintf(out + o, outLen - (size_t)o, ",%s", fields[9]);
+    if (add < 0 || (size_t)add >= outLen - (size_t)o)
+    {
+      return -1;
+    }
+    o += add;
+  }
+
+  const uint8_t newCs = NMEAChecksumBytes(out + 1, out + o);
+  const int fin = snprintf(out + o, outLen - (size_t)o, "*%02X\r\n", (unsigned)newCs);
+  if (fin < 0 || (size_t)fin >= outLen - (size_t)o)
+  {
+    return -1;
+  }
+
+  return o + fin;
+}
+
 // Handles paths: (1) unknown sentences — pass through unchanged;
-// (2) VTG / RMC — checksum, fill speed/track; pass through;
+// (2) VTG / RMC — checksum, fill speed/track; VTG forwarded with smoothed COG;
 // (3) GGA — checksum, fill fix, quality, HDOP, rebuild GGA with formatted lat/lon for callback.
 void GNSS::ProcessNMEASentence
   (
@@ -326,31 +547,56 @@ void GNSS::ProcessNMEASentence
     case PGN_REAR_NMEA:    pLoc = &RearScraperLocation;  break;
   }
 
-  // (2) VTG only: fields[] are VTG columns, not GGA. Update speed/course; send original sentence.
+  // (2) VTG only: fields[] are VTG columns, not GGA. Update speed/course; forward filtered VTG.
   if (isVtg)
   {
     // $--VTG,cogTrue,T,cogMag,M,sogKn,N,sogKph,K — indices 1..8 after talker in fields[0]
+    double speed_kph = 0.0;
+    bool speed_valid = false;
     if (nfields > 7 && fields[7][0] != '\0')
     {
-      pLoc->SpeedKph = strtod(fields[7], NULL);
+      speed_kph = strtod(fields[7], NULL);
+      speed_valid = true;
     }
     else if (nfields > 5 && fields[5][0] != '\0')
     {
-      pLoc->SpeedKph = strtod(fields[5], NULL) * (double)NMEA_KNOTS_TO_KPH;
+      speed_kph = strtod(fields[5], NULL) * (double)NMEA_KNOTS_TO_KPH;
+      speed_valid = true;
     }
 
+    double course_deg = 0.0;
+    bool course_valid = false;
     if (nfields > 3 && fields[3][0] != '\0')
     {
-      pLoc->TrackMagneticDeg = strtod(fields[3], NULL);
+      course_deg = strtod(fields[3], NULL);
+      course_valid = true;
     }
     else if (nfields > 1 && fields[1][0] != '\0')
     {
-      pLoc->TrackMagneticDeg = strtod(fields[1], NULL);
+      course_deg = strtod(fields[1], NULL);
+      course_valid = true;
     }
+
+    UpdateSpeedAndSmoothedCourse(
+      TrackSmoothForPgn(PGN),
+      pLoc,
+      speed_kph,
+      speed_valid,
+      course_deg,
+      course_valid);
 
     if (GNSSReceivedNMEACallback != NULL)
     {
-      GNSSReceivedNMEACallback(PGN, (char *)sentence, length);
+      char out[MAX_NMEA_LENGTH];
+      const int o = FormatVtgSentence(out, sizeof(out), fields[0], pLoc, fields, nfields);
+      if (o > 0)
+      {
+        GNSSReceivedNMEACallback(PGN, out, (uint8_t)o);
+      }
+      else
+      {
+        GNSSReceivedNMEACallback(PGN, (char *)sentence, length);
+      }
     }
 
     return;
@@ -362,14 +608,29 @@ void GNSS::ProcessNMEASentence
     // $--RMC,time,status,lat,N,lon,W,sogKn,cogT,date,magvar* — need status A and sog/cog
     if (nfields > 8 && fields[2][0] == 'A')
     {
+      double speed_kph = 0.0;
+      bool speed_valid = false;
       if (fields[7][0] != '\0')
       {
-        pLoc->SpeedKph = strtod(fields[7], NULL) * (double)NMEA_KNOTS_TO_KPH;
+        speed_kph = strtod(fields[7], NULL) * (double)NMEA_KNOTS_TO_KPH;
+        speed_valid = true;
       }
+
+      double course_deg = 0.0;
+      bool course_valid = false;
       if (fields[8][0] != '\0')
       {
-        pLoc->TrackMagneticDeg = strtod(fields[8], NULL);
+        course_deg = strtod(fields[8], NULL);
+        course_valid = true;
       }
+
+      UpdateSpeedAndSmoothedCourse(
+      TrackSmoothForPgn(PGN),
+      pLoc,
+      speed_kph,
+      speed_valid,
+      course_deg,
+      course_valid);
     }
 
     if (GNSSReceivedNMEACallback != NULL)

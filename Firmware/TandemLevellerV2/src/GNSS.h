@@ -27,8 +27,10 @@ typedef struct _gnss_location_t
   double Latitude;
   double Longitude;
   double Altitude;
-  // Course over ground, degrees (magnetic from VTG field 3, else true from field 1)
+  // Smoothed course over ground sent to AgGrade (EMA of VTG/RMC COG).
   double TrackMagneticDeg;
+  // Non-zero once a smoothed COG has been established.
+  int TrackValid;
   double SpeedKph;
   // GGA fix quality field (0 = invalid, 1 = GPS, 2 = DGPS, 4 = RTK fixed, 5 = RTK float, etc.)
   int FixQuality;
@@ -41,6 +43,13 @@ typedef struct _gnss_location_t
   // GGA UTC timestamp with smoothed UTC-to-millis offset.
   uint32_t FixEpochMs;
 } gnss_location_t;
+
+typedef struct _gnss_track_smooth_t
+{
+  double h_cos;   // circular EMA cosine component of COG
+  double h_sin;   // circular EMA sine component of COG
+  bool init;      // true once the first accepted COG sample has been applied
+} gnss_track_smooth_t;
 
 // callback function type for receiving NMEA sentences
 typedef void (*gnss_received_nmea_callback_t)(pgn_t PGN, char *Sentence, uint8_t Length);
@@ -90,6 +99,11 @@ class GNSS
     // callback functions
     gnss_received_nmea_callback_t GNSSReceivedNMEACallback = NULL;
     gnss_request_fuse_callback_t GNSSRequestFuseCallback = NULL;
+
+    // Per-receiver circular EMA state for VTG/RMC course-over-ground smoothing.
+    gnss_track_smooth_t TractorTrackSmooth = { 0 };
+    gnss_track_smooth_t FrontTrackSmooth   = { 0 };
+    gnss_track_smooth_t RearTrackSmooth    = { 0 };
 
     // XOR checksum for NMEA 0183: bytes from first after '$' up to (exclusive) '*'
     uint8_t NMEAChecksumBytes
@@ -148,6 +162,59 @@ class GNSS
       const char *sentence,
       uint8_t length
       );
+
+    // Wraps course_deg into [0, 360).
+    double NormalizeCourseDeg
+      (
+      double course_deg                 // raw course in degrees
+      ) const;
+
+    // Returns true if a VTG/RMC COG sample should update the smoother.
+    bool CourseSampleAccepted
+      (
+      double speed_kph,                 // reported speed in km/h
+      bool speed_valid,                 // true when speed field was present
+      bool course_valid,                // true when course field was present
+      double course_deg,                // raw course in degrees
+      bool track_valid,                 // true once a smoothed COG exists
+      double smoothed_deg               // current smoothed COG in degrees
+      ) const;
+
+    // Applies one accepted COG sample to the circular EMA; updates pLoc->TrackMagneticDeg.
+    void ApplySmoothedCourse
+      (
+      gnss_track_smooth_t *pSmooth,     // per-receiver smoother state
+      gnss_location_t *pLoc,            // location record to update
+      double course_deg                 // accepted raw course in degrees
+      );
+
+    // Returns the COG smoother state for the receiver identified by PGN.
+    gnss_track_smooth_t *TrackSmoothForPgn
+      (
+      pgn_t PGN                         // NMEA source PGN (tractor / front / rear)
+      );
+
+    // Updates speed always; feeds accepted COG samples into the circular EMA smoother.
+    void UpdateSpeedAndSmoothedCourse
+      (
+      gnss_track_smooth_t *pSmooth,     // per-receiver smoother state
+      gnss_location_t *pLoc,            // location record to update
+      double speed_kph,                 // reported speed in km/h
+      bool speed_valid,                 // true when speed field was present
+      double course_deg,                // raw course in degrees
+      bool course_valid                 // true when course field was present
+      );
+
+    // Rebuilds a VTG sentence from smoothed speed/course in pLoc.
+    int FormatVtgSentence
+      (
+      char *out,                        // output buffer for rebuilt sentence
+      size_t outLen,                    // size of out in bytes
+      const char *talker,               // VTG talker id field (e.g. "GNVTG")
+      const gnss_location_t *pLoc,        // location with smoothed speed/course
+      const char *fields[],             // parsed fields from the original VTG
+      int nfields                       // number of parsed fields
+      ) const;
 
     // processes a byte read from a GNSS stream
     void ProcessGNSSByte

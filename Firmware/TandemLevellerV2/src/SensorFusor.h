@@ -101,7 +101,9 @@ class SensorFusor
     static constexpr double IMU_ROLL_CALIBRATION_DEG  = 0.70;
     static constexpr double IMU_PITCH_CALIBRATION_DEG = -4.37;
 
-    static constexpr double SpeedThresholdKph    = 5.0;
+    // GNSS COG blend / gyro offset calibration only above this speed (~4.3 MPH).
+    // Below: gyro-only heading for fusion; AgGrade still receives smoothed GNSS COG.
+    static constexpr double SpeedThresholdKph    = 7.0;
     // |yaw_rate| below: allow GNSS/gyro track blend (when speed high) and horizontal
     // tilt / lever-arm + horizontal KF measurement updates; at or above: gyro-only heading,
     // horizontal lever-arm moves skipped and horizontal KF holds (no meas update).

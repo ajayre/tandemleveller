@@ -488,7 +488,7 @@ void SensorFusor::FuseInternal
   const double fuse_in_alt = fix_in->altitude;
 
   // Base heading is always IMU + magnetic declination.
-  // When moving at speed with RTK, blend with GNSS COG for better accuracy.
+  // When moving fast enough with RTK, blend with smoothed GNSS COG for better accuracy.
   heading = NormalizeHeadingDeg(imu_heading);
 
   if (imu_gyro_offset == InvalidGyro)
