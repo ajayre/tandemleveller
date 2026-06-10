@@ -142,60 +142,67 @@ void Blades::ControlBlade
   )
 {
   int PWMValue;
-  float PWMHist;
 
-  // if already at the requested height then nothing to do
-  if (BladeCommand[BladeIndex].CutValve == BladeHeight[BladeIndex]) return;
-
-  // store command
+  // store command for status reporting
   BladeStatus[BladeIndex].BladeCommand = BladeCommand[BladeIndex].CutValve;
 
-  // fixme - replace with closed-loop control system
-  /*// lower the blade
-  if (BladeCommand[BladeIndex].CutValve >= (BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband))
+  // position error (mm): positive → blade is above target grade → lower;
+  //                       negative → blade is below target grade → raise
+  int error = BladeCommand[BladeIndex].CutValve - (int)BladeHeight[BladeIndex];
+
+  // reset integrator whenever the setpoint changes to avoid stale windup
+  if (BladeCommand[BladeIndex].CutValve != prevCommand[BladeIndex])
   {
-    // PWM value is negative
-    PWMValue = -((BladeCommand[BladeIndex].CutValve - BLADE_HEIGHT_GROUND_LEVEL - BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainDown + BladeConfig[BladeIndex].PWMMinDown);
+    integralAccumulator[BladeIndex] = 0.0f;
+    prevError[BladeIndex]           = 0;
+    prevCommand[BladeIndex]         = BladeCommand[BladeIndex].CutValve;
   }
-  // lift the blade
-  else if (BladeCommand[BladeIndex].CutValve <= (BLADE_HEIGHT_GROUND_LEVEL - BladeConfig[BladeIndex].Deadband))
+
+  // within deadband: stop the valve and clear PID state
+  if (abs(error) <= BladeConfig[BladeIndex].Deadband)
   {
-    // PWM value is positive
-    PWMValue = -((BladeCommand[BladeIndex].CutValve - BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband) * BladeConfig[BladeIndex].PWMGainUp - BladeConfig[BladeIndex].PWMMinUp);
+    integralAccumulator[BladeIndex] = 0.0f;
+    prevError[BladeIndex]           = 0;
+    switch (BladeIndex)
+    {
+      case FRONT_BLADE_IDX: SetFrontValvePWM(0); break;
+      case REAR_BLADE_IDX:  SetRearValvePWM(0);  break;
+    }
+    return;
   }
+
+  // select direction-dependent gains and limits
+  bool  goingDown = (error > 0);
+  float Kp        = goingDown ? (float)BladeConfig[BladeIndex].PWMGainDown : (float)BladeConfig[BladeIndex].PWMGainUp;
+  float Ki        = (float)BladeConfig[BladeIndex].IntegralMultiplier / 100.0f;
+  int   PWMMin    = goingDown ? (int)BladeConfig[BladeIndex].PWMMinDown : (int)BladeConfig[BladeIndex].PWMMinUp;
+  int   PWMMax    = goingDown ? (int)BladeConfig[BladeIndex].PWMMaxDown : (int)BladeConfig[BladeIndex].PWMMaxUp;
+
+  // reset integral on zero crossing to prevent windup carrying across direction changes
+  if (prevError[BladeIndex] != 0 && ((error > 0) != (prevError[BladeIndex] > 0)))
+    integralAccumulator[BladeIndex] = 0.0f;
   else
+    integralAccumulator[BladeIndex] += (float)error;
+
+  // anti-windup: clamp integral so its contribution never exceeds PWMMax
+  if (Ki > 0.0f)
   {
-    PWMValue = 0;
+    float maxAccum = (float)PWMMax / Ki;
+    if (integralAccumulator[BladeIndex] >  maxAccum) integralAccumulator[BladeIndex] =  maxAccum;
+    if (integralAccumulator[BladeIndex] < -maxAccum) integralAccumulator[BladeIndex] = -maxAccum;
   }
 
-  // calculate a derivative
-  if (BladeCommand[BladeIndex].CutValve != BLADE_HEIGHT_GROUND_LEVEL && PWMValue != 0)
-  {
-    PWMHist = ((((pwm1ago[BladeIndex]) + pwm2ago[BladeIndex] + (pwm3ago[BladeIndex]) + (pwm4ago[BladeIndex]) + (pwm5ago[BladeIndex] / 2.000)) * (sq(BladeConfig[BladeIndex].IntegralMultiplier) / 100.0000)) / sq(BladeCommand[BladeIndex].CutValve - (float)BLADE_HEIGHT_GROUND_LEVEL));
+  prevError[BladeIndex] = error;
 
-    //put pwmHist to 0 when the blade cross the line.
-    if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) > 0) PWMHist = 0;
-    if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && (pwm1ago[BladeIndex] + pwm2ago[BladeIndex] + pwm3ago[BladeIndex] + pwm4ago[BladeIndex] + pwm5ago[BladeIndex]) < 0) PWMHist = 0;
+  // P + I output (both error and accumulator carry the same sign, so abs gives magnitude)
+  PWMValue = (int)(Kp * (float)abs(error) + Ki * fabsf(integralAccumulator[BladeIndex]));
 
-    PWMValue = (PWMValue - PWMHist);
-  }
+  // clamp to [PWMMin, PWMMax]; PWMMin is the valve cracking threshold
+  if (PWMValue < PWMMin) PWMValue = PWMMin;
+  if (PWMValue > PWMMax) PWMValue = PWMMax;
 
-  // shuffle samples down
-  pwm5ago[BladeIndex] = pwm4ago[BladeIndex];
-  pwm4ago[BladeIndex] = pwm3ago[BladeIndex];
-  pwm3ago[BladeIndex] = pwm2ago[BladeIndex];
-  pwm2ago[BladeIndex] = pwm1ago[BladeIndex];
-  pwm1ago[BladeIndex] = PWMValue;
-  
-  // enforce limits
-  if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && PWMValue > 0) PWMValue = 0;
-  if (BladeCommand[BladeIndex].CutValve > BLADE_HEIGHT_GROUND_LEVEL && PWMValue < -(BladeConfig[BladeIndex].PWMMaxDown)) PWMValue = -(BladeConfig[BladeIndex].PWMMaxDown);
-  if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && PWMValue < 0) PWMValue = 0;
-  if (BladeCommand[BladeIndex].CutValve < BLADE_HEIGHT_GROUND_LEVEL && PWMValue > BladeConfig[BladeIndex].PWMMaxUp) PWMValue = BladeConfig[BladeIndex].PWMMaxUp;
-  if (PWMValue > 0 && PWMValue < BladeConfig[BladeIndex].PWMMinUp) PWMValue = 0;
-  if (PWMValue < 0 && PWMValue > -(BladeConfig[BladeIndex].PWMMinDown)) PWMValue = 0;
-
-  if (PWMValue < 0)
+  // set direction and apply PWM
+  if (goingDown)
   {
     digitalWrite(BladeIndex == FRONT_BLADE_IDX ? FRONT_HEIGHT_DIR : REAR_HEIGHT_DIR, HIGH);
     BladeStatus[BladeIndex].BladeDirection = BLADE_DIR_DOWN;
@@ -208,14 +215,9 @@ void Blades::ControlBlade
 
   switch (BladeIndex)
   {
-    case FRONT_BLADE_IDX:
-      SetFrontValvePWM(abs(PWMValue));
-      break;
-      
-    case REAR_BLADE_IDX:
-      SetRearValvePWM(abs(PWMValue));
-      break;
-  }*/
+    case FRONT_BLADE_IDX: SetFrontValvePWM((uint8_t)PWMValue); break;
+    case REAR_BLADE_IDX:  SetRearValvePWM((uint8_t)PWMValue);  break;
+  }
 }
 
 // sets blades into emergency stop state

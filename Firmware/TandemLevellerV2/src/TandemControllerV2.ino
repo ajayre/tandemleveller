@@ -42,7 +42,7 @@
 #define MAX_PENDANT_SEARCH_TIME 4000
 
 // perform blade control periodically
-#define BLADE_CONTROL_PERIOD_MS 50
+#define BLADE_CONTROL_PERIOD_MS 20
 
 // how often to send ping to AgGrade
 #define PING_PERIOD_MS 1000

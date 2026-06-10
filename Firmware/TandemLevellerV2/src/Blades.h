@@ -92,11 +92,9 @@ class Blades
       );
 
   private:
-    int pwm1ago[NUM_BLADES] = { 0 };
-    int pwm2ago[NUM_BLADES] = { 0 };
-    int pwm3ago[NUM_BLADES] = { 0 };
-    int pwm4ago[NUM_BLADES] = { 0 };
-    int pwm5ago[NUM_BLADES] = { 0 };
+    float integralAccumulator[NUM_BLADES] = { 0.0f };
+    int   prevError[NUM_BLADES]           = { 0 };
+    int   prevCommand[NUM_BLADES]         = { 0 };
     blades_blade_changed_callback_t BladeChangedCallback = NULL;
 
     // sets the PWM value for the front valve
