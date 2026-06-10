@@ -45,7 +45,7 @@ void Blades::SetFrontValvePWM
 
     if (BladeChangedCallback != NULL)
     {
-      BladeChangedCallback(FRONT_BLADE_IDX, BladeStatus[FRONT_BLADE_IDX].BladePWM, BladeHeight[FRONT_BLADE_IDX], digitalRead(FRONT_HEIGHT_DIR) ? BLADE_DIR_UP : BLADE_DIR_DOWN);
+      BladeChangedCallback(FRONT_BLADE_IDX, BladeStatus[FRONT_BLADE_IDX].BladePWM, BladeHeight[FRONT_BLADE_IDX], BladeStatus[FRONT_BLADE_IDX].BladeDirection);
     }
   }
 }
@@ -65,7 +65,7 @@ void Blades::SetRearValvePWM
 
     if (BladeChangedCallback != NULL)
     {
-      BladeChangedCallback(REAR_BLADE_IDX, BladeStatus[REAR_BLADE_IDX].BladePWM, BladeHeight[REAR_BLADE_IDX], digitalRead(REAR_HEIGHT_DIR) ? BLADE_DIR_UP : BLADE_DIR_DOWN);
+      BladeChangedCallback(REAR_BLADE_IDX, BladeStatus[REAR_BLADE_IDX].BladePWM, BladeHeight[REAR_BLADE_IDX], BladeStatus[REAR_BLADE_IDX].BladeDirection);
     }
   }
 }
@@ -148,7 +148,7 @@ void Blades::ControlBlade
 
   // position error (mm): positive → blade is above target grade → lower;
   //                       negative → blade is below target grade → raise
-  int error = BladeCommand[BladeIndex].CutValve - (int)BladeHeight[BladeIndex];
+  int error = (int)BladeHeight[BladeIndex] - BladeCommand[BladeIndex].CutValve;
 
   // reset integrator whenever the setpoint changes to avoid stale windup
   if (BladeCommand[BladeIndex].CutValve != prevCommand[BladeIndex])
@@ -182,7 +182,7 @@ void Blades::ControlBlade
   if (prevError[BladeIndex] != 0 && ((error > 0) != (prevError[BladeIndex] > 0)))
     integralAccumulator[BladeIndex] = 0.0f;
   else
-    integralAccumulator[BladeIndex] += (float)error;
+    integralAccumulator[BladeIndex] += (float)error * (BLADE_CONTROL_PERIOD_MS / 1000.0f);
 
   // anti-windup: clamp integral so its contribution never exceeds PWMMax
   if (Ki > 0.0f)

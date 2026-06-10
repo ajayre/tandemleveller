@@ -94,7 +94,7 @@ class Blades
   private:
     float integralAccumulator[NUM_BLADES] = { 0.0f };
     int   prevError[NUM_BLADES]           = { 0 };
-    int   prevCommand[NUM_BLADES]         = { 0 };
+    int   prevCommand[NUM_BLADES]         = { BLADE_HEIGHT_GROUND_LEVEL, BLADE_HEIGHT_GROUND_LEVEL };
     blades_blade_changed_callback_t BladeChangedCallback = NULL;
 
     // sets the PWM value for the front valve

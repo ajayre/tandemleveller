@@ -27,6 +27,9 @@
 // when communicating with AgGrade
 #define BLADE_HEIGHT_GROUND_LEVEL 200
 
+// perform blade control periodically
+#define BLADE_CONTROL_PERIOD_MS 20
+
 // Antenna lever arm for IMU fusion: height mm; left mm (+ = port); forward mm (+ = ahead)
 typedef struct _antenna_location_t
 {
