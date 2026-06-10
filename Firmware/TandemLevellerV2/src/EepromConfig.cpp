@@ -4,6 +4,7 @@
 #include <EEPROM.h>
 
 #define EEPROM_IMU_ADDR ((int)0)
+#define EEPROM_BLADE_ADDR ((int)40)
 
 ///////////////////////////////////////////////////////////////////////////////////
 // PRIVATE FUNCTIONS
@@ -17,6 +18,18 @@ static void ClearStoreBytes
   for (unsigned i = 0; i < sizeof(eeprom_imu_store_t); i++)
   {
     EEPROM.write(EEPROM_IMU_ADDR + (int)i, 0);
+  }
+}
+
+// Zero entire blade store region so no stale magic remains at other offsets.
+static void ClearStoredBladeBytes
+  (
+  void
+  )
+{
+  for (unsigned i = 0; i < sizeof(eeprom_blade_store_t); i++)
+  {
+    EEPROM.write(EEPROM_BLADE_ADDR + (int)i, 0);
   }
 }
 
@@ -70,4 +83,48 @@ void EepromConfigClear
   )
 {
   ClearStoreBytes();
+}
+
+// fills outputs from EERPOM when stored data is valid; otherwise uses defaults
+void EepromBladeConfigLoad
+  (
+  int16_t *FrontHeightOffset,
+  int16_t *RearHeightOffset
+  )
+{
+  eeprom_blade_store_t store;
+  EEPROM.get(EEPROM_BLADE_ADDR, store);
+
+  if (store.Magic != EEPROMCONFIG_MAGIC_VALID)
+  {
+    *FrontHeightOffset = EEPROMCONFIG_DEFAULT_FRONTBLADEZEROFFSET;
+    *RearHeightOffset  = EEPROMCONFIG_DEFAULT_REARBLADEZEROOFFSET;
+    return;
+  }
+
+  *FrontHeightOffset = store.FrontOffset;
+  *RearHeightOffset = store.RearOffset;
+}
+
+// persists blade settings
+void EepromBladeConfigSave
+  (
+  int16_t FrontHeightOffset,
+  int16_t RearHeightOffset
+  )
+{
+  eeprom_blade_store_t store;
+  store.FrontOffset = FrontHeightOffset;
+  store.RearOffset = RearHeightOffset;
+  store.Magic = EEPROMCONFIG_MAGIC_VALID;
+  EEPROM.put(EEPROM_BLADE_ADDR, store);
+}
+
+// invalidates stored blade configuration (next load returns defaults)
+void EepromBladeConfigClear
+  (
+  void
+  )
+{
+  ClearStoredBladeBytes();
 }

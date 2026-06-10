@@ -12,6 +12,8 @@
 #define EEPROMCONFIG_DEFAULT_ZERO_PITCH   (0.0)
 #define EEPROMCONFIG_DEFAULT_ZERO_ROLL    (0.0)
 #define EEPROMCONFIG_DEFAULT_ORIENTATION  ((uint8_t)0)
+#define EEPROMCONFIG_DEFAULT_FRONTBLADEZEROFFSET (0)
+#define EEPROMCONFIG_DEFAULT_REARBLADEZEROOFFSET (0)
 
 typedef struct __attribute__((packed)) _eeprom_imu_store_t
 {
@@ -20,6 +22,13 @@ typedef struct __attribute__((packed)) _eeprom_imu_store_t
   uint8_t Orientation;
   uint8_t Magic;
 } eeprom_imu_store_t;
+
+typedef struct __attribute__((packet)) _eeprom_blade_store_t
+{
+  int16_t FrontOffset;
+  int16_t RearOffset;
+  uint8_t Magic;
+} eeprom_blade_store_t;
 
 // Fills outputs from EEPROM when Magic is valid; otherwise uses defaults.
 void EepromConfigLoad
@@ -39,6 +48,26 @@ void EepromConfigSave
 
 // Invalidates stored configuration (next Load returns defaults).
 void EepromConfigClear
+  (
+  void
+  );
+
+// fills outputs from EERPOM when stored data is valid; otherwise uses defaults
+void EepromBladeConfigLoad
+  (
+  int16_t *FrontHeightOffset,
+  int16_t *RearHeightOffset
+  );
+
+// persists blade settings
+void EepromBladeConfigSave
+  (
+  int16_t FrontHeightOffset,
+  int16_t RearHeightOffset
+  );
+
+  // invalidates stored blade configuration (next load returns defaults)
+void EepromBladeConfigClear
   (
   void
   );

@@ -15,6 +15,10 @@
 #include "Pendent.h"
 #include "SecondaryTablet.h"
 #include "SensorFusor.h"
+#include "EepromConfig.h"
+#if USE_HYDRAULIC_SIMULATION == 1
+#include "HydraulicSimulation.h"
+#endif // USE_HYDRAULIC_SIMULATION
 
 // Activity LED cannot share pin 13 when USE_INTEGRATED_TRACTOR_IMU uses SPI0 — Teensy SCK is GPIO13.
 #if USE_INTEGRATED_TRACTOR_IMU == 1
@@ -42,6 +46,9 @@
 
 // how often to send ping to AgGrade
 #define PING_PERIOD_MS 1000
+
+// how often to send blade height to AgGrade
+#define BLADE_HEIGHT_PERIOD_MS 200
 
 // time to wait before deciding that AgGrade has disconnected
 #define PING_TIMEOUT_PERIOD_MS 3000
@@ -95,6 +102,11 @@ static SecondaryTablet SecTablet;
 // sensor fusors
 static SensorFusor Fusors[NUM_BLADES + 1];
 
+#if USE_HYDRAULIC_SIMULATION == 1
+HydraulicSimulation FrontHydraulicSim;
+HydraulicSimulation RearHydraulicSim;
+#endif // USE_HYDRAULIC_SIMULATION
+
 // State variables
 static elapsedMillis LEDFlashTimestamp;
 static elapsedMillis PendantSearchTimestamp;
@@ -107,6 +119,9 @@ static bool AgGradeFound = false;
 static elapsedMillis TPDOTimestamp;
 static elapsedMillis AgGradeImuPublishTimestamp;
 static bool SecTabletPresent;
+static elapsedMillis BladeHeightTimestamp;
+static int16_t FrontBladeZeroOffset;
+static int16_t RearBladeZeroOffset;
 
 // Drains CAN RX outside the main loop so IMU TPDOs stay current even when loop() is slow.
 static IntervalTimer CanRxTimer;
@@ -174,6 +189,32 @@ static void Blades_BladeChanged
     agGrade.SendBladeState(BladeIndex, PWM, Height, Direction);
 }
 
+// parses the angle from the front scraper into blade height and stores it
+static void ParseFrontAngle
+  (
+  float Angle                    // angle to parse
+  )
+{
+  // fixme - to do - convert angle to height using calibration
+  // this example converts -30 to 30 deg to -100mm to 170mm
+  int HeightMm = (int)(Angle * 4.5 + 35);
+
+  BladeControl.BladeHeight[FRONT_BLADE_IDX] = HeightMm + BLADE_HEIGHT_GROUND_LEVEL - FrontBladeZeroOffset;
+}
+
+// parses the angle from the rear scraper into blade height and stores it
+static void ParseRearAngle
+  (
+  float Angle                    // angle to parse
+  )
+{
+  // fixme - to do - convert angle to height using calibration
+  // this example converts -30 to 30 deg to -100mm to 170mm
+  int HeightMm = (int)(Angle * 4.5 + 35);
+
+  BladeControl.BladeHeight[REAR_BLADE_IDX] = HeightMm + BLADE_HEIGHT_GROUND_LEVEL - RearBladeZeroOffset;
+}
+
 // process TPDO from angle sensors
 static void ProcessAngleTPDO
   (
@@ -182,11 +223,24 @@ static void ProcessAngleTPDO
   const uint8_t *pData
   )
 {
-  // fixme - parse pData into BladeControl.BladeHeight[] when defined.
-  // Never call agGrade from the CAN RX path — UDP/Ethernet send blocks and stalls draining.
-  (void)NodeId;
-  (void)Length;
-  (void)pData;
+#if USE_HYDRAULIC_SIMULATION == 0
+  // check for invalid length
+  if (Length < 2) return;
+
+  // get the angle
+  float Angle = (float)(pData[0] | ((uint16_t)pData[1] << 8)) / 100.0;
+
+  switch (NodeId)
+  {
+    case FRONT_ANGLE_NODE_ID:
+      ParseFrontAngle(Angle);
+      break;
+
+    case REAR_ANGLE_NODE_ID:
+      ParseRearAngle(Angle);
+      break;
+  }
+#endif // USE_HYDRAULIC_SIMUATION == 0
 }
 
 // called when IMU module wants to transmit a CAN message
@@ -410,6 +464,38 @@ static void CANopen_ProcessPDO
   }
 }
 
+#if USE_HYDRAULIC_SIMULATION == 1
+// called periodically by the hydraulic simulation
+// provides state information to simulate front angle sensor values
+static void FrontHydraulicSimCallback
+  (
+  HydraulicSimulation *pSimulation,
+  const hydraulicsimulation_state_t *pState
+  )
+{
+  (void)pSimulation;
+
+  float Angle = pState->AngleDeg;
+
+  ParseFrontAngle(Angle);
+}
+
+// called periodically by the hydraulic simulation
+// provides state information to simulate rear angle sensor values
+static void RearHydraulicSimCallback
+  (
+  HydraulicSimulation *pSimulation,
+  const hydraulicsimulation_state_t *pState
+  )
+{
+  (void)pSimulation;
+
+  float Angle = pState->AngleDeg;
+
+  ParseRearAngle(Angle);
+}
+#endif // USE_HYDRAULIC_SIMULATION
+
 // called when the fusor has applied a fuse
 void SensorFusor_FuseApplied
   (
@@ -422,6 +508,32 @@ void SensorFusor_FuseApplied
   if (pFusor == &Fusors[TRACTOR_IDX])
   {
     CANopn.TxTPDO5(EastingMm, NorthingMm, AltitudeMm);
+  }
+}
+
+// returns true if the IMU for this index should be reported to AgGrade
+static bool IsImuPresentForAgGrade
+  (
+  int ImuIndex
+  )
+{
+  switch (ImuIndex)
+  {
+    case TRACTOR_IDX:
+#if USE_INTEGRATED_TRACTOR_IMU == 1
+      return true;
+#else
+      return CANopn.IsNodeFound(TRACTOR_IMU_NODE_ID);
+#endif
+
+    case FRONT_BLADE_IDX:
+      return CANopn.IsNodeFound(FRONTSCRAPER_IMU_NODE_ID);
+
+    case REAR_BLADE_IDX:
+      return CANopn.IsNodeFound(REARSCRAPER_IMU_NODE_ID);
+
+    default:
+      return false;
   }
 }
 
@@ -484,6 +596,10 @@ void setup
   AgGradeImuPublishTimestamp = 0;
   PingTimestamp = 0;
   LastPingRxTimestamp = 0;
+  BladeHeightTimestamp = 0;
+
+  // get blade height offsets
+  EepromBladeConfigLoad(&FrontBladeZeroOffset, &RearBladeZeroOffset);
 
   State = STATE_RUN;
 
@@ -502,36 +618,14 @@ void setup
 
   CANopn.ResetAllNodes();
 
-  // fixme - remove
-  AntennaLocations[TRACTOR_IDX].HeightMm = 2593;
+#if USE_HYDRAULIC_SIMULATION == 1
+  FrontHydraulicSim.SetCallback(FrontHydraulicSimCallback);
+  FrontHydraulicSim.Start();
+  RearHydraulicSim.SetCallback(RearHydraulicSimCallback);
+  RearHydraulicSim.Start();
+#endif // USE_HYDRAULIC_SIMULATION
 
   Serial.println("Ready");
-}
-
-// returns true if the IMU for this index should be reported to AgGrade
-static bool IsImuPresentForAgGrade
-  (
-  int ImuIndex
-  )
-{
-  switch (ImuIndex)
-  {
-    case TRACTOR_IDX:
-#if USE_INTEGRATED_TRACTOR_IMU == 1
-      return true;
-#else
-      return CANopn.IsNodeFound(TRACTOR_IMU_NODE_ID);
-#endif
-
-    case FRONT_BLADE_IDX:
-      return CANopn.IsNodeFound(FRONTSCRAPER_IMU_NODE_ID);
-
-    case REAR_BLADE_IDX:
-      return CANopn.IsNodeFound(REARSCRAPER_IMU_NODE_ID);
-
-    default:
-      return false;
-  }
 }
 
 // continually executes
@@ -555,6 +649,11 @@ void loop
 
   CANopn.Process();
   IMUHandler.Process();
+
+#if USE_HYDRAULIC_SIMULATION == 1
+  FrontHydraulicSim.Process();
+  RearHydraulicSim.Process();
+#endif // USE_HYDRAULIC_SIMULATION
 
   // publish IMU state to AgGrade (LatestCanRaw maintained by CanRxTimer)
   if (AgGradeImuPublishTimestamp >= AGGRADE_IMU_PUBLISH_PERIOD_MS)
@@ -611,11 +710,15 @@ void loop
 
       // reset blade height
       case PGN_FRONT_ZERO_BLADE_HEIGHT:
-        BladeControl.BladeHeight[FRONT_BLADE_IDX] = BLADE_HEIGHT_GROUND_LEVEL;
+        FrontBladeZeroOffset = BladeControl.BladeHeight[FRONT_BLADE_IDX] - BLADE_HEIGHT_GROUND_LEVEL;
+        EepromBladeConfigSave(FrontBladeZeroOffset, RearBladeZeroOffset);
+        BladeControl.BladeHeight[FRONT_BLADE_IDX] -= FrontBladeZeroOffset;
         agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
         break;
       case PGN_REAR_ZERO_BLADE_HEIGHT:
-        BladeControl.BladeHeight[REAR_BLADE_IDX] = BLADE_HEIGHT_GROUND_LEVEL;
+        RearBladeZeroOffset = BladeControl.BladeHeight[REAR_BLADE_IDX] - BLADE_HEIGHT_GROUND_LEVEL;
+        EepromBladeConfigSave(FrontBladeZeroOffset, RearBladeZeroOffset);
+        BladeControl.BladeHeight[REAR_BLADE_IDX] -= RearBladeZeroOffset;
         agGrade.SendRearBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
         break;
 
@@ -627,7 +730,7 @@ void loop
         agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
         break;
 
-        // front blade configuration
+      // front blade configuration
       case PGN_FRONT_PWM_GAIN_UP:
         BladeControl.BladeConfig[FRONT_BLADE_IDX].PWMGainUp = agGrade.GetPGNPacketUInt32(&Command);
         break;
@@ -870,6 +973,15 @@ void loop
     PingTimestamp = 0;
 
     agGrade.SendPing();
+  }
+
+  // tell AgGrade current blade heights
+  if (BladeHeightTimestamp >= BLADE_HEIGHT_PERIOD_MS)
+  {
+    BladeHeightTimestamp = 0;
+
+    agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
+    agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
   }
 
   NavData.Process();
