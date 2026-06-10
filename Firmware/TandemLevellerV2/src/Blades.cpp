@@ -150,10 +150,6 @@ void Blades::ControlBlade
   // store command
   BladeStatus[BladeIndex].BladeCommand = BladeCommand[BladeIndex].CutValve;
 
-  // fixme - remove and replace with reading actual blade height from sensors
-  // this is currently open-loop
-  BladeHeight[BladeIndex] = BladeStatus[BladeIndex].BladeCommand;
-
   // fixme - replace with closed-loop control system
   /*// lower the blade
   if (BladeCommand[BladeIndex].CutValve >= (BLADE_HEIGHT_GROUND_LEVEL + BladeConfig[BladeIndex].Deadband))

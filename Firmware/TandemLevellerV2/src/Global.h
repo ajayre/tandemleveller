@@ -102,7 +102,7 @@ typedef enum _pgn_t : uint16_t
   PGN_FRONT_BUCKET_ANGLE         = 0x500D, // fixme - to do
   PGN_REAR_BUCKET_ANGLE          = 0x500E, // fixme - to do
   PGN_FRONT_STATE                = 0x500F, // fixme - to do
-  PGN_REAR_STATE                 = 0x500A, // fixme - to do
+  PGN_REAR_STATE                 = 0x5010, // fixme - to do
 
   // sensors
   PGN_TRACTOR_IMU                = 0x6000,

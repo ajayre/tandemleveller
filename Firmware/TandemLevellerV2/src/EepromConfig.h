@@ -23,7 +23,7 @@ typedef struct __attribute__((packed)) _eeprom_imu_store_t
   uint8_t Magic;
 } eeprom_imu_store_t;
 
-typedef struct __attribute__((packet)) _eeprom_blade_store_t
+typedef struct __attribute__((packed)) _eeprom_blade_store_t
 {
   int16_t FrontOffset;
   int16_t RearOffset;

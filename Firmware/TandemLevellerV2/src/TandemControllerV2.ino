@@ -186,7 +186,20 @@ static void Blades_BladeChanged
   blade_direction_t Direction    // direction of blade movement
   )
 {
-    agGrade.SendBladeState(BladeIndex, PWM, Height, Direction);
+  agGrade.SendBladeState(BladeIndex, PWM, Height, Direction);
+
+#if USE_HYDRAULIC_SIMULATION == 1
+  switch (BladeIndex)
+  {
+    case FRONT_BLADE_IDX:
+      FrontHydraulicSim.SetPWM(PWM);
+      break;
+
+    case REAR_BLADE_IDX:
+      RearHydraulicSim.SetPWM(PWM);
+      break;
+  }
+#endif // USE_HYDRAULIC_SIMULATION == 1
 }
 
 // parses the angle from the front scraper into blade height and stores it
@@ -199,7 +212,14 @@ static void ParseFrontAngle
   // this example converts -30 to 30 deg to -100mm to 170mm
   int HeightMm = (int)(Angle * 4.5 + 35);
 
-  BladeControl.BladeHeight[FRONT_BLADE_IDX] = HeightMm + BLADE_HEIGHT_GROUND_LEVEL - FrontBladeZeroOffset;
+  if ((HeightMm - FrontBladeZeroOffset) < -(int)BLADE_HEIGHT_GROUND_LEVEL)
+  {
+    BladeControl.BladeHeight[FRONT_BLADE_IDX] = 0;
+  }
+  else
+  {
+    BladeControl.BladeHeight[FRONT_BLADE_IDX] = HeightMm + BLADE_HEIGHT_GROUND_LEVEL - FrontBladeZeroOffset;
+  }
 }
 
 // parses the angle from the rear scraper into blade height and stores it
@@ -212,7 +232,14 @@ static void ParseRearAngle
   // this example converts -30 to 30 deg to -100mm to 170mm
   int HeightMm = (int)(Angle * 4.5 + 35);
 
-  BladeControl.BladeHeight[REAR_BLADE_IDX] = HeightMm + BLADE_HEIGHT_GROUND_LEVEL - RearBladeZeroOffset;
+  if ((HeightMm - RearBladeZeroOffset) < -(int)BLADE_HEIGHT_GROUND_LEVEL)
+  {
+    BladeControl.BladeHeight[REAR_BLADE_IDX] = 0;
+  }
+  else
+  {
+    BladeControl.BladeHeight[REAR_BLADE_IDX] = HeightMm + BLADE_HEIGHT_GROUND_LEVEL - RearBladeZeroOffset;
+  }
 }
 
 // process TPDO from angle sensors
@@ -228,7 +255,7 @@ static void ProcessAngleTPDO
   if (Length < 2) return;
 
   // get the angle
-  float Angle = (float)(pData[0] | ((uint16_t)pData[1] << 8)) / 100.0;
+  float Angle = (float)(int16_t)(pData[0] | ((uint16_t)pData[1] << 8)) / 100.0f;
 
   switch (NodeId)
   {
@@ -710,16 +737,16 @@ void loop
 
       // reset blade height
       case PGN_FRONT_ZERO_BLADE_HEIGHT:
-        FrontBladeZeroOffset = BladeControl.BladeHeight[FRONT_BLADE_IDX] - BLADE_HEIGHT_GROUND_LEVEL;
+        FrontBladeZeroOffset += BladeControl.BladeHeight[FRONT_BLADE_IDX] - BLADE_HEIGHT_GROUND_LEVEL;
         EepromBladeConfigSave(FrontBladeZeroOffset, RearBladeZeroOffset);
-        BladeControl.BladeHeight[FRONT_BLADE_IDX] -= FrontBladeZeroOffset;
+        BladeControl.BladeHeight[FRONT_BLADE_IDX] = BLADE_HEIGHT_GROUND_LEVEL;
         agGrade.SendFrontBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
         break;
       case PGN_REAR_ZERO_BLADE_HEIGHT:
-        RearBladeZeroOffset = BladeControl.BladeHeight[REAR_BLADE_IDX] - BLADE_HEIGHT_GROUND_LEVEL;
+        RearBladeZeroOffset += BladeControl.BladeHeight[REAR_BLADE_IDX] - BLADE_HEIGHT_GROUND_LEVEL;
         EepromBladeConfigSave(FrontBladeZeroOffset, RearBladeZeroOffset);
-        BladeControl.BladeHeight[REAR_BLADE_IDX] -= RearBladeZeroOffset;
-        agGrade.SendRearBladeHeight(BladeControl.BladeHeight[FRONT_BLADE_IDX]);
+        BladeControl.BladeHeight[REAR_BLADE_IDX] = BLADE_HEIGHT_GROUND_LEVEL;
+        agGrade.SendRearBladeHeight(BladeControl.BladeHeight[REAR_BLADE_IDX]);
         break;
 
       // request blade height
@@ -872,7 +899,7 @@ void loop
         IMUHandler.SetZero(FRONTSCRAPER_IMU_NODE_ID);
         break;
       case PGN_REAR_IMU_LEVEL:
-        IMUHandler.SetZero(FRONTSCRAPER_IMU_NODE_ID);
+        IMUHandler.SetZero(REARSCRAPER_IMU_NODE_ID);
         break;
       case PGN_FRONT_BUCKET_IMU_LEVEL:
         IMUHandler.SetZero(FRONT_BUCKET_IMU_NODE_ID);
